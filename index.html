@@ -23,11 +23,24 @@
       image-rendering: pixelated;
       image-rendering: crisp-edges;
       display: block;
+      outline: none;
     }
   </style>
 </head>
 <body>
-  <div id="game-container"></div>
+  <div id="game-container" tabindex="0"></div>
   <script type="module" src="/src/main.js"></script>
+  <script>
+    // Auto-focus the game container so keyboard input works immediately
+    window.addEventListener('load', function() {
+      var container = document.getElementById('game-container');
+      if (container) container.focus();
+    });
+    // Refocus on any click
+    document.addEventListener('click', function() {
+      var container = document.getElementById('game-container');
+      if (container) container.focus();
+    });
+  </script>
 </body>
 </html>

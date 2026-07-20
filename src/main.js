@@ -20,7 +20,10 @@ const config = {
     }
   },
   input: {
-    gamepad: true
+    gamepad: true,
+    keyboard: {
+      target: 'window'
+    }
   },
   scene: [BootScene, TitleScene, OverworldScene, TownScene]
 };

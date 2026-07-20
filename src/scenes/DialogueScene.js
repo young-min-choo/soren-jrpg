@@ -1,27 +1,9 @@
 import Phaser from 'phaser';
 
 /**
- * DialogueScene — overlay scene that runs on top of field scenes.
- * Renders an FFTA-style dialogue box at the bottom of the screen with:
- * - Portrait (left side, placeholder colored square for now)
- * - Speaker name
- * - Typewriter text effect
- * - Branching choices (when applicable)
- * - Z/Enter to advance, X/Esc to close
- *
- * Launched via: this.scene.launch('Dialogue', { ... dialogueData ... })
- * When done, emits 'dialogue-complete' event and stops itself.
- *
- * Dialogue data format:
- * {
- *   speaker: "Name",
- *   portrait: null,  // texture key, or null for placeholder
- *   pages: ["Page 1 text", "Page 2 text", ...],
- *   choices: [        // optional, only on last page
- *     { text: "Choice 1", value: "choice1" },
- *     { text: "Choice 2", value: "choice2" }
- *   ]
- * }
+ * DialogueScene — overlay scene using DOM elements for crisp text.
+ * Renders dialogue box, portrait, speaker name, typewriter text,
+ * and branching choices as HTML positioned over the game canvas.
  */
 export default class DialogueScene extends Phaser.Scene {
   constructor() {
@@ -35,101 +17,109 @@ export default class DialogueScene extends Phaser.Scene {
     this.typingTimer = null;
     this.choiceIndex = 0;
     this.showingChoices = false;
+    this.domElements = [];
 
-    const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
+    const container = document.getElementById('game-container');
+    if (!container) return;
 
-    // --- Dialogue box ---
-    // Positioned at the bottom, takes up ~40% of the screen height
-    const boxHeight = 90;
-    const boxY = height - boxHeight;
-    const padding = 8;
+    // --- Dialogue box (DOM) ---
+    const box = document.createElement('div');
+    box.style.cssText = `
+      position: absolute;
+      left: 2%; top: 58%;
+      width: 96%; height: 38%;
+      background: rgba(0, 0, 64, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      display: flex;
+      flex-direction: row;
+      padding: 8px;
+      box-sizing: border-box;
+      z-index: 20;
+      pointer-events: none;
+    `;
+    container.appendChild(box);
+    this.domElements.push(box);
 
-    // Background — semi-opaque dark blue (FFTA style)
-    this.boxBg = this.add.graphics();
-    this.boxBg.fillStyle(0x000040, 0.85);
-    this.boxBg.fillRect(0, boxY, width, boxHeight);
-    this.boxBg.lineStyle(1, 0xffffff, 0.5);
-    this.boxBg.strokeRect(0.5, boxY + 0.5, width - 1, boxHeight - 1);
+    // --- Portrait (left side) ---
+    const portrait = document.createElement('div');
+    portrait.style.cssText = `
+      width: 48px; height: 48px;
+      min-width: 48px;
+      background: #4a4a8a;
+      border: 1px solid rgba(255,255,255,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 8px;
+      font-size: 20px;
+      color: #aaa;
+    `;
+    portrait.textContent = '?';
+    box.appendChild(portrait);
 
-    // --- Portrait area (left side) ---
-    const portraitSize = 48;
-    const portraitX = padding;
-    const portraitY = boxY + padding;
-
-    if (this.dialogueData.portrait) {
-      this.portrait = this.add.image(portraitX + portraitSize / 2, portraitY + portraitSize / 2, this.dialogueData.portrait);
-      this.portrait.setOrigin(0.5);
-    } else {
-      // Placeholder portrait — colored square with a simple face
-      this.portrait = this.add.graphics();
-      this.portrait.fillStyle(0x4a4a8a, 1);
-      this.portrait.fillRect(portraitX, portraitY, portraitSize, portraitSize);
-      this.portrait.lineStyle(1, 0xffffff, 0.4);
-      this.portrait.strokeRect(portraitX + 0.5, portraitY + 0.5, portraitSize - 1, portraitSize - 1);
-
-      // Simple face dots (eyes + mouth)
-      this.portrait.fillStyle(0xffffff, 1);
-      this.portrait.fillRect(portraitX + 14, portraitY + 16, 4, 4); // left eye
-      this.portrait.fillRect(portraitX + 30, portraitY + 16, 4, 4); // right eye
-      this.portrait.fillRect(portraitX + 16, portraitY + 30, 16, 2); // mouth
-    }
-
-    // Portrait frame border
-    const portraitFrame = this.add.graphics();
-    portraitFrame.lineStyle(1, 0xffffff, 0.6);
-    portraitFrame.strokeRect(portraitX + 0.5, portraitY + 0.5, portraitSize - 1, portraitSize - 1);
+    // --- Right side: name + text ---
+    const rightSide = document.createElement('div');
+    rightSide.style.cssText = `
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    `;
+    box.appendChild(rightSide);
 
     // --- Speaker name ---
-    const nameX = portraitX + portraitSize + padding;
-    this.nameText = this.add.text(nameX, boxY + padding, this.dialogueData.speaker || '', {
-      fontFamily: '"Courier New", monospace',
-      fontSize: '10px',
-      color: '#ffff00',
-      fontStyle: 'bold'
-    });
-    this.nameText.setResolution(3);
-    this.nameText
+    this.nameDiv = document.createElement('div');
+    this.nameDiv.style.cssText = `
+      color: #ffff00;
+      font-family: "Courier New", monospace;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 4px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    `;
+    this.nameDiv.textContent = this.dialogueData.speaker || '';
+    rightSide.appendChild(this.nameDiv);
 
-    // --- Dialogue text (typewriter) ---
-    const textX = nameX;
-    const textY = boxY + padding + 14;
-    const textWidth = width - textX - padding;
+    // --- Dialogue text ---
+    this.textDiv = document.createElement('div');
+    this.textDiv.style.cssText = `
+      color: #ffffff;
+      font-family: "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      flex: 1;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    `;
+    rightSide.appendChild(this.textDiv);
 
-    this.dialogueText = this.add.text(textX, textY, '', {
-      fontFamily: '"Courier New", monospace',
-      fontSize: '10px',
-      color: '#ffffff',
-      wordWrap: { width: textWidth },
-      maxLines: 4,
-      lineSpacing: 2
-    });
-    this.dialogueText.setResolution(3);
-    this.dialogueText
+    // --- Continue indicator ---
+    this.indicatorDiv = document.createElement('div');
+    this.indicatorDiv.style.cssText = `
+      position: absolute;
+      right: 12px; bottom: 8px;
+      color: #ffffff;
+      font-size: 14px;
+      display: none;
+    `;
+    this.indicatorDiv.textContent = '▼';
+    box.appendChild(this.indicatorDiv);
 
-    // --- Continue indicator (blinking ▼) ---
-    this.continueIndicator = this.add.text(width - 16, boxY + boxHeight - 14, '▼', {
-      fontFamily: '"Courier New", monospace',
-      fontSize: '10px',
-      color: '#ffffff'
-    });
-    this.continueIndicator.setResolution(3);
-    this.continueIndicator.setOrigin(0.5);
-    this.continueIndicator
-    this.continueIndicator.setVisible(false);
+    this.blinkInterval = setInterval(() => {
+      this.indicatorDiv.style.opacity = this.indicatorDiv.style.opacity === '0' ? '1' : '0';
+    }, 300);
 
-    this.tweens.add({
-      targets: this.continueIndicator,
-      alpha: 0,
-      duration: 300,
-      yoyo: true,
-      repeat: -1
-    });
+    // --- Choice container ---
+    this.choiceContainer = document.createElement('div');
+    this.choiceContainer.style.cssText = `
+      position: absolute;
+      left: 60px; bottom: 4px;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+    `;
+    box.appendChild(this.choiceContainer);
 
-    // --- Choice area (rendered below text when choices exist) ---
-    this.choiceTexts = [];
-
-    // --- Input ---
+    // --- Input (raw DOM) ---
     this.handleKeyDown = (e) => {
       switch (e.key) {
         case 'z': case 'Z': case 'Enter':
@@ -160,8 +150,7 @@ export default class DialogueScene extends Phaser.Scene {
     window.addEventListener('keydown', this.handleKeyDown);
 
     this.events.on('shutdown', () => {
-      window.removeEventListener('keydown', this.handleKeyDown);
-      if (this.typingTimer) this.typingTimer.remove();
+      this.cleanup();
     });
 
     // Start typing first page
@@ -175,16 +164,16 @@ export default class DialogueScene extends Phaser.Scene {
       return;
     }
 
-    this.dialogueText.setText('');
+    this.textDiv.textContent = '';
     this.isTyping = true;
-    this.continueIndicator.setVisible(false);
+    this.indicatorDiv.style.display = 'none';
     let charIndex = 0;
 
     this.typingTimer = this.time.addEvent({
-      delay: 30, // ms per character
+      delay: 30,
       callback: () => {
         charIndex++;
-        this.dialogueText.setText(page.substring(0, charIndex));
+        this.textDiv.textContent = page.substring(0, charIndex);
         if (charIndex >= page.length) {
           this.typingTimer.remove();
           this.isTyping = false;
@@ -196,59 +185,55 @@ export default class DialogueScene extends Phaser.Scene {
   }
 
   onPageComplete() {
-    // If this is the last page and there are choices, show them
     const isLastPage = this.currentPage === this.dialogueData.pages.length - 1;
     if (isLastPage && this.dialogueData.choices && this.dialogueData.choices.length > 0) {
       this.showChoices();
     } else {
-      this.continueIndicator.setVisible(true);
+      this.indicatorDiv.style.display = 'block';
     }
   }
 
   showChoices() {
     this.showingChoices = true;
     this.choiceIndex = 0;
-
-    const textY = this.dialogueText.y + this.dialogueText.height + 4;
-    const textX = this.dialogueText.x;
+    this.choiceContainer.innerHTML = '';
+    this.choiceContainer.style.display = 'flex';
 
     this.dialogueData.choices.forEach((choice, i) => {
-      const prefix = i === 0 ? '> ' : '  ';
-      const choiceText = this.add.text(textX, textY + i * 14, prefix + choice.text, {
-        fontFamily: '"Courier New", monospace',
-        fontSize: '10px',
-        color: '#ffffff'
-      });
-      choiceText.setResolution(3);
-      choiceText
-      this.choiceTexts.push(choiceText);
+      const div = document.createElement('div');
+      div.style.cssText = `
+        color: #ffffff;
+        font-family: "Courier New", monospace;
+        font-size: 13px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+      `;
+      div.textContent = (i === 0 ? '> ' : '  ') + choice.text;
+      this.choiceContainer.appendChild(div);
     });
   }
 
   updateChoiceHighlight() {
-    this.choiceTexts.forEach((text, i) => {
-      text.setText((i === this.choiceIndex ? '> ' : '  ') + this.dialogueData.choices[i].text);
-    });
+    const children = this.choiceContainer.children;
+    for (let i = 0; i < children.length; i++) {
+      children[i].textContent = (i === this.choiceIndex ? '> ' : '  ') + this.dialogueData.choices[i].text;
+    }
   }
 
   handleConfirm() {
     if (this.isTyping) {
-      // Skip typewriter — show full text immediately
       this.typingTimer.remove();
-      this.dialogueText.setText(this.dialogueData.pages[this.currentPage]);
+      this.textDiv.textContent = this.dialogueData.pages[this.currentPage];
       this.isTyping = false;
       this.onPageComplete();
       return;
     }
 
     if (this.showingChoices) {
-      // Select choice
       const selected = this.dialogueData.choices[this.choiceIndex];
       this.close(selected.value);
       return;
     }
 
-    // Advance to next page
     this.currentPage++;
     if (this.currentPage >= this.dialogueData.pages.length) {
       this.close();
@@ -258,11 +243,22 @@ export default class DialogueScene extends Phaser.Scene {
   }
 
   close(choiceValue) {
-    // Emit result to parent scene
     if (this.dialogueData.onComplete) {
       this.dialogueData.onComplete(choiceValue);
     }
     this.events.emit('dialogue-complete', choiceValue);
     this.scene.stop('Dialogue');
+  }
+
+  cleanup() {
+    window.removeEventListener('keydown', this.handleKeyDown);
+    if (this.typingTimer) this.typingTimer.remove();
+    if (this.blinkInterval) clearInterval(this.blinkInterval);
+    this.domElements.forEach(el => el.remove());
+    this.domElements = [];
+  }
+
+  shutdown() {
+    this.cleanup();
   }
 }

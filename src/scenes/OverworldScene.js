@@ -84,13 +84,11 @@ export default class OverworldScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, MAP_COLS * TILE_SIZE, MAP_ROWS * TILE_SIZE);
 
     // Input — use raw DOM keyboard events instead of Phaser's keyboard plugin
-    // Phaser 4's keyboard plugin has quirks with key state tracking
-    this.keyZ = this.input.keyboard.addKey('Z');
-    this.keyEnter = this.input.keyboard.addKey('ENTER');
     this.keyShift = this.input.keyboard.addKey('SHIFT');
 
     // Raw key state tracking
     this.keys = { up: false, down: false, left: false, right: false };
+    this.confirmPressed = false;
 
     this.handleKeyDown = (e) => {
       switch (e.key) {
@@ -98,6 +96,7 @@ export default class OverworldScene extends Phaser.Scene {
         case 'ArrowDown': case 's': case 'S': this.keys.down = true; e.preventDefault(); break;
         case 'ArrowLeft': case 'a': case 'A': this.keys.left = true; e.preventDefault(); break;
         case 'ArrowRight': case 'd': case 'D': this.keys.right = true; e.preventDefault(); break;
+        case 'z': case 'Z': case 'Enter': this.confirmPressed = true; e.preventDefault(); break;
       }
     };
 
@@ -159,8 +158,8 @@ export default class OverworldScene extends Phaser.Scene {
 
     // Status text (top-left, stays on screen)
     this.statusText = this.add.text(8, 8, 'Overworld — Phase 1 Demo', {
-      fontFamily: 'monospace',
-      fontSize: '8px',
+      fontFamily: '"Courier New", monospace',
+      fontSize: '10px',
       color: '#ffffff',
       backgroundColor: '#000000'
     });
@@ -229,8 +228,8 @@ export default class OverworldScene extends Phaser.Scene {
       Math.abs(playerTileX - TOWN_ENTRANCE_X) <= 1 &&
       Math.abs(playerTileY - TOWN_ENTRANCE_Y) <= 1;
 
-    if (nearEntrance && (Phaser.Input.Keyboard.JustDown(this.keyZ) ||
-                         Phaser.Input.Keyboard.JustDown(this.keyEnter))) {
+    if (nearEntrance && this.confirmPressed) {
+      this.confirmPressed = false;
       this.enterTown();
     }
 
@@ -238,6 +237,9 @@ export default class OverworldScene extends Phaser.Scene {
     if (nearEntrance && this.gamepad && this.gamepad.A) {
       this.enterTown();
     }
+
+    // Reset one-shot flag at end of frame
+    this.confirmPressed = false;
   }
 
   enterTown() {

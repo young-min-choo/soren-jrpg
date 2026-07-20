@@ -131,11 +131,10 @@ export default class TownScene extends Phaser.Scene {
     this.cameras.main.fadeIn(300, 0, 0, 0);
 
     // Input — raw DOM keyboard events (same as OverworldScene)
-    this.keyZ = this.input.keyboard.addKey('Z');
-    this.keyEnter = this.input.keyboard.addKey('ENTER');
     this.keyShift = this.input.keyboard.addKey('SHIFT');
 
     this.keys = { up: false, down: false, left: false, right: false };
+    this.confirmPressed = false; // one-shot flag, reset each frame
 
     this.handleKeyDown = (e) => {
       switch (e.key) {
@@ -143,6 +142,7 @@ export default class TownScene extends Phaser.Scene {
         case 'ArrowDown': case 's': case 'S': this.keys.down = true; e.preventDefault(); break;
         case 'ArrowLeft': case 'a': case 'A': this.keys.left = true; e.preventDefault(); break;
         case 'ArrowRight': case 'd': case 'D': this.keys.right = true; e.preventDefault(); break;
+        case 'z': case 'Z': case 'Enter': this.confirmPressed = true; e.preventDefault(); break;
       }
     };
 
@@ -202,8 +202,8 @@ export default class TownScene extends Phaser.Scene {
 
     // Status text
     this.statusText = this.add.text(8, 8, '', {
-      fontFamily: 'monospace',
-      fontSize: '8px',
+      fontFamily: '"Courier New", monospace',
+      fontSize: '10px',
       color: '#ffffff',
       backgroundColor: '#000000'
     });
@@ -268,11 +268,12 @@ export default class TownScene extends Phaser.Scene {
       Math.abs(playerTileX - EXIT_X) <= 1 &&
       Math.abs(playerTileY - EXIT_Y) <= 1;
 
-    if (nearExit && (Phaser.Input.Keyboard.JustDown(this.keyZ) ||
-                     Phaser.Input.Keyboard.JustDown(this.keyEnter))) {
+    if (nearExit && this.confirmPressed) {
+      this.confirmPressed = false;
       this.exitTown();
     }
 
+    // Gamepad A button
     if (nearExit && this.gamepad && this.gamepad.A) {
       this.exitTown();
     }
@@ -293,8 +294,8 @@ export default class TownScene extends Phaser.Scene {
     if (this.nearbyNpc && !this.dialogueActive) {
       if (!this.interactPrompt) {
         this.interactPrompt = this.add.text(this.nearbyNpc.x, this.nearbyNpc.y - 20, 'Press Z', {
-          fontFamily: 'monospace',
-          fontSize: '8px',
+          fontFamily: '"Courier New", monospace',
+          fontSize: '10px',
           color: '#ffff00',
           backgroundColor: '#000000',
           padding: { x: 2, y: 1 }
@@ -310,9 +311,13 @@ export default class TownScene extends Phaser.Scene {
     }
 
     // Talk to NPC on Z/Enter press
-    if (this.nearbyNpc && Phaser.Input.Keyboard.JustDown(this.keyZ)) {
+    if (this.nearbyNpc && this.confirmPressed && !this.dialogueActive) {
+      this.confirmPressed = false;
       this.talkToNpc(this.nearbyNpc);
     }
+
+    // Reset one-shot flag at end of frame
+    this.confirmPressed = false;
   }
 
   talkToNpc(npc) {

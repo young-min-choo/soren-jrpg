@@ -13,6 +13,8 @@ const config = {
   pixelArt: true,
   zoom: 3,
   backgroundColor: '#000000',
+  // Use roundPixels to prevent sub-pixel rendering issues
+  roundPixels: true,
   physics: {
     default: 'arcade',
     arcade: {

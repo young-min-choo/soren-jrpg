@@ -83,8 +83,8 @@ export default class DialogueScene extends Phaser.Scene {
     // --- Speaker name ---
     const nameX = portraitX + portraitSize + padding;
     this.nameText = this.add.text(nameX, boxY + padding, this.dialogueData.speaker || '', {
-      fontFamily: 'monospace',
-      fontSize: '8px',
+      fontFamily: '"Courier New", monospace',
+      fontSize: '10px',
       color: '#ffff00',
       fontStyle: 'bold'
     });
@@ -93,20 +93,20 @@ export default class DialogueScene extends Phaser.Scene {
     const textX = nameX;
     const textY = boxY + padding + 14;
     const textWidth = width - textX - padding;
-    const textHeight = boxHeight - padding - 14;
 
     this.dialogueText = this.add.text(textX, textY, '', {
-      fontFamily: 'monospace',
-      fontSize: '8px',
+      fontFamily: '"Courier New", monospace',
+      fontSize: '10px',
       color: '#ffffff',
       wordWrap: { width: textWidth },
-      maxLines: 4
+      maxLines: 4,
+      lineSpacing: 2
     });
 
     // --- Continue indicator (blinking ▼) ---
-    this.continueIndicator = this.add.text(width - 16, boxY + boxHeight - 12, '▼', {
-      fontFamily: 'monospace',
-      fontSize: '8px',
+    this.continueIndicator = this.add.text(width - 16, boxY + boxHeight - 14, '▼', {
+      fontFamily: '"Courier New", monospace',
+      fontSize: '10px',
       color: '#ffffff'
     });
     this.continueIndicator.setOrigin(0.5);
@@ -208,9 +208,9 @@ export default class DialogueScene extends Phaser.Scene {
 
     this.dialogueData.choices.forEach((choice, i) => {
       const prefix = i === 0 ? '> ' : '  ';
-      const choiceText = this.add.text(textX, textY + i * 12, prefix + choice.text, {
-        fontFamily: 'monospace',
-        fontSize: '8px',
+      const choiceText = this.add.text(textX, textY + i * 14, prefix + choice.text, {
+        fontFamily: '"Courier New", monospace',
+        fontSize: '10px',
         color: '#ffffff'
       });
       this.choiceTexts.push(choiceText);

@@ -20,7 +20,7 @@ export default class TitleScene extends Phaser.Scene {
       this.cameras.main.height / 2 - 20,
       'SOREN',
       {
-        fontFamily: 'monospace',
+        fontFamily: '"Courier New", monospace',
         fontSize: '32px',
         color: '#ffffff',
         align: 'center'
@@ -34,8 +34,8 @@ export default class TitleScene extends Phaser.Scene {
       this.cameras.main.height / 2 + 10,
       'A JRPG',
       {
-        fontFamily: 'monospace',
-        fontSize: '10px',
+        fontFamily: '"Courier New", monospace',
+        fontSize: '12px',
         color: '#888888',
         align: 'center'
       }
@@ -48,8 +48,8 @@ export default class TitleScene extends Phaser.Scene {
       this.cameras.main.height - 40,
       'Press Z to Start',
       {
-        fontFamily: 'monospace',
-        fontSize: '8px',
+        fontFamily: '"Courier New", monospace',
+        fontSize: '10px',
         color: '#ffffff',
         align: 'center'
       }

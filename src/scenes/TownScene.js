@@ -137,6 +137,8 @@ export default class TownScene extends Phaser.Scene {
     this.confirmPressed = false; // one-shot flag, reset each frame
 
     this.handleKeyDown = (e) => {
+      // Ignore movement/confirm keys while dialogue is open
+      if (this.dialogueActive) return;
       switch (e.key) {
         case 'ArrowUp': case 'w': case 'W': this.keys.up = true; e.preventDefault(); break;
         case 'ArrowDown': case 's': case 'S': this.keys.down = true; e.preventDefault(); break;
@@ -152,6 +154,7 @@ export default class TownScene extends Phaser.Scene {
         case 'ArrowDown': case 's': case 'S': this.keys.down = false; break;
         case 'ArrowLeft': case 'a': case 'A': this.keys.left = false; break;
         case 'ArrowRight': case 'd': case 'D': this.keys.right = false; break;
+        case 'z': case 'Z': case 'Enter': this.confirmPressed = false; break;
       }
     };
 

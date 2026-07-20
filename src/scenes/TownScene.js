@@ -79,12 +79,47 @@ export default class TownScene extends Phaser.Scene {
     // Fade in
     this.cameras.main.fadeIn(300, 0, 0, 0);
 
-    // Input
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.wasd = this.input.keyboard.addKeys('W,A,S,D');
+    // Input — raw DOM keyboard events (same as OverworldScene)
     this.keyZ = this.input.keyboard.addKey('Z');
     this.keyEnter = this.input.keyboard.addKey('ENTER');
     this.keyShift = this.input.keyboard.addKey('SHIFT');
+
+    this.keys = { up: false, down: false, left: false, right: false };
+
+    this.handleKeyDown = (e) => {
+      switch (e.key) {
+        case 'ArrowUp': case 'w': case 'W': this.keys.up = true; e.preventDefault(); break;
+        case 'ArrowDown': case 's': case 'S': this.keys.down = true; e.preventDefault(); break;
+        case 'ArrowLeft': case 'a': case 'A': this.keys.left = true; e.preventDefault(); break;
+        case 'ArrowRight': case 'd': case 'D': this.keys.right = true; e.preventDefault(); break;
+      }
+    };
+
+    this.handleKeyUp = (e) => {
+      switch (e.key) {
+        case 'ArrowUp': case 'w': case 'W': this.keys.up = false; break;
+        case 'ArrowDown': case 's': case 'S': this.keys.down = false; break;
+        case 'ArrowLeft': case 'a': case 'A': this.keys.left = false; break;
+        case 'ArrowRight': case 'd': case 'D': this.keys.right = false; break;
+      }
+    };
+
+    this.handleBlur = () => {
+      this.keys.up = false;
+      this.keys.down = false;
+      this.keys.left = false;
+      this.keys.right = false;
+    };
+
+    window.addEventListener('keydown', this.handleKeyDown);
+    window.addEventListener('keyup', this.handleKeyUp);
+    window.addEventListener('blur', this.handleBlur);
+
+    this.events.on('shutdown', () => {
+      window.removeEventListener('keydown', this.handleKeyDown);
+      window.removeEventListener('keyup', this.handleKeyUp);
+      window.removeEventListener('blur', this.handleBlur);
+    });
 
     // Gamepad
     this.gamepad = null;
@@ -138,22 +173,22 @@ export default class TownScene extends Phaser.Scene {
     let moving = false;
 
     // Horizontal
-    if (this.cursors.right.isDown || this.wasd.D.isDown) {
+    if (this.keys.right) {
       vx = speed;
       this.facing = 'right';
       moving = true;
-    } else if (this.cursors.left.isDown || this.wasd.A.isDown) {
+    } else if (this.keys.left) {
       vx = -speed;
       this.facing = 'left';
       moving = true;
     }
 
     // Vertical (overrides horizontal facing if pressed)
-    if (this.cursors.down.isDown || this.wasd.S.isDown) {
+    if (this.keys.down) {
       vy = speed;
       this.facing = 'down';
       moving = true;
-    } else if (this.cursors.up.isDown || this.wasd.W.isDown) {
+    } else if (this.keys.up) {
       vy = -speed;
       this.facing = 'up';
       moving = true;

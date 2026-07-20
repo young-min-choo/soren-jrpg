@@ -1,53 +1,41 @@
 import Phaser from 'phaser';
 
-/**
- * TitleScene — simple title screen.
- * Camera zooms 3x, so game world is 256×224 but canvas is 768×672.
- * Text positions are in game world coordinates (256×224) and get zoomed by camera.
- * Text renders at canvas resolution (768×672) = crisp.
- */
 export default class TitleScene extends Phaser.Scene {
   constructor() {
     super('Title');
   }
 
   create() {
-    // Camera zoom 3x — game world is 256×224, canvas is 768×672
-    this.cameras.main.setZoom(3);
-    this.cameras.main.setScroll(0, 0);
     this.cameras.main.setBackgroundColor('#000000');
 
-    const cx = 128; // center X in game world (256/2)
-    const cy = 112; // center Y in game world (224/2)
+    const cx = 128;
+    const cy = 112;
 
     // Title text
     const titleText = this.add.text(cx, cy - 20, 'SOREN', {
       fontFamily: '"Courier New", monospace',
-      fontSize: '32px',
+      fontSize: '20px',
       color: '#ffffff',
       align: 'center'
     });
-    titleText.setResolution(3);
     titleText.setOrigin(0.5);
 
     // Subtitle
-    const subtitle = this.add.text(cx, cy + 10, 'A JRPG', {
+    const subtitle = this.add.text(cx, cy + 8, 'A JRPG', {
       fontFamily: '"Courier New", monospace',
-      fontSize: '12px',
+      fontSize: '10px',
       color: '#888888',
       align: 'center'
     });
-    subtitle.setResolution(3);
     subtitle.setOrigin(0.5);
 
     // "Press Start" prompt (blinking)
     const pressStart = this.add.text(cx, 184, 'Press Z to Start', {
       fontFamily: '"Courier New", monospace',
-      fontSize: '10px',
+      fontSize: '8px',
       color: '#ffffff',
       align: 'center'
     });
-    pressStart.setResolution(3);
     pressStart.setOrigin(0.5);
 
     // Blink animation
@@ -80,7 +68,6 @@ export default class TitleScene extends Phaser.Scene {
   }
 
   update() {
-    // Gamepad button 0 (A) to start
     if (this.gamepad && this.gamepad.A) {
       this.scene.start('Overworld');
     }

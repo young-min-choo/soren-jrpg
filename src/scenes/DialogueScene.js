@@ -88,7 +88,6 @@ export default class DialogueScene extends Phaser.Scene {
       color: '#ffff00',
       fontStyle: 'bold'
     });
-    this.nameText.setResolution(3);
     this.nameText
 
     // --- Dialogue text (typewriter) ---
@@ -104,7 +103,6 @@ export default class DialogueScene extends Phaser.Scene {
       maxLines: 4,
       lineSpacing: 2
     });
-    this.dialogueText.setResolution(3);
     this.dialogueText
 
     // --- Continue indicator (blinking ▼) ---
@@ -113,7 +111,6 @@ export default class DialogueScene extends Phaser.Scene {
       fontSize: '10px',
       color: '#ffffff'
     });
-    this.continueIndicator.setResolution(3);
     this.continueIndicator.setOrigin(0.5);
     this.continueIndicator
     this.continueIndicator.setVisible(false);
@@ -219,7 +216,6 @@ export default class DialogueScene extends Phaser.Scene {
         fontSize: '10px',
         color: '#ffffff'
       });
-      choiceText.setResolution(3);
       choiceText
       this.choiceTexts.push(choiceText);
     });

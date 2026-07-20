@@ -14,7 +14,7 @@ const config = {
   parent: 'game-container',
   width: 256,
   height: 224,
-  pixelArt: true,
+  roundPixels: true,
   zoom: 3,
   backgroundColor: '#000000',
   physics: {

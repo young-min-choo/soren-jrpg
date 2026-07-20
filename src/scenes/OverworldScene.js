@@ -137,34 +137,51 @@ export default class OverworldScene extends Phaser.Scene {
   update(time, delta) {
     if (this.transitioning) return;
 
-    const speed = this.keyShift.isDown ? 4 : 2; // sprint = 4, normal = 2
-    let moving = false;
+    // Phaser setVelocity is pixels/second, not pixels/frame
+    const speed = this.keyShift.isDown ? 180 : 100; // sprint vs normal
+
+    // Read all directions independently (no else-if chains)
+    const left = this.cursors.left.isDown || this.wasd.A.isDown || (this.gamepad && this.gamepad.left);
+    const right = this.cursors.right.isDown || this.wasd.D.isDown || (this.gamepad && this.gamepad.right);
+    const up = this.cursors.up.isDown || this.wasd.W.isDown || (this.gamepad && this.gamepad.up);
+    const down = this.cursors.down.isDown || this.wasd.S.isDown || (this.gamepad && this.gamepad.down);
+
+    // Track which keys were most recently pressed for direction priority
+    // Use the last pressed direction when multiple are held
     let vx = 0;
     let vy = 0;
+    let moving = false;
 
-    // Horizontal movement
-    if (this.cursors.left.isDown || this.wasd.A.isDown ||
-        (this.gamepad && this.gamepad.left)) {
+    // Horizontal: last pressed wins
+    if (left && !right) {
       vx = -speed;
       this.facing = 'left';
       moving = true;
-    } else if (this.cursors.right.isDown || this.wasd.D.isDown ||
-               (this.gamepad && this.gamepad.right)) {
+    } else if (right && !left) {
       vx = speed;
       this.facing = 'right';
       moving = true;
+    } else if (left && right) {
+      // Both pressed — use last pressed key
+      const leftJustDown = Phaser.Input.Keyboard.JustDown(this.cursors.left) || Phaser.Input.Keyboard.JustDown(this.wasd.A);
+      vx = leftJustDown ? -speed : speed;
+      this.facing = leftJustDown ? 'left' : 'right';
+      moving = true;
     }
 
-    // Vertical movement
-    if (this.cursors.up.isDown || this.wasd.W.isDown ||
-        (this.gamepad && this.gamepad.up)) {
+    // Vertical: last pressed wins, independent of horizontal
+    if (up && !down) {
       vy = -speed;
       this.facing = 'up';
       moving = true;
-    } else if (this.cursors.down.isDown || this.wasd.S.isDown ||
-               (this.gamepad && this.gamepad.down)) {
+    } else if (down && !up) {
       vy = speed;
       this.facing = 'down';
+      moving = true;
+    } else if (up && down) {
+      const upJustDown = Phaser.Input.Keyboard.JustDown(this.cursors.up) || Phaser.Input.Keyboard.JustDown(this.wasd.W);
+      vy = upJustDown ? -speed : speed;
+      this.facing = upJustDown ? 'up' : 'down';
       moving = true;
     }
 

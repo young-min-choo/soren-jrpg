@@ -21,6 +21,7 @@ const config = {
   width: GW * SCALE,    // 768 — actual canvas pixel resolution
   height: GH * SCALE,  // 672 — text renders at this resolution
   backgroundColor: '#000000',
+  preserveDrawingBuffer: true,  // needed for canvas.toDataURL screenshots
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH

@@ -38,18 +38,3 @@ game.events.once('ready', function() {
     canvas.focus();
   }
 });
-
-// Global safety net: reset all keyboard state when window loses focus
-// This prevents "stuck key" bugs where keyup is missed
-window.addEventListener('blur', function() {
-  if (game.input && game.input.keyboard) {
-    game.input.keyboard.resetKeys();
-  }
-});
-
-// Also reset on visibility change (tab switch)
-document.addEventListener('visibilitychange', function() {
-  if (document.hidden && game.input && game.input.keyboard) {
-    game.input.keyboard.resetKeys();
-  }
-});

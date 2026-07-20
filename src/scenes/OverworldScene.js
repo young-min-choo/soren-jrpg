@@ -90,16 +90,6 @@ export default class OverworldScene extends Phaser.Scene {
     this.keyEnter = this.input.keyboard.addKey('ENTER');
     this.keyShift = this.input.keyboard.addKey('SHIFT');
 
-    // Reset all key states when window loses focus (prevents stuck keys)
-    this.handleBlur = () => {
-      this.input.keyboard.resetKeys();
-    };
-    this.scale.on('leavefull', this.handleBlur);
-    window.addEventListener('blur', this.handleBlur);
-    this.events.on('shutdown', () => {
-      window.removeEventListener('blur', this.handleBlur);
-    });
-
     // Gamepad
     this.gamepad = null;
     this.input.gamepad.once('connected', (pad) => {
@@ -150,55 +140,36 @@ export default class OverworldScene extends Phaser.Scene {
   update(time, delta) {
     if (this.transitioning) return;
 
-    // Phaser setVelocity is pixels/second, not pixels/frame
-    const speed = this.keyShift.isDown ? 180 : 100; // sprint vs normal
+    const speed = this.keyShift.isDown ? 180 : 100;
 
-    // Read all directions independently (no else-if chains)
-    const left = this.cursors.left.isDown || this.wasd.A.isDown || (this.gamepad && this.gamepad.left);
-    const right = this.cursors.right.isDown || this.wasd.D.isDown || (this.gamepad && this.gamepad.right);
-    const up = this.cursors.up.isDown || this.wasd.W.isDown || (this.gamepad && this.gamepad.up);
-    const down = this.cursors.down.isDown || this.wasd.S.isDown || (this.gamepad && this.gamepad.down);
-
-    // Track which keys were most recently pressed for direction priority
-    // Use the last pressed direction when multiple are held
+    // Simple direction reading — last pressed wins via priority order
+    // No JustDown checks, no both-pressed logic — just clean isDown polling
     let vx = 0;
     let vy = 0;
     let moving = false;
 
-    // Horizontal: last pressed wins
-    if (left && !right) {
-      vx = -speed;
-      this.facing = 'left';
-      moving = true;
-    } else if (right && !left) {
+    // Horizontal
+    if (this.cursors.right.isDown || this.wasd.D.isDown) {
       vx = speed;
       this.facing = 'right';
       moving = true;
-    } else if (left && right) {
-      // Both pressed — use last pressed key
-      const leftJustDown = Phaser.Input.Keyboard.JustDown(this.cursors.left) || Phaser.Input.Keyboard.JustDown(this.wasd.A);
-      vx = leftJustDown ? -speed : speed;
-      this.facing = leftJustDown ? 'left' : 'right';
+    } else if (this.cursors.left.isDown || this.wasd.A.isDown) {
+      vx = -speed;
+      this.facing = 'left';
       moving = true;
     }
 
-    // Vertical: last pressed wins, independent of horizontal
-    if (up && !down) {
-      vy = -speed;
-      this.facing = 'up';
-      moving = true;
-    } else if (down && !up) {
+    // Vertical (overrides horizontal facing if pressed)
+    if (this.cursors.down.isDown || this.wasd.S.isDown) {
       vy = speed;
       this.facing = 'down';
       moving = true;
-    } else if (up && down) {
-      const upJustDown = Phaser.Input.Keyboard.JustDown(this.cursors.up) || Phaser.Input.Keyboard.JustDown(this.wasd.W);
-      vy = upJustDown ? -speed : speed;
-      this.facing = upJustDown ? 'up' : 'down';
+    } else if (this.cursors.up.isDown || this.wasd.W.isDown) {
+      vy = -speed;
+      this.facing = 'up';
       moving = true;
     }
 
-    // Apply velocity
     this.player.setVelocity(vx, vy);
 
     // Animation

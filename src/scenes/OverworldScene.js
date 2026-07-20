@@ -145,6 +145,7 @@ export default class OverworldScene extends Phaser.Scene {
       color: '#ffff00',
       align: 'center'
     });
+    entranceMarker.setResolution(3);
     entranceMarker.setOrigin(0.5);
     entranceMarker
 
@@ -164,6 +165,7 @@ export default class OverworldScene extends Phaser.Scene {
       color: '#ffffff',
       backgroundColor: '#000000'
     });
+    this.statusText.setResolution(3);
     this.statusText
     this.statusText.setScrollFactor(0);
 

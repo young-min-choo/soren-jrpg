@@ -41,10 +41,6 @@ export default class OverworldScene extends Phaser.Scene {
   }
 
   create() {
-    // Camera zoom 3x — game world is 256×224, canvas is 768×672
-    this.cameras.main.setZoom(3);
-    this.cameras.main.setScroll(0, 0);
-
     // Build the tilemap data array
     const mapData = this.generateMapData();
 
@@ -149,6 +145,7 @@ export default class OverworldScene extends Phaser.Scene {
       color: '#ffff00',
       align: 'center'
     });
+    entranceMarker.setResolution(3);
     entranceMarker.setOrigin(0.5);
     entranceMarker
 
@@ -168,6 +165,7 @@ export default class OverworldScene extends Phaser.Scene {
       color: '#ffffff',
       backgroundColor: '#000000'
     });
+    this.statusText.setResolution(3);
     this.statusText
     this.statusText.setScrollFactor(0);
 

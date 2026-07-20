@@ -27,6 +27,7 @@ export default class TitleScene extends Phaser.Scene {
       color: '#ffffff',
       align: 'center'
     });
+    titleText.setResolution(3);
     titleText.setOrigin(0.5);
 
     // Subtitle
@@ -36,6 +37,7 @@ export default class TitleScene extends Phaser.Scene {
       color: '#888888',
       align: 'center'
     });
+    subtitle.setResolution(3);
     subtitle.setOrigin(0.5);
 
     // "Press Start" prompt (blinking)
@@ -45,6 +47,7 @@ export default class TitleScene extends Phaser.Scene {
       color: '#ffffff',
       align: 'center'
     });
+    pressStart.setResolution(3);
     pressStart.setOrigin(0.5);
 
     // Blink animation

@@ -5,27 +5,18 @@ import OverworldScene from './scenes/OverworldScene.js';
 import TownScene from './scenes/TownScene.js';
 import DialogueScene from './scenes/DialogueScene.js';
 
-// Canvas is 768×672 (3x the classic 256×224).
-// Game world coordinates are 256×224.
-// Each scene's camera zooms 3x so the 256×224 world fills the 768×672 canvas.
-// Text renders at the full 768×672 canvas resolution = crisp text.
-// Scale.FIT auto-sizes the canvas element to fit the browser window.
-
-const SCALE = 3;
-const GW = 256;
-const GH = 224;
+// Canvas is 256×224 with zoom: 3 (Phaser handles scaling).
+// pixelArt: true gives crisp sprites. Text uses setResolution(3)
+// to render at 3x internal resolution before being canvas-scaled.
 
 const config = {
   type: Phaser.AUTO,
   parent: 'game-container',
-  width: GW * SCALE,    // 768 — actual canvas pixel resolution
-  height: GH * SCALE,  // 672 — text renders at this resolution
+  width: 256,
+  height: 224,
+  pixelArt: true,
+  zoom: 3,
   backgroundColor: '#000000',
-  preserveDrawingBuffer: true,  // needed for canvas.toDataURL screenshots
-  scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH
-  },
   physics: {
     default: 'arcade',
     arcade: {

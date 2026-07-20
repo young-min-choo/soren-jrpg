@@ -41,7 +41,7 @@ export default class TownScene extends Phaser.Scene {
   create() {
     // Camera zoom 3x — game world is 256×224, canvas is 768×672
     this.cameras.main.setZoom(3);
-    this.cameras.main.centerOn(128, 112);
+    this.cameras.main.setScroll(0, 0);
 
     // Build the town map data
     const mapData = this.generateMapData();

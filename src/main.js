@@ -20,10 +20,7 @@ const config = {
     }
   },
   input: {
-    gamepad: true,
-    keyboard: {
-      target: 'window'
-    }
+    gamepad: true
   },
   scene: [BootScene, TitleScene, OverworldScene, TownScene]
 };
@@ -32,3 +29,12 @@ const game = new Phaser.Game(config);
 
 // Expose for debugging/testing
 window.game = game;
+
+// Force keyboard focus on the game canvas once it's created
+game.events.once('ready', function() {
+  var canvas = document.querySelector('#game-container canvas');
+  if (canvas) {
+    canvas.setAttribute('tabindex', '0');
+    canvas.focus();
+  }
+});

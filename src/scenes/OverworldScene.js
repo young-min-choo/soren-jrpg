@@ -146,7 +146,7 @@ export default class OverworldScene extends Phaser.Scene {
       align: 'center'
     });
     entranceMarker.setOrigin(0.5);
-    entranceMarker.setResolution(3);
+    entranceMarker
 
     // Blink the entrance marker
     this.tweens.add({
@@ -164,7 +164,7 @@ export default class OverworldScene extends Phaser.Scene {
       color: '#ffffff',
       backgroundColor: '#000000'
     });
-    this.statusText.setResolution(3);
+    this.statusText
     this.statusText.setScrollFactor(0);
 
     this.statusText.setText('Overworld — Walk to the ▼ marker and press Z to enter town');

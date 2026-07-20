@@ -194,7 +194,7 @@ export default class TownScene extends Phaser.Scene {
       align: 'center'
     });
     exitMarker.setOrigin(0.5);
-    exitMarker.setResolution(3);
+    exitMarker
 
     this.tweens.add({
       targets: exitMarker,
@@ -211,7 +211,7 @@ export default class TownScene extends Phaser.Scene {
       color: '#ffffff',
       backgroundColor: '#000000'
     });
-    this.statusText.setResolution(3);
+    this.statusText
     this.statusText.setScrollFactor(0);
     this.statusText.setText('Town — Walk to the ▲ marker and press Z to exit');
 
@@ -307,7 +307,7 @@ export default class TownScene extends Phaser.Scene {
         });
         this.interactPrompt.setOrigin(0.5);
         this.interactPrompt.setDepth(100);
-        this.interactPrompt.setResolution(3);
+        this.interactPrompt
       } else {
         this.interactPrompt.setPosition(this.nearbyNpc.x, this.nearbyNpc.y - 20);
         this.interactPrompt.setVisible(true);

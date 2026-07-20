@@ -2,8 +2,9 @@ import Phaser from 'phaser';
 
 /**
  * TitleScene — simple title screen.
- * "Press Start" → transitions to Overworld.
- * In later phases, this will have New Game / Load Game options.
+ * Camera zooms 3x, so game world is 256×224 but canvas is 768×672.
+ * Text positions are in game world coordinates (256×224) and get zoomed by camera.
+ * Text renders at canvas resolution (768×672) = crisp.
  */
 export default class TitleScene extends Phaser.Scene {
   constructor() {
@@ -11,53 +12,37 @@ export default class TitleScene extends Phaser.Scene {
   }
 
   create() {
-    // Black background
     this.cameras.main.setBackgroundColor('#000000');
 
+    const cx = 128; // center X in game world (256/2)
+    const cy = 112; // center Y in game world (224/2)
+
     // Title text
-    const titleText = this.add.text(
-      this.cameras.main.width / 2,
-      this.cameras.main.height / 2 - 20,
-      'SOREN',
-      {
-        fontFamily: '"Courier New", monospace',
-        fontSize: '32px',
-        color: '#ffffff',
-        align: 'center'
-      }
-    );
+    const titleText = this.add.text(cx, cy - 20, 'SOREN', {
+      fontFamily: '"Courier New", monospace',
+      fontSize: '32px',
+      color: '#ffffff',
+      align: 'center'
+    });
     titleText.setOrigin(0.5);
-    titleText.setResolution(3);
 
     // Subtitle
-    const subtitle = this.add.text(
-      this.cameras.main.width / 2,
-      this.cameras.main.height / 2 + 10,
-      'A JRPG',
-      {
-        fontFamily: '"Courier New", monospace',
-        fontSize: '12px',
-        color: '#888888',
-        align: 'center'
-      }
-    );
+    const subtitle = this.add.text(cx, cy + 10, 'A JRPG', {
+      fontFamily: '"Courier New", monospace',
+      fontSize: '12px',
+      color: '#888888',
+      align: 'center'
+    });
     subtitle.setOrigin(0.5);
-    subtitle.setResolution(3);
 
     // "Press Start" prompt (blinking)
-    const pressStart = this.add.text(
-      this.cameras.main.width / 2,
-      this.cameras.main.height - 40,
-      'Press Z to Start',
-      {
-        fontFamily: '"Courier New", monospace',
-        fontSize: '10px',
-        color: '#ffffff',
-        align: 'center'
-      }
-    );
+    const pressStart = this.add.text(cx, 184, 'Press Z to Start', {
+      fontFamily: '"Courier New", monospace',
+      fontSize: '10px',
+      color: '#ffffff',
+      align: 'center'
+    });
     pressStart.setOrigin(0.5);
-    pressStart.setResolution(3);
 
     // Blink animation
     this.tweens.add({

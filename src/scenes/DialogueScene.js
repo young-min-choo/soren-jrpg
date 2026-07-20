@@ -36,8 +36,9 @@ export default class DialogueScene extends Phaser.Scene {
     this.choiceIndex = 0;
     this.showingChoices = false;
 
-    const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
+    // Game world coordinates (256×224) — camera zooms 3x
+    const width = 256;
+    const height = 224;
 
     // --- Dialogue box ---
     // Positioned at the bottom, takes up ~40% of the screen height
@@ -88,7 +89,7 @@ export default class DialogueScene extends Phaser.Scene {
       color: '#ffff00',
       fontStyle: 'bold'
     });
-    this.nameText.setResolution(3);
+    this.nameText
 
     // --- Dialogue text (typewriter) ---
     const textX = nameX;
@@ -103,7 +104,7 @@ export default class DialogueScene extends Phaser.Scene {
       maxLines: 4,
       lineSpacing: 2
     });
-    this.dialogueText.setResolution(3);
+    this.dialogueText
 
     // --- Continue indicator (blinking ▼) ---
     this.continueIndicator = this.add.text(width - 16, boxY + boxHeight - 14, '▼', {
@@ -112,7 +113,7 @@ export default class DialogueScene extends Phaser.Scene {
       color: '#ffffff'
     });
     this.continueIndicator.setOrigin(0.5);
-    this.continueIndicator.setResolution(3);
+    this.continueIndicator
     this.continueIndicator.setVisible(false);
 
     this.tweens.add({
@@ -216,7 +217,7 @@ export default class DialogueScene extends Phaser.Scene {
         fontSize: '10px',
         color: '#ffffff'
       });
-      choiceText.setResolution(3);
+      choiceText
       this.choiceTexts.push(choiceText);
     });
   }

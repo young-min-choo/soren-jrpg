@@ -43,15 +43,6 @@ const game = new Phaser.Game(config);
 // Expose for debugging/testing
 window.game = game;
 
-// Apply camera zoom to every scene — scales the 256×224 game world
-// to fill the 768×672 canvas. Text renders at full canvas resolution.
-game.scene.scenes.forEach(function(scene) {
-  scene.events.on('create', function() {
-    scene.cameras.main.setZoom(SCALE);
-    scene.cameras.main.centerOn(GW / 2, GH / 2);
-  });
-});
-
 // Force keyboard focus on the game canvas once it's created
 game.events.once('ready', function() {
   var canvas = document.querySelector('#game-container canvas');

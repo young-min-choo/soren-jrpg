@@ -36,6 +36,10 @@ export default class DialogueScene extends Phaser.Scene {
     this.choiceIndex = 0;
     this.showingChoices = false;
 
+    // Camera zoom 3x — game world is 256×224, canvas is 768×672
+    this.cameras.main.setZoom(3);
+    this.cameras.main.centerOn(128, 112);
+
     // Game world coordinates (256×224) — camera zooms 3x
     const width = 256;
     const height = 224;

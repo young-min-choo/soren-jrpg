@@ -12,6 +12,9 @@ export default class TitleScene extends Phaser.Scene {
   }
 
   create() {
+    // Camera zoom 3x — game world is 256×224, canvas is 768×672
+    this.cameras.main.setZoom(3);
+    this.cameras.main.centerOn(128, 112);
     this.cameras.main.setBackgroundColor('#000000');
 
     const cx = 128; // center X in game world (256/2)

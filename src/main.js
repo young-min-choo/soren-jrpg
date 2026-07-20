@@ -16,6 +16,7 @@ const config = {
   height: 224,
   roundPixels: true,
   zoom: 3,
+  preserveDrawingBuffer: true,
   backgroundColor: '#000000',
   physics: {
     default: 'arcade',

@@ -23,8 +23,7 @@ export default class TitleScene extends Phaser.Scene {
         fontFamily: '"Courier New", monospace',
         fontSize: '32px',
         color: '#ffffff',
-        align: 'center',
-        resolution: 3
+        align: 'center'
       }
     );
     titleText.setOrigin(0.5);
@@ -38,8 +37,7 @@ export default class TitleScene extends Phaser.Scene {
         fontFamily: '"Courier New", monospace',
         fontSize: '12px',
         color: '#888888',
-        align: 'center',
-        resolution: 3
+        align: 'center'
       }
     );
     subtitle.setOrigin(0.5);
@@ -53,8 +51,7 @@ export default class TitleScene extends Phaser.Scene {
         fontFamily: '"Courier New", monospace',
         fontSize: '10px',
         color: '#ffffff',
-        align: 'center',
-        resolution: 3
+        align: 'center'
       }
     );
     pressStart.setOrigin(0.5);

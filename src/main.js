@@ -12,7 +12,6 @@ const config = {
   height: 224,
   zoom: 3,
   backgroundColor: '#000000',
-  roundPixels: true,
   physics: {
     default: 'arcade',
     arcade: {

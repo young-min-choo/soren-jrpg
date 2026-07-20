@@ -27,6 +27,7 @@ export default class TitleScene extends Phaser.Scene {
       }
     );
     titleText.setOrigin(0.5);
+    titleText.setResolution(3);
 
     // Subtitle
     const subtitle = this.add.text(
@@ -41,6 +42,7 @@ export default class TitleScene extends Phaser.Scene {
       }
     );
     subtitle.setOrigin(0.5);
+    subtitle.setResolution(3);
 
     // "Press Start" prompt (blinking)
     const pressStart = this.add.text(
@@ -55,6 +57,7 @@ export default class TitleScene extends Phaser.Scene {
       }
     );
     pressStart.setOrigin(0.5);
+    pressStart.setResolution(3);
 
     // Blink animation
     this.tweens.add({

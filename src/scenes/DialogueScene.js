@@ -88,6 +88,7 @@ export default class DialogueScene extends Phaser.Scene {
       color: '#ffff00',
       fontStyle: 'bold'
     });
+    this.nameText.setResolution(3);
 
     // --- Dialogue text (typewriter) ---
     const textX = nameX;
@@ -102,6 +103,7 @@ export default class DialogueScene extends Phaser.Scene {
       maxLines: 4,
       lineSpacing: 2
     });
+    this.dialogueText.setResolution(3);
 
     // --- Continue indicator (blinking ▼) ---
     this.continueIndicator = this.add.text(width - 16, boxY + boxHeight - 14, '▼', {
@@ -110,6 +112,7 @@ export default class DialogueScene extends Phaser.Scene {
       color: '#ffffff'
     });
     this.continueIndicator.setOrigin(0.5);
+    this.continueIndicator.setResolution(3);
     this.continueIndicator.setVisible(false);
 
     this.tweens.add({
@@ -213,6 +216,7 @@ export default class DialogueScene extends Phaser.Scene {
         fontSize: '10px',
         color: '#ffffff'
       });
+      choiceText.setResolution(3);
       this.choiceTexts.push(choiceText);
     });
   }

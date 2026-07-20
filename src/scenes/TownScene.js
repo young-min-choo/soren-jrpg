@@ -208,7 +208,8 @@ export default class TownScene extends Phaser.Scene {
       fontFamily: '"Courier New", monospace',
       fontSize: '10px',
       color: '#ffffff',
-      backgroundColor: '#000000'
+      backgroundColor: '#000000',
+      resolution: 3
     });
     this.statusText.setScrollFactor(0);
     this.statusText.setText('Town — Walk to the ▲ marker and press Z to exit');
@@ -301,7 +302,8 @@ export default class TownScene extends Phaser.Scene {
           fontSize: '10px',
           color: '#ffff00',
           backgroundColor: '#000000',
-          padding: { x: 2, y: 1 }
+          padding: { x: 2, y: 1 },
+          resolution: 3
         });
         this.interactPrompt.setOrigin(0.5);
         this.interactPrompt.setDepth(100);

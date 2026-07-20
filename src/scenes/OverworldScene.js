@@ -161,7 +161,8 @@ export default class OverworldScene extends Phaser.Scene {
       fontFamily: '"Courier New", monospace',
       fontSize: '10px',
       color: '#ffffff',
-      backgroundColor: '#000000'
+      backgroundColor: '#000000',
+      resolution: 3
     });
     this.statusText.setScrollFactor(0);
 

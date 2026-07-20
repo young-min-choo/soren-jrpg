@@ -86,7 +86,8 @@ export default class DialogueScene extends Phaser.Scene {
       fontFamily: '"Courier New", monospace',
       fontSize: '10px',
       color: '#ffff00',
-      fontStyle: 'bold'
+      fontStyle: 'bold',
+      resolution: 3
     });
 
     // --- Dialogue text (typewriter) ---
@@ -100,14 +101,16 @@ export default class DialogueScene extends Phaser.Scene {
       color: '#ffffff',
       wordWrap: { width: textWidth },
       maxLines: 4,
-      lineSpacing: 2
+      lineSpacing: 2,
+      resolution: 3
     });
 
     // --- Continue indicator (blinking ▼) ---
     this.continueIndicator = this.add.text(width - 16, boxY + boxHeight - 14, '▼', {
       fontFamily: '"Courier New", monospace',
       fontSize: '10px',
-      color: '#ffffff'
+      color: '#ffffff',
+      resolution: 3
     });
     this.continueIndicator.setOrigin(0.5);
     this.continueIndicator.setVisible(false);
@@ -211,7 +214,8 @@ export default class DialogueScene extends Phaser.Scene {
       const choiceText = this.add.text(textX, textY + i * 14, prefix + choice.text, {
         fontFamily: '"Courier New", monospace',
         fontSize: '10px',
-        color: '#ffffff'
+        color: '#ffffff',
+        resolution: 3
       });
       this.choiceTexts.push(choiceText);
     });

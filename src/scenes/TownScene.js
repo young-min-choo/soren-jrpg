@@ -72,6 +72,57 @@ export default class TownScene extends Phaser.Scene {
     // Collision
     this.physics.add.collider(this.player, groundLayer);
 
+    // --- NPC (townsperson) ---
+    // Place an NPC near the center of town
+    this.npcs = [];
+
+    // NPC 1: Townsperson near the central path
+    const npc1X = 6 * TILE_SIZE + TILE_SIZE / 2;
+    const npc1Y = 5 * TILE_SIZE + TILE_SIZE / 2;
+    const npc1 = this.physics.add.staticSprite(npc1X, npc1Y, 'player_field', 1);
+    npc1.setData('dialogue', {
+      speaker: 'Townsfolk',
+      portrait: null,
+      pages: [
+        'Welcome to our town, traveler.',
+        'You seek the ancient relics? Dangerous business, that.',
+        'But I can see it in your eyes... you won\'t be dissuaded.',
+        'Be careful out there. The world is not as kind as this town.'
+      ]
+    });
+    npc1.setData('name', 'Townsfolk');
+    this.npcs.push(npc1);
+
+    // NPC 2: Village elder near the right building
+    const npc2X = 11 * TILE_SIZE + TILE_SIZE / 2;
+    const npc2Y = 5 * TILE_SIZE + TILE_SIZE / 2;
+    const npc2 = this.physics.add.staticSprite(npc2X, npc2Y, 'player_field', 1);
+    npc2.setTint(0x888888); // slightly different color to distinguish
+    npc2.setData('dialogue', {
+      speaker: 'Elder',
+      portrait: null,
+      pages: [
+        'The prophecy speaks of one who will gather the ancient relics.',
+        'I had hoped it was just a story told to children.',
+        '...But here you stand before me.',
+        'Will you take on this burden?'
+      ],
+      choices: [
+        { text: 'I will.', value: 'accept' },
+        { text: 'I\'m not sure yet...', value: 'hesitant' }
+      ]
+    });
+    npc2.setData('name', 'Elder');
+    this.npcs.push(npc2);
+
+    // Prevent walking through NPCs
+    this.npcs.forEach(npc => {
+      this.physics.add.collider(this.player, npc);
+    });
+
+    this.nearbyNpc = null;
+    this.interactPrompt = null;
+
     // Camera follows player
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.setBounds(0, 0, MAP_COLS * TILE_SIZE, MAP_ROWS * TILE_SIZE);
@@ -161,10 +212,12 @@ export default class TownScene extends Phaser.Scene {
 
     this.facing = 'down';
     this.transitioning = false;
+    this.dialogueActive = false;
   }
 
   update(time, delta) {
     if (this.transitioning) return;
+    if (this.dialogueActive) return; // pause movement during dialogue
 
     const speed = this.keyShift.isDown ? 180 : 100;
 
@@ -223,6 +276,67 @@ export default class TownScene extends Phaser.Scene {
     if (nearExit && this.gamepad && this.gamepad.A) {
       this.exitTown();
     }
+
+    // --- NPC interaction ---
+    // Find the nearest NPC within 1.5 tiles
+    this.nearbyNpc = null;
+    let minDist = TILE_SIZE * 1.5;
+    for (const npc of this.npcs) {
+      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.x, npc.y);
+      if (dist < minDist) {
+        minDist = dist;
+        this.nearbyNpc = npc;
+      }
+    }
+
+    // Show/hide interaction prompt
+    if (this.nearbyNpc && !this.dialogueActive) {
+      if (!this.interactPrompt) {
+        this.interactPrompt = this.add.text(this.nearbyNpc.x, this.nearbyNpc.y - 20, 'Press Z', {
+          fontFamily: 'monospace',
+          fontSize: '8px',
+          color: '#ffff00',
+          backgroundColor: '#000000',
+          padding: { x: 2, y: 1 }
+        });
+        this.interactPrompt.setOrigin(0.5);
+        this.interactPrompt.setDepth(100);
+      } else {
+        this.interactPrompt.setPosition(this.nearbyNpc.x, this.nearbyNpc.y - 20);
+        this.interactPrompt.setVisible(true);
+      }
+    } else if (this.interactPrompt) {
+      this.interactPrompt.setVisible(false);
+    }
+
+    // Talk to NPC on Z/Enter press
+    if (this.nearbyNpc && Phaser.Input.Keyboard.JustDown(this.keyZ)) {
+      this.talkToNpc(this.nearbyNpc);
+    }
+  }
+
+  talkToNpc(npc) {
+    if (this.dialogueActive) return;
+    this.dialogueActive = true;
+    if (this.interactPrompt) this.interactPrompt.setVisible(false);
+
+    // Stop player movement
+    this.player.setVelocity(0, 0);
+    this.player.anims.pause();
+    const frameMap = { down: 1, left: 4, right: 7, up: 10 };
+    this.player.setFrame(frameMap[this.facing] ?? 1);
+
+    // Launch dialogue scene as overlay
+    const dialogueData = npc.getData('dialogue');
+    this.scene.launch('Dialogue', {
+      ...dialogueData,
+      onComplete: (choiceValue) => {
+        this.dialogueActive = false;
+        if (choiceValue) {
+          console.log(`Player chose: ${choiceValue}`);
+        }
+      }
+    });
   }
 
   exitTown() {

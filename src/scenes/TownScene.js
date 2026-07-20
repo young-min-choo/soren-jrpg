@@ -61,6 +61,9 @@ export default class TownScene extends Phaser.Scene {
 
     this.player = this.physics.add.sprite(playerStartX, playerStartY, 'player_field', 1);
 
+    // Stop instantly when velocity is set to 0 (no sliding/deceleration)
+    this.player.body.setDrag(0, 0);
+
     // Animations (same as overworld)
     this.createAnimations();
     this.player.anims.play('walk-down', false);
@@ -82,6 +85,16 @@ export default class TownScene extends Phaser.Scene {
     this.keyZ = this.input.keyboard.addKey('Z');
     this.keyEnter = this.input.keyboard.addKey('ENTER');
     this.keyShift = this.input.keyboard.addKey('SHIFT');
+
+    // Reset all key states when window loses focus (prevents stuck keys)
+    this.handleBlur = () => {
+      this.input.keyboard.resetKeys();
+    };
+    this.scale.on('leavefull', this.handleBlur);
+    window.addEventListener('blur', this.handleBlur);
+    this.events.on('shutdown', () => {
+      window.removeEventListener('blur', this.handleBlur);
+    });
 
     // Gamepad
     this.gamepad = null;

@@ -517,16 +517,18 @@ export default class BattleScene extends Phaser.Scene {
         if (target.defending) {
           dmg = Math.floor(dmg / 2);
         }
-        player.hp -= dmg;
+        target.hp -= dmg;
         this.log(`${enemy.name} attacks ${target.name} for ${dmg} damage!`);
         this.flashSprite(playerSprite);
         this.screenShake();
         this.showDamageNumber(playerSprite, dmg);
 
-        if (player.hp <= 0) {
-          player.hp = 0;
-          player.alive = false;
-          this.log('Soren has fallen!');
+        if (target.hp <= 0) {
+          target.hp = 0;
+          target.alive = false;
+          this.log(`${target.name} has fallen!`);
+          // Hide fallen party member's sprite
+          playerSprite.setVisible(false);
         }
 
         // Lunge back via rAF

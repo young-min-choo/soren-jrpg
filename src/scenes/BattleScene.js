@@ -202,12 +202,13 @@ export default class BattleScene extends Phaser.Scene {
       this.cleanupDom();
     });
 
-    // Start battle after intro fade
-    this.time.delayedCall(500, () => {
+    // Start battle after intro (setTimeout — delayedCall doesn't fire in launched scenes)
+    setTimeout(() => {
       this.battleState = 'turn_start';
       this.log('A ' + this.enemies.map(e => e.name).join(' and ') + ' appeared!');
       this.updateAllDom();
-    });
+      this._turnTimeout = setTimeout(() => this.processNextTurn(), 100);
+    }, 500);
   }
 
   update(time, delta) {
@@ -326,6 +327,8 @@ export default class BattleScene extends Phaser.Scene {
       return;
     }
     this.battleState = 'turn_start';
+    // Process next turn via setTimeout
+    this._turnTimeout = setTimeout(() => this.processNextTurn(), 100);
   }
 
   executeAction(action) {
@@ -341,7 +344,7 @@ export default class BattleScene extends Phaser.Scene {
       case 'FLEE':
         if (Math.random() < 0.5) {
           this.log('Fled successfully!');
-          this.time.delayedCall(800, () => this.endBattle('flee'));
+          setTimeout(() => this.endBattle('flee'), 800);
           return;
         } else {
           this.log('Failed to flee!');
@@ -417,6 +420,8 @@ export default class BattleScene extends Phaser.Scene {
       this.currentTurnIndex++;
       this.battleState = 'turn_start';
       this.updateActionMenu();
+      // Process next turn via setTimeout — update() doesn't fire in launched scenes
+      this._turnTimeout = setTimeout(() => this.processNextTurn(), 100);
     }
   }
 
@@ -474,6 +479,8 @@ export default class BattleScene extends Phaser.Scene {
           this.currentTurnIndex++;
           this.battleState = 'turn_start';
           this.updateActionMenu();
+          // Process next turn via setTimeout
+          this._turnTimeout = setTimeout(() => this.processNextTurn(), 100);
         }
       }, 300);
     }, 300);
@@ -531,7 +538,7 @@ export default class BattleScene extends Phaser.Scene {
     this.messageDiv.textContent = message;
     this.messageDiv.style.display = 'block';
 
-    this.time.delayedCall(2000, () => {
+    setTimeout(() => {
       this.cameras.main.fadeOut(500, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         // Resume the previous scene (Overworld/Town was paused)

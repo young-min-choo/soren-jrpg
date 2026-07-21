@@ -132,6 +132,10 @@ export default class OverworldScene extends Phaser.Scene {
 
     this.facing = 'down';
     this.transitioning = false;
+
+    // --- Random encounter system ---
+    this.encounterSteps = 0;
+    this.encounterThreshold = 15 + Math.floor(Math.random() * 10); // 15-25 steps
   }
 
   update(time, delta) {
@@ -170,8 +174,10 @@ export default class OverworldScene extends Phaser.Scene {
       this.player.setFrame(frameMap[this.facing] ?? 1);
     }
 
+    // Check town entrance (Z or Enter near entrance tile)
     const playerTileX = Math.floor(this.player.x / TILE_SIZE);
     const playerTileY = Math.floor(this.player.y / TILE_SIZE);
+
     const nearEntrance =
       Math.abs(playerTileX - TOWN_ENTRANCE_X) <= 1 &&
       Math.abs(playerTileY - TOWN_ENTRANCE_Y) <= 1;
@@ -183,6 +189,16 @@ export default class OverworldScene extends Phaser.Scene {
     if (nearEntrance && this.gamepad && this.gamepad.A) {
       this.enterTown();
     }
+
+    // --- Random encounter check ---
+    if (moving && !nearEntrance) {
+      this.encounterSteps++;
+      if (this.encounterSteps >= this.encounterThreshold) {
+        this.encounterSteps = 0;
+        this.encounterThreshold = 15 + Math.floor(Math.random() * 10);
+        this.startBattle();
+      }
+    }
     this.confirmPressed = false;
   }
 
@@ -192,6 +208,24 @@ export default class OverworldScene extends Phaser.Scene {
     this.cameras.main.fadeOut(300, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('Town');
+    });
+  }
+
+  startBattle() {
+    if (this.transitioning) return;
+    this.transitioning = true;
+    this.cameras.main.fadeOut(300, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.scene.launch('Battle', {
+        returnScene: 'Overworld',
+        enemies: ['slime', 'slime'],
+      });
+      this.scene.pause();
+    });
+    // Resume from battle when it ends
+    this.events.on('resume', () => {
+      this.transitioning = false;
+      this.cameras.main.fadeIn(300, 0, 0, 0);
     });
   }
 

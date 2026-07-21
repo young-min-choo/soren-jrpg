@@ -34,6 +34,8 @@ function createCharacter(name, jobName, level = 1) {
 let state = {
   party: [
     createCharacter('Soren', 'Warrior', 1),
+    createCharacter('Aria', 'Monk', 1),
+    createCharacter('Kael', 'Ranger', 1),
   ],
   gold: 0,
   inventory: [],

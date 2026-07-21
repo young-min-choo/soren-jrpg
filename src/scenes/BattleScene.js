@@ -266,7 +266,10 @@ export default class BattleScene extends Phaser.Scene {
       if (this.confirmPressed) {
         this.confirmPressed = false;
         const target = aliveEnemies[this.selectedTarget];
-        this.executeFight(target);
+        if (target && target.alive) {
+          this.executeFight(target);
+        }
+        return; // prevent fall-through after action executed
       }
       if (this.cancelPressed) {
         this.cancelPressed = false;

@@ -266,6 +266,7 @@ export default class BattleScene extends Phaser.Scene {
       if (this.confirmPressed) {
         this.confirmPressed = false;
         const target = aliveEnemies[this.selectedTarget];
+        console.log('DBG target_select confirm: target=' + (target ? target.name : 'null') + ' alive=' + (target ? target.alive : 'null') + ' selectedTarget=' + this.selectedTarget + ' aliveCount=' + aliveEnemies.length);
         if (target && target.alive) {
           this.executeFight(target);
         }

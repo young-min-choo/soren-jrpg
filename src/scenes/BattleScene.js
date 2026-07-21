@@ -128,7 +128,7 @@ export default class BattleScene extends Phaser.Scene {
 
     // Action menu (appears ABOVE party panel when it's player's turn)
     this.actionMenuDiv = this.createDomText('', container, {
-      left: '12px', bottom: '90px',
+      left: '12px', bottom: '100px',
       fontSize: '14px', color: '#ffffff', lineHeight: '1.6',
       background: 'rgba(30, 30, 60, 0.95)',
       border: '1px solid rgba(255,255,255,0.3)',
@@ -140,7 +140,7 @@ export default class BattleScene extends Phaser.Scene {
 
     // Battle log (right side, above party panel)
     this.battleLogDiv = this.createDomText('', container, {
-      right: '12px', bottom: '90px',
+      right: '12px', bottom: '100px',
       fontSize: '11px', color: '#aaaaff', lineHeight: '1.4',
       maxWidth: '280px', textAlign: 'right',
       zIndex: '24',

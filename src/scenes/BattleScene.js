@@ -44,10 +44,16 @@ export default class BattleScene extends Phaser.Scene {
     });
 
     // Build turn order: sort all units by AGI descending
+    // Use references to the same objects so alive/dead state stays in sync
     this.allUnits = [
-      { ...this.player, side: 'player', id: 'player', alive: true },
-      ...this.enemies.map(e => ({ ...e, side: 'enemy', id: 'enemy_' + e.index, alive: true })),
+      this.player,  // same object — changes propagate
+      ...this.enemies,
     ];
+    // Tag each unit with side and id
+    this.player.side = 'player';
+    this.player.id = 'player';
+    this.enemies.forEach(e => { e.side = 'enemy'; e.id = 'enemy_' + e.index; });
+
     this.turnOrder = [...this.allUnits].sort((a, b) => b.agi - a.agi);
     this.currentTurnIndex = 0;
 
@@ -317,7 +323,7 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   executeAction(action) {
-    const player = this.allUnits[0];
+    const player = this.player;
     if (!player.alive) return;
 
     switch (action) {
@@ -348,7 +354,7 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   executeFight(target) {
-    const player = this.allUnits[0];
+    const player = this.player;
     if (!player.alive || !target || !target.alive) return;
 
     const dmg = this.calcDamage(player.atk, target.def);
@@ -374,21 +380,23 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   executeEnemyAction() {
-    // Simple AI: attack player
-    const aliveEnemies = this.enemies.filter(e => e.alive);
-    if (aliveEnemies.length === 0) return;
+    // The current unit in turn order IS the enemy object (shared reference)
+    const enemy = this.turnOrder[this.currentTurnIndex];
+    if (!enemy || !enemy.alive || enemy.side !== 'enemy') {
+      this.currentTurnIndex++;
+      this.battleState = 'turn_start';
+      return;
+    }
 
-    const enemy = aliveEnemies[0]; // first alive enemy attacks
-    const player = this.allUnits[0];
+    const player = this.player;
     if (!player.alive) return;
 
     let dmg = this.calcDamage(enemy.atk, player.def);
-    if (this.player.defending) {
+    if (player.defending) {
       dmg = Math.floor(dmg / 2);
     }
 
     player.hp -= dmg;
-    this.player.hp = player.hp;
     this.log(`${enemy.name} attacks Soren for ${dmg} damage!`);
     this.flashSprite(this.playerSprite);
 
@@ -403,7 +411,7 @@ export default class BattleScene extends Phaser.Scene {
     if (this.battleState !== 'ended') {
       this.currentTurnIndex++;
       this.battleState = 'turn_start';
-      this.updateActionMenu(); // hide menu
+      this.updateActionMenu();
     }
   }
 
@@ -415,7 +423,7 @@ export default class BattleScene extends Phaser.Scene {
 
   checkBattleEnd() {
     // Check player death
-    if (this.allUnits[0].hp <= 0) {
+    if (this.player.hp <= 0) {
       this.endBattle('lose');
       return;
     }
@@ -436,8 +444,8 @@ export default class BattleScene extends Phaser.Scene {
 
     // Save player HP/MP back to GameState (persists across battles)
     const gs = GameState.get();
-    gs.hp = this.allUnits[0].hp;
-    gs.mp = this.allUnits[0].mp;
+    gs.hp = this.player.hp;
+    gs.mp = this.player.mp;
 
     if (result === 'win') {
       GameState.applyBattleResult(result, rewards);
@@ -522,7 +530,7 @@ export default class BattleScene extends Phaser.Scene {
   updateAllDom() {
     // --- Party panel (bottom strip) ---
     // One column per party member. For now just Soren.
-    const p = this.allUnits[0];
+    const p = this.player;
     const hpPct = Math.max(0, (p.hp / p.maxHp) * 100);
     const mpPct = Math.max(0, (p.mp / p.maxMp) * 100);
     this.partyPanelDiv.innerHTML =
@@ -548,9 +556,11 @@ export default class BattleScene extends Phaser.Scene {
 
   updateActionMenu() {
     const actions = ['FIGHT', 'DEFEND', 'FLEE'];
-    const lines = actions.map((a, i) =>
-      (i === this.selectedAction ? '<span style="color:#ffff00">▶ ' : '<span style="color:#888">&nbsp;&nbsp; ') + a + '</span>'
-    );
+    const lines = actions.map((a, i) => {
+      const prefix = i === this.selectedAction ? '▶' : '　';
+      const color = i === this.selectedAction ? '#ffff00' : '#888';
+      return `<span style="color:${color};display:inline-block;width:16px">${prefix}</span> ${a}`;
+    });
     this.actionMenuDiv.innerHTML = lines.join('<br>');
     // Show/hide action menu
     if (this.battleState === 'action_select') {

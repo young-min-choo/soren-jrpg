@@ -1,32 +1,11 @@
 import Phaser from 'phaser';
+import GameState from '../game/GameState.js';
 
 /**
  * BattleScene — turn-based combat prototype.
  * Side-view battle: player (left) vs enemies (right).
- *
- * Features:
- * - Agility-based turn order
- * - Actions: FIGHT, DEFEND, FLEE
- * - Damage formula: ATK * (ATK / DEF) * random(0.85–1.15)
- * - Simple enemy AI: attack, heal if low HP
- * - Win → return to field, Lose → game over
- * - All text via DOM overlays (crisp rendering)
- *
- * All DOM elements are created in create() and removed on shutdown.
+ * Player stats are loaded from GameState (persistent across battles).
  */
-
-// --- Battle entity data (prototype — will be data-driven later) ---
-const PLAYER_UNIT = {
-  name: 'Soren',
-  job: 'Warrior',
-  level: 1,
-  hp: 30, maxHp: 30,
-  mp: 10, maxMp: 10,
-  atk: 10, def: 5,
-  mag: 5, mdef: 5,
-  agi: 8,
-  luck: 5,
-};
 
 const ENEMY_TEMPLATES = {
   slime: {
@@ -53,9 +32,9 @@ export default class BattleScene extends Phaser.Scene {
     this.transitioning = false;
 
     // --- Battle setup ---
-    // Player unit (deep copy)
-    this.player = JSON.parse(JSON.stringify(PLAYER_UNIT));
-    this.player.defending = false;
+    // Load player from persistent GameState (HP carries over between battles)
+    const gs = GameState.get();
+    this.player = { ...gs, defending: false };
 
     // Enemies (1-3 from data, or random)
     const enemyTypes = data?.enemies || ['slime'];
@@ -366,6 +345,18 @@ export default class BattleScene extends Phaser.Scene {
   endBattle(result, rewards) {
     this.battleState = 'ended';
     this.transitioning = true;
+
+    // Save player HP/MP back to GameState (persists across battles)
+    const gs = GameState.get();
+    gs.hp = this.allUnits[0].hp;
+    gs.mp = this.allUnits[0].mp;
+
+    if (result === 'win') {
+      GameState.applyBattleResult(result, rewards);
+    } else if (result === 'lose') {
+      // On defeat, restore to full HP (for prototype — later this goes to game over)
+      GameState.fullHeal();
+    }
 
     let message = '';
     if (result === 'win') message = 'VICTORY!';

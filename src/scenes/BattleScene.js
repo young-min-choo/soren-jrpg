@@ -378,7 +378,7 @@ export default class BattleScene extends Phaser.Scene {
     }
     this.player.defending = false;
     console.log('DBG before updateAllDom');
-    this.updateAllDom();
+    try { this.updateAllDom(); } catch(e) { console.log('ERR updateAllDom:'+e.message); }
     console.log('DBG after updateAllDom');
     this.checkBattleEnd();
     console.log('DBG after checkBattleEnd st=' + this.battleState);

@@ -186,7 +186,7 @@ export default class BattleScene extends Phaser.Scene {
       switch (e.key) {
         case 'ArrowUp': case 'w': case 'W':
           if (this.battleState === 'action_select') {
-            const actions = ['FIGHT', 'ITEM', 'DEFEND', 'FLEE'];
+            const actions = ['FIGHT', 'MAGIC', 'ITEM', 'DEFEND', 'FLEE'];
             this.selectedAction = (this.selectedAction - 1 + actions.length) % actions.length;
             this.updateActionMenu();
           } else if (this.battleState === 'target_select') {
@@ -201,6 +201,12 @@ export default class BattleScene extends Phaser.Scene {
               this.selectedItem = (this.selectedItem - 1 + inv.length) % inv.length;
               this.updateActionMenu();
             }
+          } else if (this.battleState === 'magic_select') {
+            const abilities = this._currentAbilities();
+            if (abilities.length > 0) {
+              this.selectedSpell = (this.selectedSpell - 1 + abilities.length) % abilities.length;
+              this.updateActionMenu();
+            }
           } else if (this.battleState === 'ally_select') {
             const aliveAllies = this.party.filter(p => p.alive);
             if (aliveAllies.length > 0) {
@@ -211,7 +217,7 @@ export default class BattleScene extends Phaser.Scene {
           e.preventDefault(); break;
         case 'ArrowDown': case 's': case 'S':
           if (this.battleState === 'action_select') {
-            const actions = ['FIGHT', 'ITEM', 'DEFEND', 'FLEE'];
+            const actions = ['FIGHT', 'MAGIC', 'ITEM', 'DEFEND', 'FLEE'];
             this.selectedAction = (this.selectedAction + 1) % actions.length;
             this.updateActionMenu();
           } else if (this.battleState === 'target_select') {
@@ -224,6 +230,12 @@ export default class BattleScene extends Phaser.Scene {
             const inv = this._usableItems();
             if (inv.length > 0) {
               this.selectedItem = (this.selectedItem + 1) % inv.length;
+              this.updateActionMenu();
+            }
+          } else if (this.battleState === 'magic_select') {
+            const abilities = this._currentAbilities();
+            if (abilities.length > 0) {
+              this.selectedSpell = (this.selectedSpell + 1) % abilities.length;
               this.updateActionMenu();
             }
           } else if (this.battleState === 'ally_select') {
@@ -242,13 +254,19 @@ export default class BattleScene extends Phaser.Scene {
               this.updateEnemyLabels();
             }
           } else if (this.battleState === 'action_select') {
-            const actions = ['FIGHT', 'ITEM', 'DEFEND', 'FLEE'];
+            const actions = ['FIGHT', 'MAGIC', 'ITEM', 'DEFEND', 'FLEE'];
             this.selectedAction = (this.selectedAction - 1 + actions.length) % actions.length;
             this.updateActionMenu();
           } else if (this.battleState === 'item_select') {
             const inv = this._usableItems();
             if (inv.length > 0) {
               this.selectedItem = (this.selectedItem - 1 + inv.length) % inv.length;
+              this.updateActionMenu();
+            }
+          } else if (this.battleState === 'magic_select') {
+            const abilities = this._currentAbilities();
+            if (abilities.length > 0) {
+              this.selectedSpell = (this.selectedSpell - 1 + abilities.length) % abilities.length;
               this.updateActionMenu();
             }
           } else if (this.battleState === 'ally_select') {
@@ -267,13 +285,19 @@ export default class BattleScene extends Phaser.Scene {
               this.updateEnemyLabels();
             }
           } else if (this.battleState === 'action_select') {
-            const actions = ['FIGHT', 'ITEM', 'DEFEND', 'FLEE'];
+            const actions = ['FIGHT', 'MAGIC', 'ITEM', 'DEFEND', 'FLEE'];
             this.selectedAction = (this.selectedAction + 1) % actions.length;
             this.updateActionMenu();
           } else if (this.battleState === 'item_select') {
             const inv = this._usableItems();
             if (inv.length > 0) {
               this.selectedItem = (this.selectedItem + 1) % inv.length;
+              this.updateActionMenu();
+            }
+          } else if (this.battleState === 'magic_select') {
+            const abilities = this._currentAbilities();
+            if (abilities.length > 0) {
+              this.selectedSpell = (this.selectedSpell + 1) % abilities.length;
               this.updateActionMenu();
             }
           } else if (this.battleState === 'ally_select') {
@@ -286,7 +310,7 @@ export default class BattleScene extends Phaser.Scene {
           e.preventDefault(); break;
         case 'z': case 'Z': case 'Enter':
           if (this.battleState === 'action_select') {
-            const actions = ['FIGHT', 'ITEM', 'DEFEND', 'FLEE'];
+            const actions = ['FIGHT', 'MAGIC', 'ITEM', 'DEFEND', 'FLEE'];
             const action = actions[this.selectedAction];
             if (action === 'FIGHT') {
               const alive = this.enemies.filter(en => en.alive);
@@ -295,6 +319,15 @@ export default class BattleScene extends Phaser.Scene {
                 this.battleState = 'target_select';
                 this.updateActionMenu();
                 this.updateEnemyLabels();
+              }
+            } else if (action === 'MAGIC') {
+              const abilities = GameState.getAllAbilities(this.party.indexOf(this.turnOrder[this.currentTurnIndex]));
+              if (abilities.length === 0) {
+                this.log('No abilities available.');
+              } else {
+                this.selectedSpell = 0;
+                this.battleState = 'magic_select';
+                this.updateActionMenu();
               }
             } else if (action === 'ITEM') {
               this.selectedItem = 0;
@@ -309,12 +342,18 @@ export default class BattleScene extends Phaser.Scene {
             if (this.selectedTarget >= alive.length) this.selectedTarget = 0;
             const target = alive[this.selectedTarget];
             if (target && target.alive) {
-              this.battleState = 'animating';
-              this.updateEnemyLabels();
-              this.executeFight(target);
+              if (this._pendingAbility) {
+                this.battleState = 'animating';
+                this.updateEnemyLabels();
+                this.castAbility(this._pendingAbility, target);
+                this._pendingAbility = null;
+              } else {
+                this.battleState = 'animating';
+                this.updateEnemyLabels();
+                this.executeFight(target);
+              }
             }
           } else if (this.battleState === 'item_select') {
-            // Confirm item selection — now select ally target
             const inv = this._usableItems();
             if (inv.length === 0) return;
             const item = inv[this.selectedItem];
@@ -327,24 +366,63 @@ export default class BattleScene extends Phaser.Scene {
               // Use on enemy directly (only one enemy for now, or first alive)
               this.useItem(item.name, null);
             }
+          } else if (this.battleState === 'magic_select') {
+            // Confirm spell selection — determine target type
+            const abilities = this._currentAbilities();
+            if (abilities.length === 0) return;
+            const ability = abilities[this.selectedSpell];
+            const caster = this.turnOrder[this.currentTurnIndex];
+            if (caster.mp < ability.mpCost) {
+              this.log('Not enough MP!');
+            } else if (ability.type === 'heal') {
+              // Heal targets an ally
+              this.battleState = 'ally_select';
+              this.selectedAlly = 0;
+              this._pendingAbility = ability;
+              this.updateActionMenu();
+            } else if (ability.type === 'magic' || ability.type === 'physical') {
+              // Offensive ability targets an enemy
+              this.battleState = 'target_select';
+              this.selectedTarget = 0;
+              this._pendingAbility = ability;
+              this.updateActionMenu();
+              this.updateEnemyLabels();
+            } else if (ability.type === 'buff') {
+              // Buff targets self
+              this.castAbility(ability, caster);
+            }
           } else if (this.battleState === 'ally_select') {
             const aliveAllies = this.party.filter(p => p.alive);
             if (this.selectedAlly >= aliveAllies.length) this.selectedAlly = 0;
             const ally = aliveAllies[this.selectedAlly];
             if (ally) {
-              const inv = this._usableItems();
-              const item = inv[this.selectedItem];
-              if (item) this.useItem(item.name, ally);
+              if (this._pendingAbility) {
+                this.castAbility(this._pendingAbility, ally);
+                this._pendingAbility = null;
+              } else {
+                const inv = this._usableItems();
+                const item = inv[this.selectedItem];
+                if (item) this.useItem(item.name, ally);
+              }
             }
           }
           e.preventDefault(); break;
         case 'x': case 'X': case 'Escape':
           if (this.battleState === 'target_select') {
-            this.battleState = 'action_select';
+            if (this._pendingAbility) {
+              this.battleState = 'magic_select';
+              this._pendingAbility = null;
+            } else {
+              this.battleState = 'action_select';
+            }
             this.updateActionMenu();
             this.updateEnemyLabels();
           } else if (this.battleState === 'item_select') {
             this.battleState = 'action_select';
+            this.updateActionMenu();
+          } else if (this.battleState === 'magic_select') {
+            this.battleState = 'action_select';
+            this._pendingAbility = null;
             this.updateActionMenu();
           } else if (this.battleState === 'ally_select') {
             this.battleState = 'item_select';
@@ -893,7 +971,7 @@ export default class BattleScene extends Phaser.Scene {
 
   updateActionMenu() {
     if (this.battleState === 'action_select') {
-      const actions = ['FIGHT', 'ITEM', 'DEFEND', 'FLEE'];
+      const actions = ['FIGHT', 'MAGIC', 'ITEM', 'DEFEND', 'FLEE'];
       this.actionMenuDiv.style.display = 'block';
       this.actionMenuDiv.innerHTML = actions.map((a, i) => {
         const prefix = i === this.selectedAction ? '▶' : '　';
@@ -912,6 +990,20 @@ export default class BattleScene extends Phaser.Scene {
           return `<span style="color:${color};display:inline-block;width:16px">${prefix}</span> ${item.name} x${item.qty}`;
         }).join('<br>');
       }
+    } else if (this.battleState === 'magic_select') {
+      this.actionMenuDiv.style.display = 'block';
+      const abilities = this._currentAbilities();
+      if (abilities.length === 0) {
+        this.actionMenuDiv.innerHTML = '<span style="color:#888">No abilities available.</span>';
+      } else {
+        this.actionMenuDiv.innerHTML = abilities.map((ab, i) => {
+          const prefix = i === this.selectedSpell ? '▶' : '　';
+          const color = i === this.selectedSpell ? '#ffff00' : '#888';
+          const canAfford = this.turnOrder[this.currentTurnIndex].mp >= ab.mpCost;
+          const cost = canAfford ? `${ab.mpCost}MP` : `<span style="color:#ff4444">${ab.mpCost}MP</span>`;
+          return `<span style="color:${color};display:inline-block;width:16px">${prefix}</span> ${ab.name} (${cost})`;
+        }).join('<br>');
+      }
     } else if (this.battleState === 'ally_select') {
       // Don't show text list — use ▼ marker above party sprite + panel highlight
       this.actionMenuDiv.style.display = 'none';
@@ -926,6 +1018,82 @@ export default class BattleScene extends Phaser.Scene {
       const def = getItem(item.name);
       return def && item.qty > 0;
     });
+  }
+
+  _currentAbilities() {
+    const caster = this.turnOrder[this.currentTurnIndex];
+    if (!caster) return [];
+    return GameState.getAllAbilities(this.party.indexOf(caster));
+  }
+
+  castAbility(ability, target) {
+    const caster = this.turnOrder[this.currentTurnIndex];
+    if (!caster || !target) return;
+    if (caster.mp < ability.mpCost) {
+      this.log('Not enough MP!');
+      this.battleState = 'action_select';
+      this.updateActionMenu();
+      return;
+    }
+    caster.mp -= ability.mpCost;
+
+    this.battleState = 'animating';
+    if (this.allyMarkerDiv) { this.allyMarkerDiv.remove(); this.allyMarkerDiv = null; }
+    if (this.targetArrowDiv) { this.targetArrowDiv.remove(); this.targetArrowDiv = null; }
+
+    this.log(`${caster.name} casts ${ability.name}!`);
+
+    if (ability.type === 'heal') {
+      const healAmt = Math.floor(caster.mag * ability.power);
+      const healed = Math.min(healAmt, target.maxHp - target.hp);
+      target.hp += healed;
+      this.log(`${target.name} recovers ${healed} HP!`);
+      const sprite = target.side === 'player' ? this.playerSprites[target.partyIndex] : this.enemySprites[target.index];
+      if (sprite) this.showDamageNumber(sprite, healed, '#44ff44');
+    } else if (ability.type === 'magic') {
+      const dmg = Math.floor(caster.mag * ability.power * (0.85 + Math.random() * 0.3));
+      target.hp -= dmg;
+      this.log(`${target.name} takes ${dmg} damage!`);
+      const sprite = this.enemySprites[target.index];
+      if (sprite) {
+        this.flashSprite(sprite);
+        this.screenShake();
+        this.showDamageNumber(sprite, dmg, '#ff8844');
+      }
+      if (target.hp <= 0) {
+        target.hp = 0;
+        target.alive = false;
+        this.log(`${target.name} is defeated!`);
+        if (sprite) sprite.setVisible(false);
+      }
+    } else if (ability.type === 'physical') {
+      const dmg = Math.floor(caster.atk * ability.power * (0.85 + Math.random() * 0.3));
+      target.hp -= dmg;
+      this.log(`${target.name} takes ${dmg} damage!`);
+      const sprite = this.enemySprites[target.index];
+      if (sprite) {
+        this.flashSprite(sprite);
+        this.screenShake();
+        this.showDamageNumber(sprite, dmg, '#ffff44');
+      }
+      if (target.hp <= 0) {
+        target.hp = 0;
+        target.alive = false;
+        this.log(`${target.name} is defeated!`);
+        if (sprite) sprite.setVisible(false);
+      }
+    } else if (ability.type === 'buff') {
+      caster.defending = true;
+      this.log(`${caster.name} is defending!`);
+    }
+
+    this.updateAllDom();
+
+    // Check battle end
+    this.checkBattleEnd();
+    if (this.battleState !== 'ended') {
+      this._magicTimeout = setTimeout(() => this.afterPlayerAction(), 1000);
+    }
   }
 
   useItem(itemName, ally) {

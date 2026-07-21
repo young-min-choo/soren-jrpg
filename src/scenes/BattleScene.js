@@ -289,12 +289,12 @@ export default class BattleScene extends Phaser.Scene {
     } else if (this.battleState === 'turn_start') {
       // Process next unit in turn order
       this.processNextTurn();
-    } else if (this.battleState === 'enemy_action') {
-      // Enemy AI runs automatically
-      this.time.delayedCall(600, () => {
+    } else if (this.battleState === 'enemy_delay') {
+      // Wait 600ms before enemy acts (using update loop, not delayedCall)
+      this.enemyDelayTimer += this._delta;
+      if (this.enemyDelayTimer >= 600) {
         this.executeEnemyAction();
-      });
-      this.battleState = 'waiting';
+      }
     }
 
     // Reset one-shot flags
@@ -313,7 +313,8 @@ export default class BattleScene extends Phaser.Scene {
           this.log("Soren's turn.");
           this.updateActionMenu();
         } else {
-          this.battleState = 'enemy_action';
+          this.battleState = 'enemy_delay';
+          this.enemyDelayTimer = 0;
           this.log(unit.name + "'s turn.");
         }
         this.updateAllDom();

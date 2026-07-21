@@ -70,55 +70,85 @@ export default class BattleScene extends Phaser.Scene {
     this.playerSprite = playerSprite;
 
     // Enemy sprites (placeholder — colored squares)
+    // Spread them out more for readability
     this.enemySprites = [];
+    this.enemyLabelDivs = [];
     this.enemies.forEach((enemy, i) => {
-      const x = 192 + (i % 2) * 24;
-      const y = 110 + Math.floor(i / 2) * 30;
-      const sprite = this.add.rectangle(x, y, 20, 20, enemy.color);
+      const spacing = 48;
+      const startX = 180;
+      const x = startX + (i % 2) * spacing;
+      const y = 90 + Math.floor(i / 2) * 50;
+      const sprite = this.add.rectangle(x, y, 24, 24, enemy.color);
       sprite.setStrokeStyle(1, 0xffffff, 0.5);
       this.enemySprites.push(sprite);
     });
 
-    // --- DOM text overlays ---
+    // --- DOM text overlays (FF1-3 style layout) ---
     const container = document.getElementById('game-container');
 
-    // Battle title (top center)
+    // Battle title (top center, small)
     this.titleDiv = this.createDomText('BATTLE', container, {
-      left: '50%', top: '8px',
+      left: '50%', top: '4px',
       transform: 'translateX(-50%)',
-      fontSize: '18px', fontWeight: 'bold', color: '#ffffff',
+      fontSize: '14px', fontWeight: 'bold', color: '#666688',
     });
 
-    // Player HP/MP bar (top-left)
-    this.playerStatsDiv = this.createDomText('', container, {
-      left: '8px', top: '32px',
-      fontSize: '13px', color: '#ffffff', lineHeight: '1.6',
+    // Enemy labels — positioned near each enemy sprite
+    // Game world: 256×224. Canvas displayed: 768×672. Scale = 3x.
+    const SCALE = 3;
+    this.enemyLabelDivs = [];
+    this.enemies.forEach((enemy, i) => {
+      const spacing = 48;
+      const startX = 180;
+      const worldX = startX + (i % 2) * spacing;
+      const worldY = 90 + Math.floor(i / 2) * 50;
+      const labelDiv = this.createDomText('', container, {
+        left: (worldX * SCALE) + 'px',
+        top: ((worldY + 18) * SCALE) + 'px',
+        transform: 'translateX(-50%)',
+        fontSize: '11px', color: '#ffaaaa', textAlign: 'center',
+        whiteSpace: 'nowrap',
+      });
+      this.enemyLabelDivs.push(labelDiv);
     });
 
-    // Enemy info (top-right)
-    this.enemyInfoDiv = this.createDomText('', container, {
-      right: '8px', top: '32px',
-      fontSize: '13px', color: '#ff8888', lineHeight: '1.6', textAlign: 'right',
+    // Party panel (bottom strip)
+    this.partyPanelDiv = this.createDomText('', container, {
+      left: '0px', bottom: '0px',
+      width: '768px',
+      fontSize: '13px', color: '#ffffff',
+      background: 'rgba(20, 20, 50, 0.85)',
+      borderTop: '1px solid rgba(255,255,255,0.2)',
+      padding: '6px 10px',
+      boxSizing: 'border-box',
+      display: 'flex',
+      gap: '16px',
     });
 
-    // Action menu (bottom-left)
+    // Action menu (overlays the party panel, left side)
     this.actionMenuDiv = this.createDomText('', container, {
-      left: '8px', bottom: '8px',
-      fontSize: '14px', color: '#ffffff', lineHeight: '1.8',
+      left: '10px', bottom: '28px',
+      fontSize: '14px', color: '#ffffff', lineHeight: '1.6',
+      background: 'rgba(30, 30, 60, 0.92)',
+      border: '1px solid rgba(255,255,255,0.3)',
+      padding: '6px 10px',
+      boxSizing: 'border-box',
     });
 
-    // Battle log (bottom-right)
+    // Battle log (right side, above party panel)
     this.battleLogDiv = this.createDomText('', container, {
-      right: '8px', bottom: '8px',
-      fontSize: '11px', color: '#aaaaff', lineHeight: '1.4', maxWidth: '300px',
+      right: '8px', bottom: '36px',
+      fontSize: '11px', color: '#aaaaff', lineHeight: '1.4',
+      maxWidth: '280px', textAlign: 'right',
     });
 
     // Message (center, for win/lose)
     this.messageDiv = this.createDomText('', container, {
-      left: '50%', top: '50%',
+      left: '50%', top: '45%',
       transform: 'translate(-50%, -50%)',
-      fontSize: '24px', fontWeight: 'bold', color: '#ffffff',
+      fontSize: '28px', fontWeight: 'bold', color: '#ffffff',
       display: 'none',
+      zIndex: '30',
     });
 
     // --- Input (raw DOM, same pattern as field scenes) ---
@@ -403,6 +433,7 @@ export default class BattleScene extends Phaser.Scene {
     if (styles.right) cssParts.push('right: ' + styles.right);
     if (styles.top) cssParts.push('top: ' + styles.top);
     if (styles.bottom) cssParts.push('bottom: ' + styles.bottom);
+    if (styles.width) cssParts.push('width: ' + styles.width);
     if (styles.transform) cssParts.push('transform: ' + styles.transform);
     cssParts.push('color: ' + (styles.color || '#ffffff'));
     cssParts.push('font-family: "Courier New", monospace');
@@ -412,8 +443,16 @@ export default class BattleScene extends Phaser.Scene {
     if (styles.textAlign) cssParts.push('text-align: ' + styles.textAlign);
     if (styles.maxWidth) cssParts.push('max-width: ' + styles.maxWidth);
     if (styles.display) cssParts.push('display: ' + styles.display);
+    if (styles.background) cssParts.push('background: ' + styles.background);
+    if (styles.border) cssParts.push('border: ' + styles.border);
+    if (styles.borderTop) cssParts.push('border-top: ' + styles.borderTop);
+    if (styles.padding) cssParts.push('padding: ' + styles.padding);
+    if (styles.boxSizing) cssParts.push('box-sizing: ' + styles.boxSizing);
+    if (styles.gap) cssParts.push('gap: ' + styles.gap);
+    if (styles.whiteSpace) cssParts.push('white-space: ' + styles.whiteSpace);
+    if (styles.zIndex) cssParts.push('z-index: ' + styles.zIndex);
+    else cssParts.push('z-index: 20');
     cssParts.push('pointer-events: none');
-    cssParts.push('z-index: 20');
     cssParts.push('text-shadow: 1px 1px 2px rgba(0,0,0,0.8)');
     div.style.cssText = cssParts.join('; ');
     div.textContent = text;
@@ -423,17 +462,42 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   updateAllDom() {
-    // Player stats
-    this.playerStatsDiv.innerHTML =
-      `<span style="color:#88ff88">Soren</span> (Warrior Lv.1)<br>` +
-      `HP: ${this.allUnits[0].hp}/${this.allUnits[0].maxHp}<br>` +
-      `MP: ${this.allUnits[0].mp}/${this.allUnits[0].maxMp}`;
+    // --- Party panel (bottom strip) ---
+    // One column per party member. For now just Soren.
+    const p = this.allUnits[0];
+    const hpPct = Math.max(0, (p.hp / p.maxHp) * 100);
+    const mpPct = Math.max(0, (p.mp / p.maxMp) * 100);
+    this.partyPanelDiv.innerHTML =
+      `<div style="min-width:140px">` +
+      `<div style="color:#88ff88;font-weight:bold">${p.name}</div>` +
+      `<div style="font-size:11px;color:#aaa">${p.job} Lv.${p.level}</div>` +
+      `<div style="margin-top:2px">HP: ${p.hp}/${p.maxHp}</div>` +
+      `<div style="height:4px;background:#333;border-radius:2px;margin-top:1px">` +
+        `<div style="height:4px;background:#44dd44;width:${hpPct}%;border-radius:2px"></div>` +
+      `</div>` +
+      `<div style="margin-top:1px">MP: ${p.mp}/${p.maxMp}</div>` +
+      `<div style="height:3px;background:#333;border-radius:2px;margin-top:1px">` +
+        `<div style="height:3px;background:#4488ff;width:${mpPct}%;border-radius:2px"></div>` +
+      `</div>` +
+      `</div>`;
 
-    // Enemy info
-    const enemyLines = this.enemies.filter(e => e.alive).map(e =>
-      `<span style="color:#ff8888">${e.name}</span> HP: ${e.hp}/${e.maxHp}`
-    );
-    this.enemyInfoDiv.innerHTML = enemyLines.join('<br>') || '<span style="color:#666">No enemies</span>';
+    // --- Enemy labels (near each sprite) ---
+    this.enemies.forEach((enemy, i) => {
+      const div = this.enemyLabelDivs[i];
+      if (!div) return;
+      if (enemy.alive) {
+        const hpPct = Math.max(0, (enemy.hp / enemy.maxHp) * 100);
+        div.innerHTML =
+          `<div style="color:#ffaaaa">${enemy.name}</div>` +
+          `<div style="font-size:10px;color:#ccc">${enemy.hp}/${enemy.maxHp}</div>` +
+          `<div style="height:3px;background:#440000;width:60px;margin:1px auto 0;border-radius:2px">` +
+            `<div style="height:3px;background:#dd4444;width:${hpPct}%;border-radius:2px"></div>` +
+          `</div>`;
+        div.style.display = 'block';
+      } else {
+        div.style.display = 'none';
+      }
+    });
 
     // Action menu
     this.updateActionMenu();

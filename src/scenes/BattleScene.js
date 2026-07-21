@@ -157,6 +157,7 @@ export default class BattleScene extends Phaser.Scene {
       right: '12px', bottom: '100px',
       fontSize: '11px', color: '#aaaaff', lineHeight: '1.4',
       maxWidth: '280px', maxHeight: '60px', overflow: 'hidden',
+      display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
       background: 'rgba(20, 20, 50, 0.85)',
       border: '1px solid rgba(255,255,255,0.15)',
       padding: '6px 10px', boxSizing: 'border-box',
@@ -848,7 +849,7 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   updateBattleLog() {
-    this.battleLogDiv.innerHTML = this.battleLog.map(l => '• ' + l).join('<br>');
+    this.battleLogDiv.innerHTML = this.battleLog.map(l => `<div>• ${l}</div>`).join('');
   }
 
   cleanupDom() {

@@ -601,17 +601,17 @@ export default class BattleScene extends Phaser.Scene {
       text-shadow: 1px 1px 2px rgba(0,0,0,0.9);
       pointer-events: none;
       z-index: 40;
-      transition: top 0.8s ease-out, opacity 0.8s ease-out;
+      transition: top 1.2s ease-out, opacity 1.2s ease-out;
       opacity: 1;
     `;
     div.textContent = dmg;
     container.appendChild(div);
-    // Animate upward + fade
+    // Animate upward + fade (longer duration for visibility)
     setTimeout(() => {
-      div.style.top = (sprite.y * scaleY - 50) + 'px';
+      div.style.top = (sprite.y * scaleY - 60) + 'px';
       div.style.opacity = '0';
-    }, 50);
-    setTimeout(() => div.remove(), 900);
+    }, 100);
+    setTimeout(() => div.remove(), 1500);
   }
 
   log(text) {

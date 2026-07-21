@@ -375,10 +375,11 @@ export default class BattleScene extends Phaser.Scene {
 
     // Manual lunge via requestAnimationFrame (Phaser tweens don't run in launched scenes)
     const startTime = performance.now();
+    const LUNGE_MS = 400; // lunge duration
     const animateLunge = () => {
       const elapsed = performance.now() - startTime;
-      if (elapsed < 250) {
-        const t = elapsed / 250;
+      if (elapsed < LUNGE_MS) {
+        const t = elapsed / LUNGE_MS;
         this.playerSprite.x = origX + (lungeX - origX) * (1 - (1 - t) * (1 - t)); // easeOut
         requestAnimationFrame(animateLunge);
       } else {
@@ -399,8 +400,8 @@ export default class BattleScene extends Phaser.Scene {
           const fadeStart = performance.now();
           const animateFade = () => {
             const fe = performance.now() - fadeStart;
-            if (fe < 400) {
-              targetSprite.setAlpha(1 - fe / 400);
+            if (fe < 600) {
+              targetSprite.setAlpha(1 - fe / 600);
               requestAnimationFrame(animateFade);
             } else {
               targetSprite.setVisible(false);
@@ -415,8 +416,8 @@ export default class BattleScene extends Phaser.Scene {
           const backFromX = lungeX;
           const animateBack = () => {
             const be = performance.now() - backStart;
-            if (be < 250) {
-              const t = be / 250;
+            if (be < LUNGE_MS) {
+              const t = be / LUNGE_MS;
               this.playerSprite.x = backFromX + (origX - backFromX) * (t * t); // easeIn
               requestAnimationFrame(animateBack);
             } else {
@@ -468,10 +469,11 @@ export default class BattleScene extends Phaser.Scene {
 
     // Manual lunge via requestAnimationFrame
     const startTime = performance.now();
+    const LUNGE_MS = 400;
     const animateLunge = () => {
       const elapsed = performance.now() - startTime;
-      if (elapsed < 250) {
-        const t = elapsed / 250;
+      if (elapsed < LUNGE_MS) {
+        const t = elapsed / LUNGE_MS;
         enemySprite.x = origX + (lungeX - origX) * (1 - (1 - t) * (1 - t));
         requestAnimationFrame(animateLunge);
       } else {
@@ -498,8 +500,8 @@ export default class BattleScene extends Phaser.Scene {
         const backFromX = lungeX;
         const animateBack = () => {
           const be = performance.now() - backStart;
-          if (be < 250) {
-            const t = be / 250;
+          if (be < LUNGE_MS) {
+            const t = be / LUNGE_MS;
             enemySprite.x = backFromX + (origX - backFromX) * (t * t);
             requestAnimationFrame(animateBack);
           } else {

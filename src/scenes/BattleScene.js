@@ -364,16 +364,16 @@ export default class BattleScene extends Phaser.Scene {
     this.battleState = 'animating';
     const targetSprite = this.enemySprites[target.index];
     const origX = this.playerSprite.x;
-    const lungeX = targetSprite.x - 30; // lunge toward target
+    const lungeX = targetSprite.x - 30;
 
-    // Lunge forward → deal damage → lunge back
+    // Step 1: Lunge forward
     this.tweens.add({
       targets: this.playerSprite,
       x: lungeX,
       duration: 250,
       ease: 'Quad.easeOut',
       onComplete: () => {
-        // Deal damage on impact
+        // Step 2: Deal damage + flash
         const dmg = this.calcDamage(player.atk, target.def);
         target.hp -= dmg;
         this.log(`Soren attacks ${target.name} for ${dmg} damage!`);
@@ -383,26 +383,22 @@ export default class BattleScene extends Phaser.Scene {
           target.hp = 0;
           target.alive = false;
           this.log(`${target.name} is defeated!`);
-          // Death: hide immediately, skip fade to avoid tween conflicts
           targetSprite.setVisible(false);
-          // Lunge back
-          this.tweens.add({
-            targets: this.playerSprite,
-            x: origX,
-            duration: 250,
-            ease: 'Quad.easeIn',
-            onComplete: () => { this.afterPlayerAction(); },
-          });
-        } else {
-          // Lunge back
-          this.tweens.add({
-            targets: this.playerSprite,
-            x: origX,
-            duration: 250,
-            ease: 'Quad.easeIn',
-            onComplete: () => { this.afterPlayerAction(); },
-          });
         }
+
+        // Step 3: Lunge back (deferred by 1 frame to avoid tween conflicts)
+        this.time.delayedCall(50, () => {
+          this.tweens.add({
+            targets: this.playerSprite,
+            x: origX,
+            duration: 250,
+            ease: 'Quad.easeIn',
+            onComplete: () => {
+              // Step 4: Advance turn (deferred by 1 frame)
+              this.time.delayedCall(50, () => this.afterPlayerAction());
+            },
+          });
+        });
       },
     });
   }
@@ -455,21 +451,25 @@ export default class BattleScene extends Phaser.Scene {
           this.log('Soren has fallen!');
         }
 
-        // Lunge back
-        this.tweens.add({
-          targets: enemySprite,
-          x: origX,
-          duration: 250,
-          ease: 'Quad.easeIn',
-          onComplete: () => {
-            this.updateAllDom();
-            this.checkBattleEnd();
-            if (this.battleState !== 'ended') {
-              this.currentTurnIndex++;
-              this.battleState = 'turn_start';
-              this.updateActionMenu();
-            }
-          },
+        // Lunge back (deferred by 1 frame to avoid tween conflicts)
+        this.time.delayedCall(50, () => {
+          this.tweens.add({
+            targets: enemySprite,
+            x: origX,
+            duration: 250,
+            ease: 'Quad.easeIn',
+            onComplete: () => {
+              this.time.delayedCall(50, () => {
+                this.updateAllDom();
+                this.checkBattleEnd();
+                if (this.battleState !== 'ended') {
+                  this.currentTurnIndex++;
+                  this.battleState = 'turn_start';
+                  this.updateActionMenu();
+                }
+              });
+            },
+          });
         });
       },
     });

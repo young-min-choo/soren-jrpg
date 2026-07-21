@@ -259,7 +259,6 @@ export default class BattleScene extends Phaser.Scene {
               if (alive.length > 0) {
                 this.selectedTarget = 0;
                 this.battleState = 'target_select';
-                this.log('Select a target.');
                 this.updateActionMenu();
                 this.updateEnemyLabels();
               }
@@ -267,7 +266,6 @@ export default class BattleScene extends Phaser.Scene {
               this.selectedItem = 0;
               this.selectedAlly = 0;
               this.battleState = 'item_select';
-              this.log('Select an item.');
               this.updateActionMenu();
             } else {
               this.executeAction(action);
@@ -290,7 +288,6 @@ export default class BattleScene extends Phaser.Scene {
             if (itemDef.target === 'ally') {
               this.battleState = 'ally_select';
               this.selectedAlly = 0;
-              this.log('Select an ally.');
               this.updateActionMenu();
             } else if (itemDef.target === 'enemy') {
               // Use on enemy directly (only one enemy for now, or first alive)
@@ -310,16 +307,14 @@ export default class BattleScene extends Phaser.Scene {
         case 'x': case 'X': case 'Escape':
           if (this.battleState === 'target_select') {
             this.battleState = 'action_select';
-            this.log('Select an action.');
             this.updateActionMenu();
             this.updateEnemyLabels();
           } else if (this.battleState === 'item_select') {
             this.battleState = 'action_select';
-            this.log('Select an action.');
             this.updateActionMenu();
           } else if (this.battleState === 'ally_select') {
             this.battleState = 'item_select';
-            this.log('Select an item.');
+            if (this.allyMarkerDiv) { this.allyMarkerDiv.remove(); this.allyMarkerDiv = null; }
             this.updateActionMenu();
           }
           e.preventDefault(); break;
@@ -380,12 +375,10 @@ export default class BattleScene extends Phaser.Scene {
           this.activePartyIndex = this.party.indexOf(unit);
           this.battleState = 'action_select';
           this.selectedAction = 0;
-          this.log(unit.name + "'s turn.");
           this.updateActionMenu();
         } else {
           this.battleState = 'enemy_delay';
-          this.log(unit.name + "'s turn.");
-          // Use setTimeout instead of update() — update() doesn't fire in launched scenes
+          this.log(unit.name + " acts.");
           this._enemyDelayTimeout = setTimeout(() => this.executeEnemyAction(), 600);
         }
         this.updateAllDom();
@@ -861,13 +854,9 @@ export default class BattleScene extends Phaser.Scene {
         }).join('<br>');
       }
     } else if (this.battleState === 'ally_select') {
-      this.actionMenuDiv.style.display = 'block';
-      const aliveAllies = this.party.filter(p => p.alive);
-      this.actionMenuDiv.innerHTML = aliveAllies.map((ally, i) => {
-        const prefix = i === this.selectedAlly ? '▶' : '　';
-        const color = i === this.selectedAlly ? '#ffff00' : '#888';
-        return `<span style="color:${color};display:inline-block;width:16px">${prefix}</span> ${ally.name} (${ally.hp}/${ally.maxHp})`;
-      }).join('<br>');
+      // Don't show text list — use ▼ marker above party sprite + panel highlight
+      this.actionMenuDiv.style.display = 'none';
+      this.updateAllyMarker();
     } else {
       this.actionMenuDiv.style.display = 'none';
     }
@@ -923,12 +912,65 @@ export default class BattleScene extends Phaser.Scene {
       }
     }
 
+    if (this.allyMarkerDiv) { this.allyMarkerDiv.remove(); this.allyMarkerDiv = null; }
+
     GameState.removeItem(itemName, 1);
     this.updateAllDom();
 
     // Advance turn after a short delay
     this.battleState = 'animating';
     this._itemTimeout = setTimeout(() => this.afterPlayerAction(), 1000);
+  }
+
+  updateAllyMarker() {
+    // Remove old marker
+    if (this.allyMarkerDiv) {
+      this.allyMarkerDiv.remove();
+      this.allyMarkerDiv = null;
+    }
+    // Clear old panel highlights
+    if (this.partyPanelDiv) {
+      const cols = this.partyPanelDiv.querySelectorAll(':scope > div');
+      cols.forEach(col => {
+        if (col.style) {
+          col.style.background = '';
+          col.style.boxShadow = '';
+        }
+      });
+    }
+
+    if (this.battleState !== 'ally_select') return;
+
+    const aliveAllies = this.party.filter(p => p.alive);
+    if (this.selectedAlly >= aliveAllies.length) this.selectedAlly = 0;
+    const ally = aliveAllies[this.selectedAlly];
+    if (!ally) return;
+
+    const sprite = this.playerSprites[ally.partyIndex];
+    if (!sprite) return;
+
+    // Create ▼ marker above party sprite
+    const container = document.getElementById('game-container');
+    const canvas = document.querySelector('canvas');
+    const cr = canvas.getBoundingClientRect();
+    const scaleX = cr.width / 256;
+    const scaleY = cr.height / 224;
+    const markerX = sprite.x * scaleX;
+    const markerY = (sprite.y - 22) * scaleY;
+
+    this.allyMarkerDiv = document.createElement('div');
+    this.allyMarkerDiv.style.cssText = `position:absolute;left:${markerX}px;top:${markerY}px;transform:translate(-50%,0);color:#ffff00;font-size:16px;font-family:'Courier New',monospace;text-shadow:1px 1px 2px rgba(0,0,0,0.9);pointer-events:none;z-index:40;`;
+    this.allyMarkerDiv.textContent = '▼';
+    container.appendChild(this.allyMarkerDiv);
+
+    // Highlight party panel entry for selected ally
+    if (this.partyPanelDiv) {
+      const cols = this.partyPanelDiv.querySelectorAll(':scope > div');
+      if (cols[ally.partyIndex]) {
+        cols[ally.partyIndex].style.background = 'rgba(255, 255, 0, 0.15)';
+        cols[ally.partyIndex].style.boxShadow = 'inset 0 0 0 1px rgba(255, 255, 0, 0.4)';
+      }
+    }
   }
 
   updateEnemyLabels() {

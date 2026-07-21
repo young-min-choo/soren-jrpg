@@ -149,7 +149,8 @@ export default class BattleScene extends Phaser.Scene {
     this.battleLogDiv = this.createDomText('', container, {
       right: '12px', bottom: '100px',
       fontSize: '11px', color: '#aaaaff', lineHeight: '1.4',
-      maxWidth: '280px', textAlign: 'right',
+      maxWidth: '280px', maxHeight: '60px', overflow: 'hidden',
+      textAlign: 'right',
       zIndex: '24',
     });
 
@@ -702,6 +703,8 @@ export default class BattleScene extends Phaser.Scene {
     if (styles.lineHeight) cssParts.push('line-height: ' + styles.lineHeight);
     if (styles.textAlign) cssParts.push('text-align: ' + styles.textAlign);
     if (styles.maxWidth) cssParts.push('max-width: ' + styles.maxWidth);
+    if (styles.maxHeight) cssParts.push('max-height: ' + styles.maxHeight);
+    if (styles.overflow) cssParts.push('overflow: ' + styles.overflow);
     if (styles.display) cssParts.push('display: ' + styles.display);
     if (styles.background) cssParts.push('background: ' + styles.background);
     if (styles.border) cssParts.push('border: ' + styles.border);

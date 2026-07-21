@@ -287,84 +287,11 @@ export default class BattleScene extends Phaser.Scene {
   update(time, delta) {
     if (this.transitioning) return;
     this._delta = delta || 16;
-
-    if (this.battleState === 'action_select') {
-      // Navigate action menu
-      const actions = ['FIGHT', 'DEFEND', 'FLEE'];
-      if (this.keys.down || this.keys.up) {
-        if (this.keys.down) {
-          this.selectedAction = (this.selectedAction + 1) % actions.length;
-          this.keys.down = false;
-        }
-        if (this.keys.up) {
-          this.selectedAction = (this.selectedAction - 1 + actions.length) % actions.length;
-          this.keys.up = false;
-        }
-        this.updateActionMenu();
-      }
-
-      if (this.confirmPressed) {
-        this.confirmPressed = false;
-        const action = actions[this.selectedAction];
-        if (action === 'FIGHT') {
-          // Enter target selection
-          const aliveEnemies = this.enemies.filter(e => e.alive);
-          if (aliveEnemies.length === 0) return;
-          this.selectedTarget = 0;
-          this.battleState = 'target_select';
-          this.log('Select a target.');
-          this.updateActionMenu();
-          this.updateEnemyLabels();
-        } else {
-          this.executeAction(action);
-        }
-      }
-    } else if (this.battleState === 'target_select') {
-      // Navigate enemy targets with up/down
-      const aliveEnemies = this.enemies.filter(e => e.alive);
-      if (aliveEnemies.length === 0) {
-        this.battleState = 'action_select';
-        return;
-      }
-      if (this.keys.down || this.keys.right) {
-        this.selectedTarget = (this.selectedTarget + 1) % aliveEnemies.length;
-        this.keys.down = false;
-        this.keys.right = false;
-        this.updateEnemyLabels();
-      }
-      if (this.keys.up || this.keys.left) {
-        this.selectedTarget = (this.selectedTarget - 1 + aliveEnemies.length) % aliveEnemies.length;
-        this.keys.up = false;
-        this.keys.left = false;
-        this.updateEnemyLabels();
-      }
-      if (this.confirmPressed) {
-        this.confirmPressed = false;
-        const target = aliveEnemies[this.selectedTarget];
-        if (target && target.alive) {
-          this.executeFight(target);
-        }
-        return; // prevent fall-through after action executed
-      }
-      if (this.cancelPressed) {
-        this.cancelPressed = false;
-        this.battleState = 'action_select';
-        this.log('Select an action.');
-        this.updateActionMenu();
-        this.updateEnemyLabels();
-      }
-    } else if (this.battleState === 'animating') {
-      const dt = this._delta;
-      if (this.animPhase && this.animPhase.startsWith('enemy_')) {
-        this.updateEnemyAnimation(dt);
-      } else {
-        this.updateAnimation(dt);
-      }
-    } else if (this.battleState === 'turn_start') {
-      this.processNextTurn();
-    }
-
-    // Reset one-shot flags
+    // All battle logic is now handled by:
+    // - handleKeyDown (direct input processing)
+    // - setTimeout chains (turn progression, animations)
+    // update() is not called reliably in launched scenes, so we don't use it.
+    // Reset one-shot flags (safety)
     this.confirmPressed = false;
     this.cancelPressed = false;
   }
@@ -446,7 +373,7 @@ export default class BattleScene extends Phaser.Scene {
     this.animTarget = target;
     this.animTargetSprite = this.enemySprites[target.index];
     this.animOrigX = this.playerSprite.x;
-    this.animLungeX = this.animTargetSprite.x - 30;
+    this.animLungeX = this.animTargetSprite.x - 50; // lunge toward target (more visible)
 
     this.tweens.add({
       targets: this.playerSprite,
@@ -514,7 +441,7 @@ export default class BattleScene extends Phaser.Scene {
     this.battleState = 'animating';
     const enemySprite = this.enemySprites[enemy.index];
     const origX = enemySprite.x;
-    const lungeX = this.playerSprite.x + 30;
+    const lungeX = this.playerSprite.x + 50; // lunge toward player (more visible)
 
     this.tweens.add({
       targets: enemySprite,

@@ -266,7 +266,6 @@ export default class BattleScene extends Phaser.Scene {
       if (this.confirmPressed) {
         this.confirmPressed = false;
         const target = aliveEnemies[this.selectedTarget];
-        console.log('DBG target_select confirm: target=' + (target ? target.name : 'null') + ' alive=' + (target ? target.alive : 'null') + ' selectedTarget=' + this.selectedTarget + ' aliveCount=' + aliveEnemies.length);
         if (target && target.alive) {
           this.executeFight(target);
         }
@@ -360,33 +359,23 @@ export default class BattleScene extends Phaser.Scene {
   executeFight(target) {
     const player = this.player;
     if (!player.alive || !target || !target.alive) return;
-
-    console.log('DBG executeFight start');
     const dmg = this.calcDamage(player.atk, target.def);
     target.hp -= dmg;
     this.log(`Soren attacks ${target.name} for ${dmg} damage!`);
-    console.log('DBG after damage');
     this.flashSprite(this.enemySprites[target.index]);
-    console.log('DBG after flash');
     if (target.hp <= 0) {
       target.hp = 0;
       target.alive = false;
-      console.log('DBG enemy died');
       this.enemySprites[target.index].setVisible(false);
-      console.log('DBG after setVisible');
       this.log(`${target.name} is defeated!`);
     }
     this.player.defending = false;
-    console.log('DBG before updateAllDom');
-    try { this.updateAllDom(); } catch(e) { console.log('ERR updateAllDom:'+e.message); }
-    console.log('DBG after updateAllDom');
+    this.updateAllDom();
     this.checkBattleEnd();
-    console.log('DBG after checkBattleEnd st=' + this.battleState);
     if (this.battleState !== 'ended') {
       this.currentTurnIndex++;
       this.battleState = 'turn_start';
       this.updateActionMenu();
-      console.log('DBG set turn_start ti=' + this.currentTurnIndex);
     }
   }
 
@@ -609,6 +598,10 @@ export default class BattleScene extends Phaser.Scene {
       this.targetArrowDiv = null;
     }
     if (this.battleState === 'target_select' && aliveEnemies.length > 0) {
+      // Clamp selectedTarget to valid range
+      if (this.selectedTarget >= aliveEnemies.length) {
+        this.selectedTarget = aliveEnemies.length - 1;
+      }
       const target = aliveEnemies[this.selectedTarget];
       const spacing = 48;
       const startX = 180;

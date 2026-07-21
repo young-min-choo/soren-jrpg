@@ -383,16 +383,15 @@ export default class BattleScene extends Phaser.Scene {
           target.hp = 0;
           target.alive = false;
           this.log(`${target.name} is defeated!`);
-          // Death fade
+          // Death: hide immediately, skip fade to avoid tween conflicts
+          targetSprite.setVisible(false);
+          // Lunge back
           this.tweens.add({
-            targets: targetSprite,
-            alpha: 0,
-            duration: 400,
-            onComplete: () => {
-              targetSprite.setVisible(false);
-              // Small delay before next turn to let death animation settle
-              this.time.delayedCall(200, () => this.afterPlayerAction());
-            },
+            targets: this.playerSprite,
+            x: origX,
+            duration: 250,
+            ease: 'Quad.easeIn',
+            onComplete: () => { this.afterPlayerAction(); },
           });
         } else {
           // Lunge back

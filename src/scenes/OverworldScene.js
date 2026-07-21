@@ -19,6 +19,8 @@ const T_BRIDGE = 6;
 
 const TOWN_ENTRANCE_X = 10;
 const TOWN_ENTRANCE_Y = 8;
+const DUNGEON_ENTRANCE_X = 16;
+const DUNGEON_ENTRANCE_Y = 4;
 
 export default class OverworldScene extends Phaser.Scene {
   constructor() {
@@ -105,7 +107,7 @@ export default class OverworldScene extends Phaser.Scene {
       pointer-events: none; z-index: 10;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
     `;
-    this.statusDiv.textContent = 'Walk to the ▼ marker and press Z to enter town';
+    this.statusDiv.textContent = '▼ Yellow = Town | ▼ Red = Dungeon | Walk to marker and press Z';
     container.appendChild(this.statusDiv);
     this.domElements.push(this.statusDiv);
 
@@ -124,6 +126,22 @@ export default class OverworldScene extends Phaser.Scene {
     this.entranceDiv.textContent = '▼';
     container.appendChild(this.entranceDiv);
     this.domElements.push(this.entranceDiv);
+
+    // Dungeon entrance marker (▼) — red
+    const dungeonX = DUNGEON_ENTRANCE_X * TILE_SIZE + TILE_SIZE / 2;
+    const dungeonY = DUNGEON_ENTRANCE_Y * TILE_SIZE + TILE_SIZE / 2;
+    this.dungeonDiv = document.createElement('div');
+    this.dungeonDiv.style.cssText = `
+      position: absolute;
+      color: #ff4444; font-size: 18px;
+      font-family: "Courier New", monospace;
+      transform: translate(-50%, -50%);
+      pointer-events: none; z-index: 10;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    `;
+    this.dungeonDiv.textContent = '▼';
+    container.appendChild(this.dungeonDiv);
+    this.domElements.push(this.dungeonDiv);
 
     // Blink entrance marker
     this.entranceBlink = setInterval(() => {
@@ -151,6 +169,12 @@ export default class OverworldScene extends Phaser.Scene {
     const sy = canvasRect.height / cam.worldView.height;
     this.entranceDiv.style.left = ((entranceWorldX - cam.scrollX) * sx) + 'px';
     this.entranceDiv.style.top = ((entranceWorldY - cam.scrollY) * sy) + 'px';
+
+    // Update dungeon entrance marker position
+    const dungeonWorldX = DUNGEON_ENTRANCE_X * TILE_SIZE + TILE_SIZE / 2;
+    const dungeonWorldY = DUNGEON_ENTRANCE_Y * TILE_SIZE + TILE_SIZE / 2;
+    this.dungeonDiv.style.left = ((dungeonWorldX - cam.scrollX) * sx) + 'px';
+    this.dungeonDiv.style.top = ((dungeonWorldY - cam.scrollY) * sy) + 'px';
 
     const speed = this.keyShift.isDown ? 180 : 100;
     let vx = 0, vy = 0, moving = false;
@@ -186,6 +210,15 @@ export default class OverworldScene extends Phaser.Scene {
       this.confirmPressed = false;
       this.enterTown();
     }
+
+    // Check dungeon entrance
+    const nearDungeon =
+      Math.abs(playerTileX - DUNGEON_ENTRANCE_X) <= 1 &&
+      Math.abs(playerTileY - DUNGEON_ENTRANCE_Y) <= 1;
+    if (nearDungeon && this.confirmPressed) {
+      this.confirmPressed = false;
+      this.enterDungeon();
+    }
     if (nearEntrance && this.gamepad && this.gamepad.A) {
       this.enterTown();
     }
@@ -208,6 +241,15 @@ export default class OverworldScene extends Phaser.Scene {
     this.cameras.main.fadeOut(300, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('Town');
+    });
+  }
+
+  enterDungeon() {
+    if (this.transitioning) return;
+    this.transitioning = true;
+    this.cameras.main.fadeOut(300, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.scene.start('Dungeon');
     });
   }
 
@@ -268,7 +310,9 @@ export default class OverworldScene extends Phaser.Scene {
         let tile = (x + y) % 2 === 0 ? T_GRASS_DARK : T_GRASS_LIGHT;
         if (x === 0 || x === MAP_COLS - 1 || y === 0 || y === MAP_ROWS - 1) tile = T_FOREST;
         if (x >= 14 && x <= 18 && y >= 1 && y <= 4) tile = T_WATER;
-        if (x >= 1 && x <= 4 && y >= 11 && y <= 14) tile = T_MOUNTAIN;
+        // Dungeon entrance area — clear water for path
+        if (x >= 15 && x <= 17 && y >= 3 && y <= 5) tile = T_PATH;
+        if (x === 1 && x <= 4 && y >= 11 && y <= 14) tile = T_MOUNTAIN;
         if (x === TOWN_ENTRANCE_X && y > TOWN_ENTRANCE_Y && y < MAP_ROWS - 1) tile = T_PATH;
         if (x === TOWN_ENTRANCE_X && y >= TOWN_ENTRANCE_Y && y <= TOWN_ENTRANCE_Y) tile = T_PATH;
         row.push(tile);

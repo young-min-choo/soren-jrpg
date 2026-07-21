@@ -3,6 +3,7 @@ import BootScene from './scenes/BootScene.js';
 import TitleScene from './scenes/TitleScene.js';
 import OverworldScene from './scenes/OverworldScene.js';
 import TownScene from './scenes/TownScene.js';
+import DungeonScene from './scenes/DungeonScene.js';
 import DialogueScene from './scenes/DialogueScene.js';
 import BattleScene from './scenes/BattleScene.js';
 
@@ -28,7 +29,7 @@ const config = {
   input: {
     gamepad: true
   },
-  scene: [BootScene, TitleScene, OverworldScene, TownScene, DialogueScene, BattleScene]
+  scene: [BootScene, TitleScene, OverworldScene, TownScene, DungeonScene, DialogueScene, BattleScene]
 };
 
 const game = new Phaser.Game(config);

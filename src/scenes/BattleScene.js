@@ -725,6 +725,8 @@ export default class BattleScene extends Phaser.Scene {
     if (styles.maxHeight) cssParts.push('max-height: ' + styles.maxHeight);
     if (styles.overflow) cssParts.push('overflow: ' + styles.overflow);
     if (styles.display) cssParts.push('display: ' + styles.display);
+    if (styles.flexDirection) cssParts.push('flex-direction: ' + styles.flexDirection);
+    if (styles.justifyContent) cssParts.push('justify-content: ' + styles.justifyContent);
     if (styles.background) cssParts.push('background: ' + styles.background);
     if (styles.border) cssParts.push('border: ' + styles.border);
     if (styles.borderTop) cssParts.push('border-top: ' + styles.borderTop);

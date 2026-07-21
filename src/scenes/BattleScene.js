@@ -169,12 +169,85 @@ export default class BattleScene extends Phaser.Scene {
 
     this.handleKeyDown = (e) => {
       switch (e.key) {
-        case 'ArrowUp': case 'w': case 'W': this.keys.up = true; e.preventDefault(); break;
-        case 'ArrowDown': case 's': case 'S': this.keys.down = true; e.preventDefault(); break;
-        case 'ArrowLeft': case 'a': case 'A': this.keys.left = true; e.preventDefault(); break;
-        case 'ArrowRight': case 'd': case 'D': this.keys.right = true; e.preventDefault(); break;
-        case 'z': case 'Z': case 'Enter': this.confirmPressed = true; e.preventDefault(); break;
-        case 'x': case 'X': case 'Escape': this.cancelPressed = true; e.preventDefault(); break;
+        case 'ArrowUp': case 'w': case 'W':
+          if (this.battleState === 'action_select') {
+            const actions = ['FIGHT', 'DEFEND', 'FLEE'];
+            this.selectedAction = (this.selectedAction - 1 + actions.length) % actions.length;
+            this.updateActionMenu();
+          } else if (this.battleState === 'target_select') {
+            const alive = this.enemies.filter(en => en.alive);
+            if (alive.length > 0) {
+              this.selectedTarget = (this.selectedTarget - 1 + alive.length) % alive.length;
+              this.updateEnemyLabels();
+            }
+          }
+          e.preventDefault(); break;
+        case 'ArrowDown': case 's': case 'S':
+          if (this.battleState === 'action_select') {
+            const actions = ['FIGHT', 'DEFEND', 'FLEE'];
+            this.selectedAction = (this.selectedAction + 1) % actions.length;
+            this.updateActionMenu();
+          } else if (this.battleState === 'target_select') {
+            const alive = this.enemies.filter(en => en.alive);
+            if (alive.length > 0) {
+              this.selectedTarget = (this.selectedTarget + 1) % alive.length;
+              this.updateEnemyLabels();
+            }
+          }
+          e.preventDefault(); break;
+        case 'ArrowLeft': case 'a': case 'A':
+          if (this.battleState === 'target_select') {
+            const alive = this.enemies.filter(en => en.alive);
+            if (alive.length > 0) {
+              this.selectedTarget = (this.selectedTarget - 1 + alive.length) % alive.length;
+              this.updateEnemyLabels();
+            }
+          }
+          e.preventDefault(); break;
+        case 'ArrowRight': case 'd': case 'D':
+          if (this.battleState === 'target_select') {
+            const alive = this.enemies.filter(en => en.alive);
+            if (alive.length > 0) {
+              this.selectedTarget = (this.selectedTarget + 1) % alive.length;
+              this.updateEnemyLabels();
+            }
+          }
+          e.preventDefault(); break;
+        case 'z': case 'Z': case 'Enter':
+          if (this.battleState === 'action_select') {
+            const actions = ['FIGHT', 'DEFEND', 'FLEE'];
+            const action = actions[this.selectedAction];
+            if (action === 'FIGHT') {
+              const alive = this.enemies.filter(en => en.alive);
+              if (alive.length > 0) {
+                this.selectedTarget = 0;
+                this.battleState = 'target_select';
+                this.log('Select a target.');
+                this.updateActionMenu();
+                this.updateEnemyLabels();
+              }
+            } else {
+              this.executeAction(action);
+            }
+          } else if (this.battleState === 'target_select') {
+            const alive = this.enemies.filter(en => en.alive);
+            if (this.selectedTarget >= alive.length) this.selectedTarget = 0;
+            const target = alive[this.selectedTarget];
+            if (target && target.alive) {
+              this.battleState = 'animating';
+              this.updateEnemyLabels();
+              this.executeFight(target);
+            }
+          }
+          e.preventDefault(); break;
+        case 'x': case 'X': case 'Escape':
+          if (this.battleState === 'target_select') {
+            this.battleState = 'action_select';
+            this.log('Select an action.');
+            this.updateActionMenu();
+            this.updateEnemyLabels();
+          }
+          e.preventDefault(); break;
       }
     };
 
@@ -358,7 +431,9 @@ export default class BattleScene extends Phaser.Scene {
     if (this.battleState !== 'ended') {
       this.currentTurnIndex++;
       this.battleState = 'turn_start';
-      this.updateActionMenu(); // hide menu
+      this.updateActionMenu();
+      // Process next turn via setTimeout
+      this._turnTimeout = setTimeout(() => this.processNextTurn(), 100);
     }
   }
 

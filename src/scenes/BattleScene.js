@@ -947,10 +947,10 @@ export default class BattleScene extends Phaser.Scene {
     if (this.allyMarkerDiv) { this.allyMarkerDiv.remove(); this.allyMarkerDiv = null; }
 
     GameState.removeItem(itemName, 1);
+    this.battleState = 'animating';
     this.updateAllDom();
 
     // Advance turn after a short delay
-    this.battleState = 'animating';
     this._itemTimeout = setTimeout(() => this.afterPlayerAction(), 1000);
   }
 

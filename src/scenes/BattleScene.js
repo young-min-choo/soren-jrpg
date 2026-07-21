@@ -287,15 +287,7 @@ export default class BattleScene extends Phaser.Scene {
         this.updateAnimation(dt);
       }
     } else if (this.battleState === 'turn_start') {
-      // Process next unit in turn order
       this.processNextTurn();
-    } else if (this.battleState === 'enemy_delay') {
-      // Wait 600ms before enemy acts (using Date.now since update may not fire every frame)
-      if (!this._enemyDelayStart) this._enemyDelayStart = Date.now();
-      if (Date.now() - this._enemyDelayStart >= 600) {
-        this._enemyDelayStart = 0;
-        this.executeEnemyAction();
-      }
     }
 
     // Reset one-shot flags
@@ -315,8 +307,9 @@ export default class BattleScene extends Phaser.Scene {
           this.updateActionMenu();
         } else {
           this.battleState = 'enemy_delay';
-          this.enemyDelayTimer = 0;
           this.log(unit.name + "'s turn.");
+          // Use setTimeout instead of update() — update() doesn't fire in launched scenes
+          this._enemyDelayTimeout = setTimeout(() => this.executeEnemyAction(), 600);
         }
         this.updateAllDom();
         return;
@@ -376,7 +369,6 @@ export default class BattleScene extends Phaser.Scene {
     this.animTargetSprite = this.enemySprites[target.index];
     this.animOrigX = this.playerSprite.x;
     this.animLungeX = this.animTargetSprite.x - 30;
-    this._animStart = Date.now();
 
     this.tweens.add({
       targets: this.playerSprite,
@@ -384,43 +376,37 @@ export default class BattleScene extends Phaser.Scene {
       duration: 250,
       ease: 'Quad.easeOut',
     });
-  }
 
-  // Called from update() when battleState === 'animating'
-  updateAnimation(dt) {
-    if (!this._animStart) this._animStart = Date.now();
-    const elapsed = Date.now() - this._animStart;
-
-    if (this.animPhase === 'lunge_forward' && elapsed >= 250) {
+    // Use setTimeout chain instead of update() — update() doesn't fire in launched scenes
+    this._animTimeout = setTimeout(() => {
       // Impact — deal damage
-      const target = this.animTarget;
-      const targetSprite = this.animTargetSprite;
-      const player = this.player;
       const dmg = this.calcDamage(player.atk, target.def);
       target.hp -= dmg;
       this.log(`Soren attacks ${target.name} for ${dmg} damage!`);
-      this.flashSprite(targetSprite);
+      this.flashSprite(this.animTargetSprite);
 
       if (target.hp <= 0) {
         target.hp = 0;
         target.alive = false;
         this.log(`${target.name} is defeated!`);
-        targetSprite.setVisible(false);
+        this.animTargetSprite.setVisible(false);
       }
 
-      this.animPhase = 'lunge_back';
-      this._animStart = Date.now();
+      // Lunge back
       this.tweens.add({
         targets: this.playerSprite,
         x: this.animOrigX,
         duration: 250,
         ease: 'Quad.easeIn',
       });
-    } else if (this.animPhase === 'lunge_back' && elapsed >= 250) {
-      this.animPhase = null;
-      this._animStart = 0;
-      this.afterPlayerAction();
-    }
+
+      this._animTimeout = setTimeout(() => this.afterPlayerAction(), 300);
+    }, 300);
+  }
+
+  // Called from update() when battleState === 'animating'
+  updateAnimation(dt) {
+    // No longer used — animations driven by setTimeout
   }
 
   afterPlayerAction() {
@@ -446,30 +432,19 @@ export default class BattleScene extends Phaser.Scene {
     if (!player.alive) return;
 
     this.battleState = 'animating';
-    this.animPhase = 'enemy_lunge_forward';
-    this.animEnemy = enemy;
-    this.animEnemySprite = this.enemySprites[enemy.index];
-    this.animEnemyOrigX = this.animEnemySprite.x;
-    this.animEnemyLungeX = this.playerSprite.x + 30;
-    this._animStart = Date.now();
+    const enemySprite = this.enemySprites[enemy.index];
+    const origX = enemySprite.x;
+    const lungeX = this.playerSprite.x + 30;
 
     this.tweens.add({
-      targets: this.animEnemySprite,
-      x: this.animEnemyLungeX,
+      targets: enemySprite,
+      x: lungeX,
       duration: 250,
       ease: 'Quad.easeOut',
     });
-  }
 
-  // Called from updateAnimation when animPhase starts with 'enemy_'
-  updateEnemyAnimation(dt) {
-    if (!this._animStart) this._animStart = Date.now();
-    const elapsed = Date.now() - this._animStart;
-    const enemy = this.animEnemy;
-    const player = this.player;
-
-    if (this.animPhase === 'enemy_lunge_forward' && elapsed >= 250) {
-      // Impact — deal damage to player
+    // setTimeout chain — update() doesn't fire in launched scenes
+    this._animTimeout = setTimeout(() => {
       let dmg = this.calcDamage(enemy.atk, player.def);
       if (player.defending) {
         dmg = Math.floor(dmg / 2);
@@ -484,25 +459,29 @@ export default class BattleScene extends Phaser.Scene {
         this.log('Soren has fallen!');
       }
 
-      this.animPhase = 'enemy_lunge_back';
-      this._animStart = Date.now();
+      // Lunge back
       this.tweens.add({
-        targets: this.animEnemySprite,
-        x: this.animEnemyOrigX,
+        targets: enemySprite,
+        x: origX,
         duration: 250,
         ease: 'Quad.easeIn',
       });
-    } else if (this.animPhase === 'enemy_lunge_back' && elapsed >= 250) {
-      this.animPhase = null;
-      this._animStart = 0;
-      this.updateAllDom();
-      this.checkBattleEnd();
-      if (this.battleState !== 'ended') {
-        this.currentTurnIndex++;
-        this.battleState = 'turn_start';
-        this.updateActionMenu();
-      }
-    }
+
+      this._animTimeout = setTimeout(() => {
+        this.updateAllDom();
+        this.checkBattleEnd();
+        if (this.battleState !== 'ended') {
+          this.currentTurnIndex++;
+          this.battleState = 'turn_start';
+          this.updateActionMenu();
+        }
+      }, 300);
+    }, 300);
+  }
+
+  // Called from updateAnimation when animPhase starts with 'enemy_'
+  updateEnemyAnimation(dt) {
+    // No longer used — animations driven by setTimeout
   }
 
   calcDamage(atk, def) {

@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import GameState from '../game/GameState.js';
+import { JOBS, STARTING_JOBS, UNLOCKABLE_JOBS, getStatsForLevel } from '../game/JobData.js';
 
 /**
  * TownScene — town interior.
@@ -83,6 +85,22 @@ export default class TownScene extends Phaser.Scene {
     npc2.setData('name', 'Elder');
     this.npcs.push(npc2);
 
+    // Job Master NPC — allows changing party jobs (FF3-style)
+    const npc3X = 8 * TILE_SIZE + TILE_SIZE / 2;
+    const npc3Y = 8 * TILE_SIZE + TILE_SIZE / 2;
+    const npc3 = this.physics.add.staticSprite(npc3X, npc3Y, 'player_field', 1);
+    npc3.setTint(0x44ff44);
+    npc3.setData('name', 'Job Master');
+    npc3.setData('isJobMaster', true);
+    npc3.setData('dialogue', {
+      speaker: 'Job Master', portrait: null,
+      pages: [
+        'I can help you and your party change jobs.',
+        'The path you walk is yours to choose.',
+      ],
+    });
+    this.npcs.push(npc3);
+
     this.npcs.forEach(npc => { this.physics.add.collider(this.player, npc); });
 
     this.nearbyNpc = null;
@@ -97,6 +115,8 @@ export default class TownScene extends Phaser.Scene {
     this.confirmPressed = false;
 
     this.handleKeyDown = (e) => {
+      // Job menu takes priority
+      if (this.jobMenuDiv && this._handleJobMenuKey(e)) return;
       if (this.dialogueActive) return;
       switch (e.key) {
         case 'ArrowUp': case 'w': case 'W': this.keys.up = true; e.preventDefault(); break;
@@ -298,6 +318,12 @@ export default class TownScene extends Phaser.Scene {
     const frameMap = { down: 1, left: 4, right: 7, up: 10 };
     this.player.setFrame(frameMap[this.facing] ?? 1);
 
+    // Job Master opens job change menu instead of dialogue
+    if (npc.getData('isJobMaster')) {
+      this.openJobMenu();
+      return;
+    }
+
     const dialogueData = npc.getData('dialogue');
     this.scene.launch('Dialogue', {
       ...dialogueData,
@@ -306,6 +332,144 @@ export default class TownScene extends Phaser.Scene {
         if (choiceValue) console.log(`Player chose: ${choiceValue}`);
       }
     });
+  }
+
+  openJobMenu() {
+    // Job change menu: select party member → select job → confirm
+    this.jobMenuState = 'member_select';
+    this.jobSelectedMember = 0;
+    this.jobSelectedJob = 0;
+    this._createJobMenuDom();
+  }
+
+  _createJobMenuDom() {
+    const container = document.getElementById('game-container');
+    this.jobMenuDiv = document.createElement('div');
+    this.jobMenuDiv.style.cssText = `
+      position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+      width: 500px; max-height: 400px;
+      background: rgba(20, 20, 50, 0.95); border: 2px solid rgba(255,255,255,0.3);
+      padding: 16px; box-sizing: border-box;
+      font-family: "Courier New", monospace; color: #ffffff;
+      z-index: 50; pointer-events: none;
+      border-radius: 4px; overflow: hidden;
+    `;
+    container.appendChild(this.jobMenuDiv);
+    this._updateJobMenu();
+  }
+
+  _updateJobMenu() {
+    if (!this.jobMenuDiv) return;
+    const party = GameState.getParty();
+    const unlockedJobs = GameState.get().unlockedJobs;
+
+    if (this.jobMenuState === 'member_select') {
+      let html = '<div style="font-size:14px;color:#ffff00;margin-bottom:8px">Choose a party member:</div>';
+      party.forEach((char, i) => {
+        const sel = i === this.jobSelectedMember;
+        const prefix = sel ? '▶' : '　';
+        const color = sel ? '#ffff00' : '#ccc';
+        html += `<div style="color:${color};font-size:13px;margin:4px 0"><span style="display:inline-block;width:16px">${prefix}</span>${char.name} — ${char.job} (Lv.${char.level})</div>`;
+      });
+      html += '<div style="color:#888;font-size:11px;margin-top:8px">Z: Select | X: Cancel</div>';
+      this.jobMenuDiv.innerHTML = html;
+    } else if (this.jobMenuState === 'job_select') {
+      const char = party[this.jobSelectedMember];
+      let html = `<div style="font-size:14px;color:#ffff00;margin-bottom:8px">${char.name} — Current: ${char.job}</div>`;
+      html += '<div style="font-size:12px;color:#aaa;margin-bottom:6px">Choose a new job:</div>';
+      unlockedJobs.forEach((jobName, i) => {
+        const sel = i === this.jobSelectedJob;
+        const prefix = sel ? '▶' : '　';
+        const color = sel ? '#ffff00' : '#ccc';
+        const isCurrent = jobName === char.job;
+        const currentTag = isCurrent ? ' <span style="color:#888">(current)</span>' : '';
+        const job = JOBS[jobName];
+        const desc = job ? job.description : '';
+        html += `<div style="color:${color};font-size:13px;margin:4px 0"><span style="display:inline-block;width:16px">${prefix}</span>${jobName}${currentTag} — <span style="font-size:10px;color:#888">${desc}</span></div>`;
+      });
+      html += '<div style="color:#888;font-size:11px;margin-top:8px">Z: Confirm | X: Back</div>';
+      this.jobMenuDiv.innerHTML = html;
+    } else if (this.jobMenuState === 'confirm') {
+      const char = party[this.jobSelectedMember];
+      const newJob = unlockedJobs[this.jobSelectedJob];
+      let html = `<div style="font-size:14px;color:#ffff00;margin-bottom:8px">Confirm job change?</div>`;
+      html += `<div style="font-size:13px;margin:4px 0">${char.name}: ${char.job} → ${newJob}</div>`;
+      html += '<div style="font-size:11px;color:#aaa;margin-top:8px">HP/MP will be adjusted. Learned abilities are kept.</div>';
+      html += '<div style="font-size:12px;color:#888;margin-top:8px">Z: Confirm | X: Cancel</div>';
+      this.jobMenuDiv.innerHTML = html;
+    }
+  }
+
+  _handleJobMenuKey(e) {
+    if (!this.jobMenuDiv) return false;
+    const party = GameState.getParty();
+    const unlockedJobs = GameState.get().unlockedJobs;
+
+    switch (e.key) {
+      case 'ArrowUp': case 'w': case 'W':
+        if (this.jobMenuState === 'member_select') {
+          this.jobSelectedMember = (this.jobSelectedMember - 1 + party.length) % party.length;
+        } else if (this.jobMenuState === 'job_select') {
+          this.jobSelectedJob = (this.jobSelectedJob - 1 + unlockedJobs.length) % unlockedJobs.length;
+        }
+        this._updateJobMenu();
+        e.preventDefault(); return true;
+      case 'ArrowDown': case 's': case 'S':
+        if (this.jobMenuState === 'member_select') {
+          this.jobSelectedMember = (this.jobSelectedMember + 1) % party.length;
+        } else if (this.jobMenuState === 'job_select') {
+          this.jobSelectedJob = (this.jobSelectedJob + 1) % unlockedJobs.length;
+        }
+        this._updateJobMenu();
+        e.preventDefault(); return true;
+      case 'ArrowLeft': case 'a': case 'A':
+      case 'ArrowRight': case 'd': case 'D':
+        if (this.jobMenuState === 'member_select') {
+          this.jobSelectedMember = (this.jobSelectedMember + 1) % party.length;
+        } else if (this.jobMenuState === 'job_select') {
+          this.jobSelectedJob = (this.jobSelectedJob + 1) % unlockedJobs.length;
+        }
+        this._updateJobMenu();
+        e.preventDefault(); return true;
+      case 'z': case 'Z': case 'Enter':
+        if (this.jobMenuState === 'member_select') {
+          this.jobMenuState = 'job_select';
+          this.jobSelectedJob = 0;
+          // Find current job in list
+          const char = party[this.jobSelectedMember];
+          const idx = unlockedJobs.indexOf(char.job);
+          if (idx >= 0) this.jobSelectedJob = idx;
+        } else if (this.jobMenuState === 'job_select') {
+          this.jobMenuState = 'confirm';
+        } else if (this.jobMenuState === 'confirm') {
+          // Execute job change
+          GameState.changeJob(this.jobSelectedMember, unlockedJobs[this.jobSelectedJob]);
+          this._closeJobMenu();
+          this.dialogueActive = false;
+        }
+        this._updateJobMenu();
+        e.preventDefault(); return true;
+      case 'x': case 'X': case 'Escape':
+        if (this.jobMenuState === 'confirm') {
+          this.jobMenuState = 'job_select';
+        } else if (this.jobMenuState === 'job_select') {
+          this.jobMenuState = 'member_select';
+        } else {
+          this._closeJobMenu();
+          this.dialogueActive = false;
+        }
+        this._updateJobMenu();
+        e.preventDefault(); return true;
+    }
+    return false;
+  }
+
+  _closeJobMenu() {
+    if (this.jobMenuDiv) {
+      this.jobMenuDiv.remove();
+      this.jobMenuDiv = null;
+    }
+    this.jobMenuState = null;
   }
 
   exitTown() {
@@ -322,6 +486,7 @@ export default class TownScene extends Phaser.Scene {
     this.domElements.forEach(el => el.remove());
     this.domElements = [];
     this.interactDiv = null;
+    if (this.jobMenuDiv) { this.jobMenuDiv.remove(); this.jobMenuDiv = null; }
   }
 
   shutdown() { this.cleanupDom(); }

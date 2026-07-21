@@ -555,9 +555,6 @@ export default class BattleScene extends Phaser.Scene {
     // Show/hide action menu
     if (this.battleState === 'action_select') {
       this.actionMenuDiv.style.display = 'block';
-    } else if (this.battleState === 'target_select') {
-      this.actionMenuDiv.style.display = 'block';
-      this.actionMenuDiv.innerHTML = '<span style="color:#ffff00">▶ FIGHT</span><br><span style="color:#aaa;font-size:11px">Choose target (↑↓, Z, X)</span>';
     } else {
       this.actionMenuDiv.style.display = 'none';
     }
@@ -573,9 +570,8 @@ export default class BattleScene extends Phaser.Scene {
         const isTargeted = this.battleState === 'target_select' &&
           aliveEnemies[this.selectedTarget] === enemy;
         const nameColor = isTargeted ? '#ffff00' : '#ffaaaa';
-        const borderStyle = isTargeted ? 'border:1px solid #ffff00;padding:2px;' : '';
         div.innerHTML =
-          `<div style="${borderStyle}color:${nameColor}">${isTargeted ? '▶ ' : ''}${enemy.name}</div>` +
+          `<div style="color:${nameColor}">${enemy.name}</div>` +
           `<div style="font-size:10px;color:#ccc">${enemy.hp}/${enemy.maxHp}</div>` +
           `<div style="height:3px;background:#440000;width:60px;margin:1px auto 0;border-radius:2px">` +
             `<div style="height:3px;background:#dd4444;width:${hpPct}%;border-radius:2px"></div>` +
@@ -585,6 +581,37 @@ export default class BattleScene extends Phaser.Scene {
         div.style.display = 'none';
       }
     });
+
+    // --- Target arrow (▼ above the selected enemy sprite) ---
+    if (this.targetArrowDiv) {
+      this.targetArrowDiv.remove();
+      this.targetArrowDiv = null;
+    }
+    if (this.battleState === 'target_select' && aliveEnemies.length > 0) {
+      const target = aliveEnemies[this.selectedTarget];
+      const spacing = 48;
+      const startX = 180;
+      const worldX = startX + (target.index % 2) * spacing;
+      const worldY = 90 + Math.floor(target.index / 2) * 50;
+      const SCALE = 3;
+      const container = document.getElementById('game-container');
+      this.targetArrowDiv = document.createElement('div');
+      this.targetArrowDiv.style.cssText = `
+        position: absolute;
+        left: ${(worldX * SCALE)}px;
+        top: ${((worldY - 22) * SCALE)}px;
+        transform: translateX(-50%);
+        color: #ffff00;
+        font-size: 18px;
+        font-family: "Courier New", monospace;
+        pointer-events: none;
+        z-index: 25;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+      `;
+      this.targetArrowDiv.textContent = '▼';
+      container.appendChild(this.targetArrowDiv);
+      this.domElements.push(this.targetArrowDiv);
+    }
   }
 
   updateBattleLog() {

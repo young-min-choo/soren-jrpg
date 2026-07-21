@@ -396,7 +396,7 @@ export default class BattleScene extends Phaser.Scene {
           target.hp = 0;
           target.alive = false;
           this.log(`${target.name} is defeated!`);
-          // Death fade via rAF
+          // Death fade via rAF — hold at lunge position during fade
           const fadeStart = performance.now();
           const animateFade = () => {
             const fe = performance.now() - fadeStart;
@@ -406,26 +406,29 @@ export default class BattleScene extends Phaser.Scene {
             } else {
               targetSprite.setVisible(false);
               targetSprite.setAlpha(1);
-              this.afterPlayerAction();
+              // Lunge back after death fade
+              this._lungeBackTimeout = setTimeout(() => this.afterPlayerAction(), 100);
             }
           };
           requestAnimationFrame(animateFade);
         } else {
-          // Lunge back via rAF
-          const backStart = performance.now();
-          const backFromX = lungeX;
-          const animateBack = () => {
-            const be = performance.now() - backStart;
-            if (be < LUNGE_MS) {
-              const t = be / LUNGE_MS;
-              this.playerSprite.x = backFromX + (origX - backFromX) * (t * t); // easeIn
-              requestAnimationFrame(animateBack);
-            } else {
-              this.playerSprite.x = origX;
-              this.afterPlayerAction();
-            }
-          };
-          requestAnimationFrame(animateBack);
+          // Hold at lunge position for 300ms (visible impact pause), then lunge back
+          this._lungeBackTimeout = setTimeout(() => {
+            const backStart = performance.now();
+            const backFromX = lungeX;
+            const animateBack = () => {
+              const be = performance.now() - backStart;
+              if (be < LUNGE_MS) {
+                const t = be / LUNGE_MS;
+                this.playerSprite.x = backFromX + (origX - backFromX) * (t * t);
+                requestAnimationFrame(animateBack);
+              } else {
+                this.playerSprite.x = origX;
+                this.afterPlayerAction();
+              }
+            };
+            requestAnimationFrame(animateBack);
+          }, 300);
         }
       }
     };

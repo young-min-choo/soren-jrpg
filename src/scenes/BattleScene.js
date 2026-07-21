@@ -54,6 +54,7 @@ export default class BattleScene extends Phaser.Scene {
     // State: 'intro' → 'player_turn' → 'enemy_turn' → 'action_select' → 'result'
     this.battleState = 'intro';
     this.selectedAction = 0;
+    this.selectedTarget = 0;
     this.battleLog = [];
 
     // --- Visual setup ---
@@ -207,7 +208,7 @@ export default class BattleScene extends Phaser.Scene {
     if (this.transitioning) return;
 
     if (this.battleState === 'action_select') {
-      // Navigate menu
+      // Navigate action menu
       const actions = ['FIGHT', 'DEFEND', 'FLEE'];
       if (this.keys.down || this.keys.up) {
         if (this.keys.down) {
@@ -223,7 +224,50 @@ export default class BattleScene extends Phaser.Scene {
 
       if (this.confirmPressed) {
         this.confirmPressed = false;
-        this.executeAction(actions[this.selectedAction]);
+        const action = actions[this.selectedAction];
+        if (action === 'FIGHT') {
+          // Enter target selection
+          const aliveEnemies = this.enemies.filter(e => e.alive);
+          if (aliveEnemies.length === 0) return;
+          this.selectedTarget = 0;
+          this.battleState = 'target_select';
+          this.log('Select a target.');
+          this.updateActionMenu();
+          this.updateEnemyLabels();
+        } else {
+          this.executeAction(action);
+        }
+      }
+    } else if (this.battleState === 'target_select') {
+      // Navigate enemy targets with up/down
+      const aliveEnemies = this.enemies.filter(e => e.alive);
+      if (aliveEnemies.length === 0) {
+        this.battleState = 'action_select';
+        return;
+      }
+      if (this.keys.down || this.keys.right) {
+        this.selectedTarget = (this.selectedTarget + 1) % aliveEnemies.length;
+        this.keys.down = false;
+        this.keys.right = false;
+        this.updateEnemyLabels();
+      }
+      if (this.keys.up || this.keys.left) {
+        this.selectedTarget = (this.selectedTarget - 1 + aliveEnemies.length) % aliveEnemies.length;
+        this.keys.up = false;
+        this.keys.left = false;
+        this.updateEnemyLabels();
+      }
+      if (this.confirmPressed) {
+        this.confirmPressed = false;
+        const target = aliveEnemies[this.selectedTarget];
+        this.executeFight(target);
+      }
+      if (this.cancelPressed) {
+        this.cancelPressed = false;
+        this.battleState = 'action_select';
+        this.log('Select an action.');
+        this.updateActionMenu();
+        this.updateEnemyLabels();
       }
     } else if (this.battleState === 'turn_start') {
       // Process next unit in turn order
@@ -277,24 +321,6 @@ export default class BattleScene extends Phaser.Scene {
     if (!player.alive) return;
 
     switch (action) {
-      case 'FIGHT':
-        // Target first alive enemy
-        const target = this.enemies.find(e => e.alive);
-        if (!target) return;
-        const dmg = this.calcDamage(player.atk, target.def);
-        target.hp -= dmg;
-        this.log(`Soren attacks ${target.name} for ${dmg} damage!`);
-        this.flashSprite(this.enemySprites[target.index]);
-        if (target.hp <= 0) {
-          target.hp = 0;
-          target.alive = false;
-          this.allUnits.find(u => u.id === 'enemy_' + target.index).alive = false;
-          this.enemySprites[target.index].setVisible(false);
-          this.log(`${target.name} is defeated!`);
-        }
-        this.player.defending = false;
-        break;
-
       case 'DEFEND':
         this.player.defending = true;
         this.log('Soren is defending! (damage halved next turn)');
@@ -311,6 +337,32 @@ export default class BattleScene extends Phaser.Scene {
         this.player.defending = false;
         break;
     }
+
+    this.updateAllDom();
+    this.checkBattleEnd();
+    if (this.battleState !== 'ended') {
+      this.currentTurnIndex++;
+      this.battleState = 'turn_start';
+      this.updateActionMenu(); // hide menu
+    }
+  }
+
+  executeFight(target) {
+    const player = this.allUnits[0];
+    if (!player.alive || !target || !target.alive) return;
+
+    const dmg = this.calcDamage(player.atk, target.def);
+    target.hp -= dmg;
+    this.log(`Soren attacks ${target.name} for ${dmg} damage!`);
+    this.flashSprite(this.enemySprites[target.index]);
+    if (target.hp <= 0) {
+      target.hp = 0;
+      target.alive = false;
+      this.allUnits.find(u => u.id === 'enemy_' + target.index).alive = false;
+      this.enemySprites[target.index].setVisible(false);
+      this.log(`${target.name} is defeated!`);
+    }
+    this.player.defending = false;
 
     this.updateAllDom();
     this.checkBattleEnd();
@@ -488,22 +540,7 @@ export default class BattleScene extends Phaser.Scene {
       `</div>`;
 
     // --- Enemy labels (near each sprite) ---
-    this.enemies.forEach((enemy, i) => {
-      const div = this.enemyLabelDivs[i];
-      if (!div) return;
-      if (enemy.alive) {
-        const hpPct = Math.max(0, (enemy.hp / enemy.maxHp) * 100);
-        div.innerHTML =
-          `<div style="color:#ffaaaa">${enemy.name}</div>` +
-          `<div style="font-size:10px;color:#ccc">${enemy.hp}/${enemy.maxHp}</div>` +
-          `<div style="height:3px;background:#440000;width:60px;margin:1px auto 0;border-radius:2px">` +
-            `<div style="height:3px;background:#dd4444;width:${hpPct}%;border-radius:2px"></div>` +
-          `</div>`;
-        div.style.display = 'block';
-      } else {
-        div.style.display = 'none';
-      }
-    });
+    this.updateEnemyLabels();
 
     // Action menu
     this.updateActionMenu();
@@ -515,8 +552,39 @@ export default class BattleScene extends Phaser.Scene {
       (i === this.selectedAction ? '<span style="color:#ffff00">▶ ' : '<span style="color:#888">&nbsp;&nbsp; ') + a + '</span>'
     );
     this.actionMenuDiv.innerHTML = lines.join('<br>');
-    // Show action menu only during player's turn
-    this.actionMenuDiv.style.display = (this.battleState === 'action_select') ? 'block' : 'none';
+    // Show/hide action menu
+    if (this.battleState === 'action_select') {
+      this.actionMenuDiv.style.display = 'block';
+    } else if (this.battleState === 'target_select') {
+      this.actionMenuDiv.style.display = 'block';
+      this.actionMenuDiv.innerHTML = '<span style="color:#ffff00">▶ FIGHT</span><br><span style="color:#aaa;font-size:11px">Choose target (↑↓, Z, X)</span>';
+    } else {
+      this.actionMenuDiv.style.display = 'none';
+    }
+  }
+
+  updateEnemyLabels() {
+    const aliveEnemies = this.enemies.filter(e => e.alive);
+    this.enemies.forEach((enemy, i) => {
+      const div = this.enemyLabelDivs[i];
+      if (!div) return;
+      if (enemy.alive) {
+        const hpPct = Math.max(0, (enemy.hp / enemy.maxHp) * 100);
+        const isTargeted = this.battleState === 'target_select' &&
+          aliveEnemies[this.selectedTarget] === enemy;
+        const nameColor = isTargeted ? '#ffff00' : '#ffaaaa';
+        const borderStyle = isTargeted ? 'border:1px solid #ffff00;padding:2px;' : '';
+        div.innerHTML =
+          `<div style="${borderStyle}color:${nameColor}">${isTargeted ? '▶ ' : ''}${enemy.name}</div>` +
+          `<div style="font-size:10px;color:#ccc">${enemy.hp}/${enemy.maxHp}</div>` +
+          `<div style="height:3px;background:#440000;width:60px;margin:1px auto 0;border-radius:2px">` +
+            `<div style="height:3px;background:#dd4444;width:${hpPct}%;border-radius:2px"></div>` +
+          `</div>`;
+        div.style.display = 'block';
+      } else {
+        div.style.display = 'none';
+      }
+    });
   }
 
   updateBattleLog() {

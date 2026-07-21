@@ -34,7 +34,7 @@ export default class BattleScene extends Phaser.Scene {
     // --- Battle setup ---
     // Load player from persistent GameState (HP carries over between battles)
     const gs = GameState.get();
-    this.player = { ...gs, defending: false };
+    this.player = { ...gs, alive: true, defending: false };
 
     // Enemies (1-3 from data, or random)
     const enemyTypes = data?.enemies || ['slime'];

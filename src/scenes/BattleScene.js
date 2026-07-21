@@ -150,6 +150,9 @@ export default class BattleScene extends Phaser.Scene {
       right: '12px', bottom: '100px',
       fontSize: '11px', color: '#aaaaff', lineHeight: '1.4',
       maxWidth: '280px', maxHeight: '60px', overflow: 'hidden',
+      background: 'rgba(20, 20, 50, 0.85)',
+      border: '1px solid rgba(255,255,255,0.15)',
+      padding: '6px 10px', boxSizing: 'border-box',
       textAlign: 'right',
       zIndex: '24',
     });

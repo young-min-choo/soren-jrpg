@@ -210,8 +210,9 @@ export default class BattleScene extends Phaser.Scene {
     });
   }
 
-  update() {
+  update(time, delta) {
     if (this.transitioning) return;
+    this._delta = delta || 16;
 
     if (this.battleState === 'action_select') {
       // Navigate action menu
@@ -279,8 +280,7 @@ export default class BattleScene extends Phaser.Scene {
         this.updateEnemyLabels();
       }
     } else if (this.battleState === 'animating') {
-      // Drive animation state machine from update loop
-      const dt = this.game.loop.delta;
+      const dt = this._delta;
       if (this.animPhase && this.animPhase.startsWith('enemy_')) {
         this.updateEnemyAnimation(dt);
       } else {

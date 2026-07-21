@@ -32,32 +32,33 @@ export default class BattleScene extends Phaser.Scene {
     this.transitioning = false;
 
     // --- Battle setup ---
-    // Load player from persistent GameState (HP carries over between battles)
+    // Load full party from persistent GameState
     const gs = GameState.get();
-    this.player = { ...gs, alive: true, defending: false };
+    this.party = gs.party.map((char, i) => ({
+      ...char,
+      alive: char.hp > 0,
+      defending: false,
+      side: 'player',
+      id: 'player_' + i,
+      partyIndex: i,
+    }));
 
     // Enemies (1-3 from data, or random)
     const enemyTypes = data?.enemies || ['slime'];
     this.enemies = enemyTypes.map((type, i) => {
       const tmpl = ENEMY_TEMPLATES[type] || ENEMY_TEMPLATES.slime;
-      return { ...JSON.parse(JSON.stringify(tmpl)), type, index: i, defending: false, alive: true };
+      return { ...JSON.parse(JSON.stringify(tmpl)), type, index: i, defending: false, alive: true, side: 'enemy', id: 'enemy_' + i };
     });
 
-    // Build turn order: sort all units by AGI descending
-    // Use references to the same objects so alive/dead state stays in sync
+    // Build turn order: all alive party members + enemies, sorted by AGI
     this.allUnits = [
-      this.player,  // same object — changes propagate
+      ...this.party.filter(p => p.alive),
       ...this.enemies,
     ];
-    // Tag each unit with side and id
-    this.player.side = 'player';
-    this.player.id = 'player';
-    this.enemies.forEach(e => { e.side = 'enemy'; e.id = 'enemy_' + e.index; });
-
     this.turnOrder = [...this.allUnits].sort((a, b) => b.agi - a.agi);
     this.currentTurnIndex = 0;
 
-    // State: 'intro' → 'player_turn' → 'enemy_turn' → 'action_select' → 'result'
+    // State: 'intro' → 'action_select' → 'target_select' → 'animating' → 'enemy_delay' → 'ended'
     this.battleState = 'intro';
     this.selectedAction = 0;
     this.selectedTarget = 0;
@@ -71,10 +72,16 @@ export default class BattleScene extends Phaser.Scene {
     this.add.rectangle(128, 80, 256, 160, 0x2a2a4e);
     this.add.rectangle(128, 150, 256, 48, 0x1a3a1a); // ground
 
-    // Player sprite (placeholder — blue square)
-    const playerSprite = this.add.rectangle(64, 120, 20, 28, 0x4488ff);
-    playerSprite.setStrokeStyle(1, 0xffffff, 0.5);
-    this.playerSprite = playerSprite;
+    // Player sprites (placeholder — colored squares, one per party member)
+    this.playerSprites = [];
+    const partyColors = [0x4488ff, 0xff8844, 0x44ff88, 0xff44ff];
+    this.party.forEach((char, i) => {
+      const x = 40 + i * 30;
+      const sprite = this.add.rectangle(x, 120, 20, 28, partyColors[i % partyColors.length]);
+      sprite.setStrokeStyle(1, 0xffffff, 0.5);
+      this.playerSprites.push(sprite);
+    });
+    this.playerSprite = this.playerSprites[0]; // primary for backwards-compat
 
     // Enemy sprites (placeholder — colored squares)
     // Spread them out more for readability
@@ -306,9 +313,10 @@ export default class BattleScene extends Phaser.Scene {
       const unit = this.turnOrder[this.currentTurnIndex];
       if (unit.alive) {
         if (unit.side === 'player') {
+          this.activePartyIndex = this.party.indexOf(unit);
           this.battleState = 'action_select';
           this.selectedAction = 0;
-          this.log("Soren's turn.");
+          this.log(unit.name + "'s turn.");
           this.updateActionMenu();
         } else {
           this.battleState = 'enemy_delay';
@@ -336,13 +344,13 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   executeAction(action) {
-    const player = this.player;
+    const player = this.turnOrder[this.currentTurnIndex];
     if (!player.alive) return;
 
     switch (action) {
       case 'DEFEND':
-        this.player.defending = true;
-        this.log('Soren is defending! (damage halved next turn)');
+        player.defending = true;
+        this.log(player.name + ' is defending! (damage halved next turn)');
         break;
 
       case 'FLEE':
@@ -353,7 +361,7 @@ export default class BattleScene extends Phaser.Scene {
         } else {
           this.log('Failed to flee!');
         }
-        this.player.defending = false;
+        player.defending = false;
         break;
     }
 
@@ -369,12 +377,13 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   executeFight(target) {
-    const player = this.player;
+    const player = this.turnOrder[this.currentTurnIndex];
     if (!player.alive || !target || !target.alive) return;
 
     this.battleState = 'animating';
+    const playerSprite = this.playerSprites[player.partyIndex];
     const targetSprite = this.enemySprites[target.index];
-    const origX = this.playerSprite.x;
+    const origX = playerSprite.x;
     const lungeX = targetSprite.x - 50;
 
     // Manual lunge via requestAnimationFrame (Phaser tweens don't run in launched scenes)
@@ -384,14 +393,14 @@ export default class BattleScene extends Phaser.Scene {
       const elapsed = performance.now() - startTime;
       if (elapsed < LUNGE_MS) {
         const t = elapsed / LUNGE_MS;
-        this.playerSprite.x = origX + (lungeX - origX) * (1 - (1 - t) * (1 - t)); // easeOut
+        playerSprite.x = origX + (lungeX - origX) * (1 - (1 - t) * (1 - t)); // easeOut
         requestAnimationFrame(animateLunge);
       } else {
-        this.playerSprite.x = lungeX;
+        playerSprite.x = lungeX;
         // Impact
         const dmg = this.calcDamage(player.atk, target.def);
         target.hp -= dmg;
-        this.log(`Soren attacks ${target.name} for ${dmg} damage!`);
+        this.log(`${player.name} attacks ${target.name} for ${dmg} damage!`);
         this.flashSprite(targetSprite);
         this.screenShake();
         this.showDamageNumber(targetSprite, dmg);
@@ -419,10 +428,10 @@ export default class BattleScene extends Phaser.Scene {
             const be = performance.now() - backStart;
             if (be < LUNGE_MS) {
               const t = be / LUNGE_MS;
-              this.playerSprite.x = lungeX + (origX - lungeX) * (t * t);
+              playerSprite.x = lungeX + (origX - lungeX) * (t * t);
               requestAnimationFrame(animateBack);
             } else {
-              this.playerSprite.x = origX;
+              playerSprite.x = origX;
               // Wait for fade to finish, then advance turn
               this._lungeBackTimeout = setTimeout(() => this.afterPlayerAction(), Math.max(0, 600 - LUNGE_MS));
             }
@@ -437,10 +446,10 @@ export default class BattleScene extends Phaser.Scene {
               const be = performance.now() - backStart;
               if (be < LUNGE_MS) {
                 const t = be / LUNGE_MS;
-                this.playerSprite.x = backFromX + (origX - backFromX) * (t * t);
+                playerSprite.x = backFromX + (origX - backFromX) * (t * t);
                 requestAnimationFrame(animateBack);
               } else {
-                this.playerSprite.x = origX;
+                playerSprite.x = origX;
                 this.afterPlayerAction();
               }
             };
@@ -458,7 +467,8 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   afterPlayerAction() {
-    this.player.defending = false;
+    const player = this.turnOrder[this.currentTurnIndex];
+    if (player) player.defending = false;
     this.updateAllDom();
     this.checkBattleEnd();
     if (this.battleState !== 'ended') {
@@ -479,13 +489,17 @@ export default class BattleScene extends Phaser.Scene {
       return;
     }
 
-    const player = this.player;
+    const player = this.turnOrder[this.currentTurnIndex];
     if (!player.alive) return;
 
     this.battleState = 'animating';
     const enemySprite = this.enemySprites[enemy.index];
+    // Target a random alive party member
+    const aliveParty = this.party.filter(p => p.alive);
+    const target = aliveParty[Math.floor(Math.random() * aliveParty.length)];
+    const playerSprite = this.playerSprites[target.partyIndex];
     const origX = enemySprite.x;
-    const lungeX = this.playerSprite.x + 50;
+    const lungeX = playerSprite.x + 50;
 
     // Manual lunge via requestAnimationFrame
     const startTime = performance.now();
@@ -499,15 +513,15 @@ export default class BattleScene extends Phaser.Scene {
       } else {
         enemySprite.x = lungeX;
         // Impact
-        let dmg = this.calcDamage(enemy.atk, player.def);
-        if (player.defending) {
+        let dmg = this.calcDamage(enemy.atk, target.def);
+        if (target.defending) {
           dmg = Math.floor(dmg / 2);
         }
         player.hp -= dmg;
-        this.log(`${enemy.name} attacks Soren for ${dmg} damage!`);
-        this.flashSprite(this.playerSprite);
+        this.log(`${enemy.name} attacks ${target.name} for ${dmg} damage!`);
+        this.flashSprite(playerSprite);
         this.screenShake();
-        this.showDamageNumber(this.playerSprite, dmg);
+        this.showDamageNumber(playerSprite, dmg);
 
         if (player.hp <= 0) {
           player.hp = 0;
@@ -554,8 +568,9 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   checkBattleEnd() {
-    // Check player death
-    if (this.player.hp <= 0) {
+    // Check all party members dead
+    const aliveParty = this.party.filter(p => p.alive);
+    if (aliveParty.length === 0) {
       this.endBattle('lose');
       return;
     }
@@ -574,10 +589,8 @@ export default class BattleScene extends Phaser.Scene {
     this.battleState = 'ended';
     this.transitioning = true;
 
-    // Save player HP/MP back to GameState (persists across battles)
-    const gs = GameState.get();
-    gs.hp = this.player.hp;
-    gs.mp = this.player.mp;
+    // Save party HP/MP back to GameState (persists across battles)
+    GameState.syncFromBattle(this.party);
 
     if (result === 'win') {
       GameState.applyBattleResult(result, rewards);
@@ -728,24 +741,28 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   updateAllDom() {
-    // --- Party panel (bottom strip) ---
-    // One column per party member. For now just Soren.
-    const p = this.player;
-    const hpPct = Math.max(0, (p.hp / p.maxHp) * 100);
-    const mpPct = Math.max(0, (p.mp / p.maxMp) * 100);
-    this.partyPanelDiv.innerHTML =
-      `<div style="min-width:140px">` +
-      `<div style="color:#88ff88;font-weight:bold">${p.name}</div>` +
-      `<div style="font-size:11px;color:#aaa">${p.job} Lv.${p.level}</div>` +
-      `<div style="margin-top:2px">HP: ${p.hp}/${p.maxHp}</div>` +
-      `<div style="height:4px;background:#333;border-radius:2px;margin-top:1px">` +
-        `<div style="height:4px;background:#44dd44;width:${hpPct}%;border-radius:2px"></div>` +
-      `</div>` +
-      `<div style="margin-top:1px">MP: ${p.mp}/${p.maxMp}</div>` +
-      `<div style="height:3px;background:#333;border-radius:2px;margin-top:1px">` +
-        `<div style="height:3px;background:#4488ff;width:${mpPct}%;border-radius:2px"></div>` +
-      `</div>` +
-      `</div>`;
+    // --- Party panel (bottom strip) — one column per party member ---
+    const partyHtml = this.party.map((p, i) => {
+      const hpPct = Math.max(0, (p.hp / p.maxHp) * 100);
+      const mpPct = Math.max(0, (p.mp / p.maxMp) * 100);
+      const hpColor = p.alive ? (hpPct > 50 ? '#44dd44' : hpPct > 25 ? '#ddaa44' : '#dd4444') : '#666';
+      const isActive = this.turnOrder[this.currentTurnIndex] === p;
+      const nameColor = isActive ? '#ffff00' : (p.alive ? '#ffffff' : '#666');
+      return `
+        <div style="flex:1;min-width:120px;max-width:200px;padding:4px 8px;border-right:1px solid rgba(255,255,255,0.1)">
+          <div style="color:${nameColor};font-weight:${isActive?'bold':'normal'}">${isActive?'▶ ':''}${p.name}</div>
+          <div style="font-size:10px;color:#aaa">${p.job} Lv.${p.level}</div>
+          <div style="font-size:10px;color:#ccc;margin-top:2px">HP: ${p.hp}/${p.maxHp}</div>
+          <div style="height:4px;background:#330000;width:100%;margin:1px 0;border-radius:2px">
+            <div style="height:4px;background:${hpColor};width:${hpPct}%;border-radius:2px"></div>
+          </div>
+          <div style="font-size:10px;color:#ccc;margin-top:1px">MP: ${p.mp}/${p.maxMp}</div>
+          <div style="height:3px;background:#000033;width:100%;margin:1px 0;border-radius:2px">
+            <div style="height:3px;background:#4444dd;width:${mpPct}%;border-radius:2px"></div>
+          </div>
+        </div>`;
+    }).join('');
+    this.partyPanelDiv.innerHTML = partyHtml;
 
     // --- Enemy labels (near each sprite) ---
     this.updateEnemyLabels();

@@ -389,12 +389,23 @@ export default class BattleScene extends Phaser.Scene {
       target.hp -= dmg;
       this.log(`Soren attacks ${target.name} for ${dmg} damage!`);
       this.flashSprite(this.animTargetSprite);
+      this.screenShake();
+      this.showDamageNumber(this.animTargetSprite, dmg);
 
       if (target.hp <= 0) {
         target.hp = 0;
         target.alive = false;
         this.log(`${target.name} is defeated!`);
-        this.animTargetSprite.setVisible(false);
+        // Death fade
+        this.tweens.add({
+          targets: this.animTargetSprite,
+          alpha: 0,
+          duration: 400,
+          onComplete: () => {
+            this.animTargetSprite.setVisible(false);
+            this.animTargetSprite.setAlpha(1);
+          },
+        });
       }
 
       // Lunge back
@@ -459,6 +470,8 @@ export default class BattleScene extends Phaser.Scene {
       player.hp -= dmg;
       this.log(`${enemy.name} attacks Soren for ${dmg} damage!`);
       this.flashSprite(this.playerSprite);
+      this.screenShake();
+      this.showDamageNumber(this.playerSprite, dmg);
 
       if (player.hp <= 0) {
         player.hp = 0;
@@ -553,7 +566,6 @@ export default class BattleScene extends Phaser.Scene {
 
   flashSprite(sprite) {
     if (!sprite) return;
-    // Flash white/red by toggling tint
     const originalTint = sprite.tintTopLeft || 0xffffff;
     this.tweens.add({
       targets: sprite,
@@ -563,6 +575,43 @@ export default class BattleScene extends Phaser.Scene {
       tint: 0xff4444,
       onComplete: () => { sprite.setTint(originalTint); },
     });
+  }
+
+  screenShake() {
+    this.cameras.main.shake(150, 0.003);
+  }
+
+  showDamageNumber(sprite, dmg) {
+    const container = document.getElementById('game-container');
+    if (!container || !sprite) return;
+    const canvas = document.querySelector('canvas');
+    const cr = canvas.getBoundingClientRect();
+    const scaleX = cr.width / 256; // battle canvas is 256 wide
+    const scaleY = cr.height / 224; // battle canvas is 224 tall
+    const div = document.createElement('div');
+    div.style.cssText = `
+      position: absolute;
+      left: ${sprite.x * scaleX}px;
+      top: ${sprite.y * scaleY - 10}px;
+      transform: translate(-50%, 0);
+      color: #ffff44;
+      font-size: 18px;
+      font-weight: bold;
+      font-family: "Courier New", monospace;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.9);
+      pointer-events: none;
+      z-index: 40;
+      transition: top 0.8s ease-out, opacity 0.8s ease-out;
+      opacity: 1;
+    `;
+    div.textContent = dmg;
+    container.appendChild(div);
+    // Animate upward + fade
+    setTimeout(() => {
+      div.style.top = (sprite.y * scaleY - 50) + 'px';
+      div.style.opacity = '0';
+    }, 50);
+    setTimeout(() => div.remove(), 900);
   }
 
   log(text) {

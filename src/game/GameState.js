@@ -45,7 +45,7 @@ let state = {
   y: 336,
 };
 
-export const GameState = {
+const GameState = {
   get() { return state; },
 
   getParty() { return state.party; },
@@ -214,3 +214,5 @@ export const GameState = {
     };
   },
 };
+
+export default GameState;

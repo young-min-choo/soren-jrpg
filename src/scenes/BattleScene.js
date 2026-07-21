@@ -390,7 +390,8 @@ export default class BattleScene extends Phaser.Scene {
             duration: 400,
             onComplete: () => {
               targetSprite.setVisible(false);
-              this.afterPlayerAction();
+              // Small delay before next turn to let death animation settle
+              this.time.delayedCall(200, () => this.afterPlayerAction());
             },
           });
         } else {

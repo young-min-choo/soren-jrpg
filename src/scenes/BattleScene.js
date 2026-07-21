@@ -239,6 +239,22 @@ export default class BattleScene extends Phaser.Scene {
               this.selectedTarget = (this.selectedTarget - 1 + alive.length) % alive.length;
               this.updateEnemyLabels();
             }
+          } else if (this.battleState === 'action_select') {
+            const actions = ['FIGHT', 'ITEM', 'DEFEND', 'FLEE'];
+            this.selectedAction = (this.selectedAction - 1 + actions.length) % actions.length;
+            this.updateActionMenu();
+          } else if (this.battleState === 'item_select') {
+            const inv = this._usableItems();
+            if (inv.length > 0) {
+              this.selectedItem = (this.selectedItem - 1 + inv.length) % inv.length;
+              this.updateActionMenu();
+            }
+          } else if (this.battleState === 'ally_select') {
+            const aliveAllies = this.party.filter(p => p.alive);
+            if (aliveAllies.length > 0) {
+              this.selectedAlly = (this.selectedAlly - 1 + aliveAllies.length) % aliveAllies.length;
+              this.updateAllyMarker();
+            }
           }
           e.preventDefault(); break;
         case 'ArrowRight': case 'd': case 'D':
@@ -247,6 +263,22 @@ export default class BattleScene extends Phaser.Scene {
             if (alive.length > 0) {
               this.selectedTarget = (this.selectedTarget + 1) % alive.length;
               this.updateEnemyLabels();
+            }
+          } else if (this.battleState === 'action_select') {
+            const actions = ['FIGHT', 'ITEM', 'DEFEND', 'FLEE'];
+            this.selectedAction = (this.selectedAction + 1) % actions.length;
+            this.updateActionMenu();
+          } else if (this.battleState === 'item_select') {
+            const inv = this._usableItems();
+            if (inv.length > 0) {
+              this.selectedItem = (this.selectedItem + 1) % inv.length;
+              this.updateActionMenu();
+            }
+          } else if (this.battleState === 'ally_select') {
+            const aliveAllies = this.party.filter(p => p.alive);
+            if (aliveAllies.length > 0) {
+              this.selectedAlly = (this.selectedAlly + 1) % aliveAllies.length;
+              this.updateAllyMarker();
             }
           }
           e.preventDefault(); break;
@@ -721,7 +753,7 @@ export default class BattleScene extends Phaser.Scene {
     requestAnimationFrame(animateShake);
   }
 
-  showDamageNumber(sprite, dmg) {
+  showDamageNumber(sprite, dmg, color) {
     const container = document.getElementById('game-container');
     if (!container || !sprite) return;
     const canvas = document.querySelector('canvas');
@@ -734,7 +766,7 @@ export default class BattleScene extends Phaser.Scene {
       left: ${sprite.x * scaleX}px;
       top: ${sprite.y * scaleY - 10}px;
       transform: translate(-50%, 0);
-      color: #ffff44;
+      color: ${color || '#ffff44'};
       font-size: 18px;
       font-weight: bold;
       font-family: "Courier New", monospace;
@@ -1038,6 +1070,8 @@ export default class BattleScene extends Phaser.Scene {
   cleanupDom() {
     this.domElements.forEach(el => el.remove());
     this.domElements = [];
+    if (this.allyMarkerDiv) { this.allyMarkerDiv.remove(); this.allyMarkerDiv = null; }
+    if (this.targetArrowDiv) { this.targetArrowDiv.remove(); this.targetArrowDiv = null; }
   }
 
   shutdown() {

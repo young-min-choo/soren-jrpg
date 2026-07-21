@@ -216,6 +216,10 @@ export default class OverworldScene extends Phaser.Scene {
     this.transitioning = true;
     this.cameras.main.fadeOut(300, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
+      // Hide overworld DOM elements during battle
+      this.domElements.forEach(el => el.style.display = 'none');
+      if (this.entranceBlink) clearInterval(this.entranceBlink);
+
       this.scene.launch('Battle', {
         returnScene: 'Overworld',
         enemies: ['slime', 'slime'],
@@ -225,6 +229,11 @@ export default class OverworldScene extends Phaser.Scene {
     // Resume from battle when it ends
     this.events.on('resume', () => {
       this.transitioning = false;
+      // Restore overworld DOM elements
+      this.domElements.forEach(el => el.style.display = '');
+      this.entranceBlink = setInterval(() => {
+        this.entranceDiv.style.opacity = this.entranceDiv.style.opacity === '0' ? '1' : '0';
+      }, 400);
       this.cameras.main.fadeIn(300, 0, 0, 0);
     });
   }

@@ -164,10 +164,11 @@ export default class TownScene extends Phaser.Scene {
     const canvas = document.querySelector('canvas');
     const updateMarkerPos = () => {
       const cr = canvas.getBoundingClientRect();
-      const sx = cr.width / (MAP_COLS * TILE_SIZE);
-      const sy = cr.height / (MAP_ROWS * TILE_SIZE);
-      this.exitDiv.style.left = (exitWorldX * sx) + 'px';
-      this.exitDiv.style.top = (exitWorldY * sy) + 'px';
+      const cam = this.cameras.main;
+      const sx = cr.width / cam.worldView.width;
+      const sy = cr.height / cam.worldView.height;
+      this.exitDiv.style.left = ((exitWorldX - cam.scrollX) * sx) + 'px';
+      this.exitDiv.style.top = ((exitWorldY - cam.scrollY) * sy) + 'px';
     };
     updateMarkerPos();
     this.updateMarkerPos = updateMarkerPos;
@@ -264,13 +265,16 @@ export default class TownScene extends Phaser.Scene {
         container.appendChild(this.interactDiv);
         this.domElements.push(this.interactDiv);
       }
-      // Position above NPC
+      // Position above NPC — account for camera scroll and canvas scaling
       const canvas = document.querySelector('canvas');
       const cr = canvas.getBoundingClientRect();
-      const sx = cr.width / (MAP_COLS * TILE_SIZE);
-      const sy = cr.height / (MAP_ROWS * TILE_SIZE);
-      this.interactDiv.style.left = (this.nearbyNpc.x * sx) + 'px';
-      this.interactDiv.style.top = ((this.nearbyNpc.y - 24) * sy) + 'px';
+      const cam = this.cameras.main;
+      const sx = cr.width / (cam.worldView.width);
+      const sy = cr.height / (cam.worldView.height);
+      const screenX = (this.nearbyNpc.x - cam.scrollX) * sx;
+      const screenY = (this.nearbyNpc.y - 24 - cam.scrollY) * sy;
+      this.interactDiv.style.left = screenX + 'px';
+      this.interactDiv.style.top = screenY + 'px';
       this.interactDiv.style.display = 'block';
     } else if (this.interactDiv) {
       this.interactDiv.style.display = 'none';

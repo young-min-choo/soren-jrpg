@@ -141,15 +141,12 @@ export default class OverworldScene extends Phaser.Scene {
     const cam = this.cameras.main;
     const entranceWorldX = TOWN_ENTRANCE_X * TILE_SIZE + TILE_SIZE / 2;
     const entranceWorldY = TOWN_ENTRANCE_Y * TILE_SIZE + TILE_SIZE / 2;
-    const screenX = (entranceWorldX - cam.scrollX) * cam.zoom;
-    const screenY = (entranceWorldY - cam.scrollY) * cam.zoom;
-    const rect = document.getElementById('game-container').getBoundingClientRect();
     const canvas = document.querySelector('canvas');
     const canvasRect = canvas.getBoundingClientRect();
-    const scaleX = canvasRect.width / (MAP_COLS * TILE_SIZE);
-    const scaleY = canvasRect.height / (MAP_ROWS * TILE_SIZE);
-    this.entranceDiv.style.left = (entranceWorldX * scaleX) + 'px';
-    this.entranceDiv.style.top = (entranceWorldY * scaleY) + 'px';
+    const sx = canvasRect.width / cam.worldView.width;
+    const sy = canvasRect.height / cam.worldView.height;
+    this.entranceDiv.style.left = ((entranceWorldX - cam.scrollX) * sx) + 'px';
+    this.entranceDiv.style.top = ((entranceWorldY - cam.scrollY) * sy) + 'px';
 
     const speed = this.keyShift.isDown ? 180 : 100;
     let vx = 0, vy = 0, moving = false;

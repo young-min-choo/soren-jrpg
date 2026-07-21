@@ -278,6 +278,14 @@ export default class BattleScene extends Phaser.Scene {
         this.updateActionMenu();
         this.updateEnemyLabels();
       }
+    } else if (this.battleState === 'animating') {
+      // Drive animation state machine from update loop
+      const dt = this.game.loop.delta;
+      if (this.animPhase && this.animPhase.startsWith('enemy_')) {
+        this.updateEnemyAnimation(dt);
+      } else {
+        this.updateAnimation(dt);
+      }
     } else if (this.battleState === 'turn_start') {
       // Process next unit in turn order
       this.processNextTurn();
@@ -360,47 +368,55 @@ export default class BattleScene extends Phaser.Scene {
     const player = this.player;
     if (!player.alive || !target || !target.alive) return;
 
-    // Lock state during animation
     this.battleState = 'animating';
-    const targetSprite = this.enemySprites[target.index];
-    const origX = this.playerSprite.x;
-    const lungeX = targetSprite.x - 30;
+    this.animPhase = 'lunge_forward';
+    this.animTarget = target;
+    this.animTargetSprite = this.enemySprites[target.index];
+    this.animOrigX = this.playerSprite.x;
+    this.animLungeX = this.animTargetSprite.x - 30;
+    this.animTimer = 0;
 
-    // Step 1: Lunge forward
     this.tweens.add({
       targets: this.playerSprite,
-      x: lungeX,
+      x: this.animLungeX,
       duration: 250,
       ease: 'Quad.easeOut',
-      onComplete: () => {
-        // Step 2: Deal damage + flash
-        const dmg = this.calcDamage(player.atk, target.def);
-        target.hp -= dmg;
-        this.log(`Soren attacks ${target.name} for ${dmg} damage!`);
-        this.flashSprite(targetSprite);
-
-        if (target.hp <= 0) {
-          target.hp = 0;
-          target.alive = false;
-          this.log(`${target.name} is defeated!`);
-          targetSprite.setVisible(false);
-        }
-
-        // Step 3: Lunge back (deferred by 1 frame to avoid tween conflicts)
-        this.time.delayedCall(50, () => {
-          this.tweens.add({
-            targets: this.playerSprite,
-            x: origX,
-            duration: 250,
-            ease: 'Quad.easeIn',
-            onComplete: () => {
-              // Step 4: Advance turn (deferred by 1 frame)
-              this.time.delayedCall(50, () => this.afterPlayerAction());
-            },
-          });
-        });
-      },
     });
+  }
+
+  // Called from update() when battleState === 'animating'
+  updateAnimation(dt) {
+    this.animTimer += dt;
+
+    if (this.animPhase === 'lunge_forward' && this.animTimer >= 250) {
+      // Impact — deal damage
+      const target = this.animTarget;
+      const targetSprite = this.animTargetSprite;
+      const player = this.player;
+      const dmg = this.calcDamage(player.atk, target.def);
+      target.hp -= dmg;
+      this.log(`Soren attacks ${target.name} for ${dmg} damage!`);
+      this.flashSprite(targetSprite);
+
+      if (target.hp <= 0) {
+        target.hp = 0;
+        target.alive = false;
+        this.log(`${target.name} is defeated!`);
+        targetSprite.setVisible(false);
+      }
+
+      this.animPhase = 'lunge_back';
+      this.animTimer = 0;
+      this.tweens.add({
+        targets: this.playerSprite,
+        x: this.animOrigX,
+        duration: 250,
+        ease: 'Quad.easeIn',
+      });
+    } else if (this.animPhase === 'lunge_back' && this.animTimer >= 250) {
+      this.animPhase = null;
+      this.afterPlayerAction();
+    }
   }
 
   afterPlayerAction() {
@@ -425,54 +441,62 @@ export default class BattleScene extends Phaser.Scene {
     const player = this.player;
     if (!player.alive) return;
 
-    // Lock state during animation
     this.battleState = 'animating';
-    const enemySprite = this.enemySprites[enemy.index];
-    const origX = enemySprite.x;
-    const lungeX = this.playerSprite.x + 30; // lunge toward player
+    this.animPhase = 'enemy_lunge_forward';
+    this.animEnemy = enemy;
+    this.animEnemySprite = this.enemySprites[enemy.index];
+    this.animEnemyOrigX = this.animEnemySprite.x;
+    this.animEnemyLungeX = this.playerSprite.x + 30;
+    this.animTimer = 0;
 
     this.tweens.add({
-      targets: enemySprite,
-      x: lungeX,
+      targets: this.animEnemySprite,
+      x: this.animEnemyLungeX,
       duration: 250,
       ease: 'Quad.easeOut',
-      onComplete: () => {
-        let dmg = this.calcDamage(enemy.atk, player.def);
-        if (player.defending) {
-          dmg = Math.floor(dmg / 2);
-        }
-        player.hp -= dmg;
-        this.log(`${enemy.name} attacks Soren for ${dmg} damage!`);
-        this.flashSprite(this.playerSprite);
-
-        if (player.hp <= 0) {
-          player.hp = 0;
-          player.alive = false;
-          this.log('Soren has fallen!');
-        }
-
-        // Lunge back (deferred by 1 frame to avoid tween conflicts)
-        this.time.delayedCall(50, () => {
-          this.tweens.add({
-            targets: enemySprite,
-            x: origX,
-            duration: 250,
-            ease: 'Quad.easeIn',
-            onComplete: () => {
-              this.time.delayedCall(50, () => {
-                this.updateAllDom();
-                this.checkBattleEnd();
-                if (this.battleState !== 'ended') {
-                  this.currentTurnIndex++;
-                  this.battleState = 'turn_start';
-                  this.updateActionMenu();
-                }
-              });
-            },
-          });
-        });
-      },
     });
+  }
+
+  // Called from updateAnimation when animPhase starts with 'enemy_'
+  updateEnemyAnimation(dt) {
+    this.animTimer += dt;
+    const enemy = this.animEnemy;
+    const player = this.player;
+
+    if (this.animPhase === 'enemy_lunge_forward' && this.animTimer >= 250) {
+      // Impact — deal damage to player
+      let dmg = this.calcDamage(enemy.atk, player.def);
+      if (player.defending) {
+        dmg = Math.floor(dmg / 2);
+      }
+      player.hp -= dmg;
+      this.log(`${enemy.name} attacks Soren for ${dmg} damage!`);
+      this.flashSprite(this.playerSprite);
+
+      if (player.hp <= 0) {
+        player.hp = 0;
+        player.alive = false;
+        this.log('Soren has fallen!');
+      }
+
+      this.animPhase = 'enemy_lunge_back';
+      this.animTimer = 0;
+      this.tweens.add({
+        targets: this.animEnemySprite,
+        x: this.animEnemyOrigX,
+        duration: 250,
+        ease: 'Quad.easeIn',
+      });
+    } else if (this.animPhase === 'enemy_lunge_back' && this.animTimer >= 250) {
+      this.animPhase = null;
+      this.updateAllDom();
+      this.checkBattleEnd();
+      if (this.battleState !== 'ended') {
+        this.currentTurnIndex++;
+        this.battleState = 'turn_start';
+        this.updateActionMenu();
+      }
+    }
   }
 
   calcDamage(atk, def) {

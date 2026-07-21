@@ -290,9 +290,10 @@ export default class BattleScene extends Phaser.Scene {
       // Process next unit in turn order
       this.processNextTurn();
     } else if (this.battleState === 'enemy_delay') {
-      // Wait 600ms before enemy acts (using update loop, not delayedCall)
-      this.enemyDelayTimer += this._delta;
-      if (this.enemyDelayTimer >= 600) {
+      // Wait 600ms before enemy acts (using Date.now since update may not fire every frame)
+      if (!this._enemyDelayStart) this._enemyDelayStart = Date.now();
+      if (Date.now() - this._enemyDelayStart >= 600) {
+        this._enemyDelayStart = 0;
         this.executeEnemyAction();
       }
     }
@@ -375,7 +376,7 @@ export default class BattleScene extends Phaser.Scene {
     this.animTargetSprite = this.enemySprites[target.index];
     this.animOrigX = this.playerSprite.x;
     this.animLungeX = this.animTargetSprite.x - 30;
-    this.animTimer = 0;
+    this._animStart = Date.now();
 
     this.tweens.add({
       targets: this.playerSprite,
@@ -387,9 +388,10 @@ export default class BattleScene extends Phaser.Scene {
 
   // Called from update() when battleState === 'animating'
   updateAnimation(dt) {
-    this.animTimer += dt;
+    if (!this._animStart) this._animStart = Date.now();
+    const elapsed = Date.now() - this._animStart;
 
-    if (this.animPhase === 'lunge_forward' && this.animTimer >= 250) {
+    if (this.animPhase === 'lunge_forward' && elapsed >= 250) {
       // Impact — deal damage
       const target = this.animTarget;
       const targetSprite = this.animTargetSprite;
@@ -407,15 +409,16 @@ export default class BattleScene extends Phaser.Scene {
       }
 
       this.animPhase = 'lunge_back';
-      this.animTimer = 0;
+      this._animStart = Date.now();
       this.tweens.add({
         targets: this.playerSprite,
         x: this.animOrigX,
         duration: 250,
         ease: 'Quad.easeIn',
       });
-    } else if (this.animPhase === 'lunge_back' && this.animTimer >= 250) {
+    } else if (this.animPhase === 'lunge_back' && elapsed >= 250) {
       this.animPhase = null;
+      this._animStart = 0;
       this.afterPlayerAction();
     }
   }
@@ -448,7 +451,7 @@ export default class BattleScene extends Phaser.Scene {
     this.animEnemySprite = this.enemySprites[enemy.index];
     this.animEnemyOrigX = this.animEnemySprite.x;
     this.animEnemyLungeX = this.playerSprite.x + 30;
-    this.animTimer = 0;
+    this._animStart = Date.now();
 
     this.tweens.add({
       targets: this.animEnemySprite,
@@ -460,11 +463,12 @@ export default class BattleScene extends Phaser.Scene {
 
   // Called from updateAnimation when animPhase starts with 'enemy_'
   updateEnemyAnimation(dt) {
-    this.animTimer += dt;
+    if (!this._animStart) this._animStart = Date.now();
+    const elapsed = Date.now() - this._animStart;
     const enemy = this.animEnemy;
     const player = this.player;
 
-    if (this.animPhase === 'enemy_lunge_forward' && this.animTimer >= 250) {
+    if (this.animPhase === 'enemy_lunge_forward' && elapsed >= 250) {
       // Impact — deal damage to player
       let dmg = this.calcDamage(enemy.atk, player.def);
       if (player.defending) {
@@ -481,15 +485,16 @@ export default class BattleScene extends Phaser.Scene {
       }
 
       this.animPhase = 'enemy_lunge_back';
-      this.animTimer = 0;
+      this._animStart = Date.now();
       this.tweens.add({
         targets: this.animEnemySprite,
         x: this.animEnemyOrigX,
         duration: 250,
         ease: 'Quad.easeIn',
       });
-    } else if (this.animPhase === 'enemy_lunge_back' && this.animTimer >= 250) {
+    } else if (this.animPhase === 'enemy_lunge_back' && elapsed >= 250) {
       this.animPhase = null;
+      this._animStart = 0;
       this.updateAllDom();
       this.checkBattleEnd();
       if (this.battleState !== 'ended') {

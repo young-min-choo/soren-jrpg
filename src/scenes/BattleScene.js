@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import GameState from '../game/GameState.js';
 import { ITEMS, getItem } from '../game/ItemData.js';
+import { STATUS_EFFECTS, applyStatus, removeStatus, hasStatus, processStatusTick, getActiveStatuses } from '../game/StatusEffectData.js';
 
 /**
  * BattleScene — turn-based combat prototype.
@@ -42,6 +43,7 @@ export default class BattleScene extends Phaser.Scene {
       side: 'player',
       id: 'player_' + i,
       partyIndex: i,
+      statusEffects: {},
     }));
 
     // Enemies (1-3 from data, or random)
@@ -403,6 +405,22 @@ export default class BattleScene extends Phaser.Scene {
     while (this.currentTurnIndex < this.turnOrder.length) {
       const unit = this.turnOrder[this.currentTurnIndex];
       if (unit.alive) {
+        // Process status effects at start of turn
+        const { skipped } = processStatusTick(unit, (msg) => this.log(msg));
+        this.updateAllDom();
+        if (!unit.alive) {
+          // Unit died from status tick damage
+          this.currentTurnIndex++;
+          this._turnTimeout = setTimeout(() => this.processNextTurn(), 500);
+          return;
+        }
+        if (skipped) {
+          // Unit can't act (e.g. asleep) — skip turn
+          this.currentTurnIndex++;
+          this._turnTimeout = setTimeout(() => this.processNextTurn(), 1000);
+          return;
+        }
+
         if (unit.side === 'player') {
           this.activePartyIndex = this.party.indexOf(unit);
           this.battleState = 'action_select';
@@ -618,6 +636,10 @@ export default class BattleScene extends Phaser.Scene {
           this.log(`${target.name} has fallen!`);
           // Hide fallen party member's sprite
           playerSprite.setVisible(false);
+        } else if (Math.random() < 0.2) {
+          // 20% chance to inflict poison
+          applyStatus(target, 'poison');
+          this.log(`${target.name} is poisoned!`);
         }
 
         // Lunge back via rAF
@@ -841,9 +863,14 @@ export default class BattleScene extends Phaser.Scene {
       const hpColor = p.alive ? (hpPct > 50 ? '#44dd44' : hpPct > 25 ? '#ddaa44' : '#dd4444') : '#666';
       const isActive = this.turnOrder[this.currentTurnIndex] === p;
       const nameColor = isActive ? '#ffff00' : (p.alive ? '#ffffff' : '#666');
+      const statuses = getActiveStatuses(p);
+      const statusIcons = statuses.map(s => {
+        const def = STATUS_EFFECTS[s];
+        return def ? `<span style="color:${def.color};font-size:9px;margin-left:4px">${def.icon}</span>` : '';
+      }).join('');
       return `
         <div style="flex:1;min-width:120px;max-width:200px;padding:4px 8px;border-right:1px solid rgba(255,255,255,0.1)">
-          <div style="color:${nameColor};font-weight:${isActive?'bold':'normal'}">${isActive?'▶ ':''}${p.name}</div>
+          <div style="color:${nameColor};font-weight:${isActive?'bold':'normal'}">${isActive?'▶ ':''}${p.name}${statusIcons}</div>
           <div style="font-size:10px;color:#aaa">${p.job} Lv.${p.level}</div>
           <div style="font-size:10px;color:#ccc;margin-top:2px">HP: ${p.hp}/${p.maxHp}</div>
           <div style="height:4px;background:#330000;width:100%;margin:1px 0;border-radius:2px">
@@ -928,6 +955,13 @@ export default class BattleScene extends Phaser.Scene {
         const sprite = this.playerSprites[target.partyIndex];
         if (sprite) sprite.setVisible(true);
         this.log(`${target.name} is revived!`);
+      } else {
+        this.log('It has no effect.');
+      }
+    } else if (def.type === 'cure_status') {
+      if (hasStatus(target, def.status)) {
+        removeStatus(target, def.status);
+        this.log(`${target.name} is cured of ${STATUS_EFFECTS[def.status].name}!`);
       } else {
         this.log('It has no effect.');
       }

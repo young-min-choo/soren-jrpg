@@ -407,7 +407,22 @@ export default class BattleScene extends Phaser.Scene {
               targetSprite.setVisible(false);
               targetSprite.setAlpha(1);
               // Lunge back after death fade
-              this._lungeBackTimeout = setTimeout(() => this.afterPlayerAction(), 100);
+              this._lungeBackTimeout = setTimeout(() => {
+                const backStart = performance.now();
+                const backFromX = lungeX;
+                const animateBack = () => {
+                  const be = performance.now() - backStart;
+                  if (be < LUNGE_MS) {
+                    const t = be / LUNGE_MS;
+                    this.playerSprite.x = backFromX + (origX - backFromX) * (t * t);
+                    requestAnimationFrame(animateBack);
+                  } else {
+                    this.playerSprite.x = origX;
+                    this.afterPlayerAction();
+                  }
+                };
+                requestAnimationFrame(animateBack);
+              }, 100);
             }
           };
           requestAnimationFrame(animateFade);

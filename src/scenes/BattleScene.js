@@ -202,7 +202,7 @@ export default class BattleScene extends Phaser.Scene {
               this.updateActionMenu();
             }
           } else if (this.battleState === 'magic_select') {
-            const abilities = this._currentAbilities();
+            const abilities = this._magicAbilities();
             if (abilities.length > 0) {
               this.selectedSpell = (this.selectedSpell - 1 + abilities.length) % abilities.length;
               this.updateActionMenu();
@@ -264,7 +264,7 @@ export default class BattleScene extends Phaser.Scene {
               this.updateActionMenu();
             }
           } else if (this.battleState === 'magic_select') {
-            const abilities = this._currentAbilities();
+            const abilities = this._magicAbilities();
             if (abilities.length > 0) {
               this.selectedSpell = (this.selectedSpell - 1 + abilities.length) % abilities.length;
               this.updateActionMenu();
@@ -321,9 +321,9 @@ export default class BattleScene extends Phaser.Scene {
                 this.updateEnemyLabels();
               }
             } else if (action === 'MAGIC') {
-              const abilities = GameState.getAllAbilities(this.party.indexOf(this.turnOrder[this.currentTurnIndex]));
+              const abilities = this._magicAbilities();
               if (abilities.length === 0) {
-                this.log('No abilities available.');
+                this.log('No magic available.');
               } else {
                 this.selectedSpell = 0;
                 this.battleState = 'magic_select';
@@ -992,7 +992,7 @@ export default class BattleScene extends Phaser.Scene {
       }
     } else if (this.battleState === 'magic_select') {
       this.actionMenuDiv.style.display = 'block';
-      const abilities = this._currentAbilities();
+      const abilities = this._magicAbilities();
       if (abilities.length === 0) {
         this.actionMenuDiv.innerHTML = '<span style="color:#888">No abilities available.</span>';
       } else {
@@ -1024,6 +1024,16 @@ export default class BattleScene extends Phaser.Scene {
     const caster = this.turnOrder[this.currentTurnIndex];
     if (!caster) return [];
     return GameState.getAllAbilities(this.party.indexOf(caster));
+  }
+
+  // Magic/heal abilities (shown under MAGIC)
+  _magicAbilities() {
+    return this._currentAbilities().filter(a => a.type === 'magic' || a.type === 'heal');
+  }
+
+  // Physical abilities (shown under FIGHT submenu)
+  _fightAbilities() {
+    return this._currentAbilities().filter(a => a.type === 'physical');
   }
 
   castAbility(ability, target) {

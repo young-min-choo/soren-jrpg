@@ -28,6 +28,8 @@ function createCharacter(name, jobName, level = 1) {
     defending: false,
     // Abilities learned per job: { Warrior: ['Power Strike'], Mage: ['Fire'] }
     learnedAbilities: { [jobName]: JOBS[jobName].abilities.filter(a => a.level <= 1).map(a => a.name) },
+    // JP (job points) for spending on abilities — per job
+    jp: {},
     unlockedJobs: [jobName],
   };
 }
@@ -140,12 +142,14 @@ const GameState = {
   applyBattleResult(result, rewards) {
     if (result === 'win' && rewards) {
       const expShare = Math.floor(rewards.exp / state.party.length);
-      const goldShare = rewards.gold;
-      state.gold += goldShare;
+      const jpEarned = Math.max(5, Math.floor(rewards.exp / 10)); // JP = 10% of total exp, min 5
+      state.gold += rewards.gold;
       state.party.forEach(char => {
         if (char.alive) {
           char.exp += expShare;
-          char.jobXp += expShare;
+          // Award JP to current job
+          if (!char.jp) char.jp = {};
+          char.jp[char.job] = (char.jp[char.job] || 0) + jpEarned;
           // Level up check (every 100 exp)
           while (char.exp >= char.level * 100) {
             char.exp -= char.level * 100;
@@ -229,6 +233,43 @@ const GameState = {
       });
     }
     return all;
+  },
+
+  /**
+   * Get abilities available to purchase for a character in their current job.
+   * Returns abilities not yet learned, with their JP cost.
+   */
+  getPurchasableAbilities(charIndex) {
+    const char = state.party[charIndex];
+    if (!char) return [];
+    const job = JOBS[char.job];
+    if (!job) return [];
+    const learned = char.learnedAbilities[char.job] || [];
+    return job.abilities
+      .filter(a => !learned.includes(a.name))
+      .map(a => ({ ...a, affordable: (char.jp[char.job] || 0) >= (a.jpCost || 0) }));
+  },
+
+  /**
+   * Purchase an ability for a character using JP.
+   */
+  buyAbility(charIndex, abilityName) {
+    const char = state.party[charIndex];
+    if (!char) return false;
+    const job = JOBS[char.job];
+    if (!job) return false;
+    const ability = job.abilities.find(a => a.name === abilityName);
+    if (!ability) return false;
+    const learned = char.learnedAbilities[char.job] || [];
+    if (learned.includes(abilityName)) return false; // already learned
+    const cost = ability.jpCost || 0;
+    const currentJp = char.jp[char.job] || 0;
+    if (currentJp < cost) return false; // not enough JP
+    // Deduct JP and learn ability
+    char.jp[char.job] = currentJp - cost;
+    if (!char.learnedAbilities[char.job]) char.learnedAbilities[char.job] = [];
+    char.learnedAbilities[char.job].push(abilityName);
+    return true;
   },
 
   reset() {

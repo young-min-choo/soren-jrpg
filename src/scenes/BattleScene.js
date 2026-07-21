@@ -361,25 +361,32 @@ export default class BattleScene extends Phaser.Scene {
     const player = this.player;
     if (!player.alive || !target || !target.alive) return;
 
+    console.log('DBG executeFight start');
     const dmg = this.calcDamage(player.atk, target.def);
     target.hp -= dmg;
     this.log(`Soren attacks ${target.name} for ${dmg} damage!`);
+    console.log('DBG after damage');
     this.flashSprite(this.enemySprites[target.index]);
+    console.log('DBG after flash');
     if (target.hp <= 0) {
       target.hp = 0;
       target.alive = false;
-      this.allUnits.find(u => u.id === 'enemy_' + target.index).alive = false;
+      console.log('DBG enemy died');
       this.enemySprites[target.index].setVisible(false);
+      console.log('DBG after setVisible');
       this.log(`${target.name} is defeated!`);
     }
     this.player.defending = false;
-
+    console.log('DBG before updateAllDom');
     this.updateAllDom();
+    console.log('DBG after updateAllDom');
     this.checkBattleEnd();
+    console.log('DBG after checkBattleEnd st=' + this.battleState);
     if (this.battleState !== 'ended') {
       this.currentTurnIndex++;
       this.battleState = 'turn_start';
-      this.updateActionMenu(); // hide menu
+      this.updateActionMenu();
+      console.log('DBG set turn_start ti=' + this.currentTurnIndex);
     }
   }
 

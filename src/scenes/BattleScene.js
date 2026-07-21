@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import GameState from '../game/GameState.js';
+import { ITEMS, getItem } from '../game/ItemData.js';
 
 /**
  * BattleScene — turn-based combat prototype.
@@ -183,7 +184,7 @@ export default class BattleScene extends Phaser.Scene {
       switch (e.key) {
         case 'ArrowUp': case 'w': case 'W':
           if (this.battleState === 'action_select') {
-            const actions = ['FIGHT', 'DEFEND', 'FLEE'];
+            const actions = ['FIGHT', 'ITEM', 'DEFEND', 'FLEE'];
             this.selectedAction = (this.selectedAction - 1 + actions.length) % actions.length;
             this.updateActionMenu();
           } else if (this.battleState === 'target_select') {
@@ -192,11 +193,23 @@ export default class BattleScene extends Phaser.Scene {
               this.selectedTarget = (this.selectedTarget - 1 + alive.length) % alive.length;
               this.updateEnemyLabels();
             }
+          } else if (this.battleState === 'item_select') {
+            const inv = this._usableItems();
+            if (inv.length > 0) {
+              this.selectedItem = (this.selectedItem - 1 + inv.length) % inv.length;
+              this.updateActionMenu();
+            }
+          } else if (this.battleState === 'ally_select') {
+            const aliveAllies = this.party.filter(p => p.alive);
+            if (aliveAllies.length > 0) {
+              this.selectedAlly = (this.selectedAlly - 1 + aliveAllies.length) % aliveAllies.length;
+              this.updateActionMenu();
+            }
           }
           e.preventDefault(); break;
         case 'ArrowDown': case 's': case 'S':
           if (this.battleState === 'action_select') {
-            const actions = ['FIGHT', 'DEFEND', 'FLEE'];
+            const actions = ['FIGHT', 'ITEM', 'DEFEND', 'FLEE'];
             this.selectedAction = (this.selectedAction + 1) % actions.length;
             this.updateActionMenu();
           } else if (this.battleState === 'target_select') {
@@ -204,6 +217,18 @@ export default class BattleScene extends Phaser.Scene {
             if (alive.length > 0) {
               this.selectedTarget = (this.selectedTarget + 1) % alive.length;
               this.updateEnemyLabels();
+            }
+          } else if (this.battleState === 'item_select') {
+            const inv = this._usableItems();
+            if (inv.length > 0) {
+              this.selectedItem = (this.selectedItem + 1) % inv.length;
+              this.updateActionMenu();
+            }
+          } else if (this.battleState === 'ally_select') {
+            const aliveAllies = this.party.filter(p => p.alive);
+            if (aliveAllies.length > 0) {
+              this.selectedAlly = (this.selectedAlly + 1) % aliveAllies.length;
+              this.updateActionMenu();
             }
           }
           e.preventDefault(); break;
@@ -227,7 +252,7 @@ export default class BattleScene extends Phaser.Scene {
           e.preventDefault(); break;
         case 'z': case 'Z': case 'Enter':
           if (this.battleState === 'action_select') {
-            const actions = ['FIGHT', 'DEFEND', 'FLEE'];
+            const actions = ['FIGHT', 'ITEM', 'DEFEND', 'FLEE'];
             const action = actions[this.selectedAction];
             if (action === 'FIGHT') {
               const alive = this.enemies.filter(en => en.alive);
@@ -238,6 +263,12 @@ export default class BattleScene extends Phaser.Scene {
                 this.updateActionMenu();
                 this.updateEnemyLabels();
               }
+            } else if (action === 'ITEM') {
+              this.selectedItem = 0;
+              this.selectedAlly = 0;
+              this.battleState = 'item_select';
+              this.log('Select an item.');
+              this.updateActionMenu();
             } else {
               this.executeAction(action);
             }
@@ -250,6 +281,30 @@ export default class BattleScene extends Phaser.Scene {
               this.updateEnemyLabels();
               this.executeFight(target);
             }
+          } else if (this.battleState === 'item_select') {
+            // Confirm item selection — now select ally target
+            const inv = this._usableItems();
+            if (inv.length === 0) return;
+            const item = inv[this.selectedItem];
+            const itemDef = getItem(item.name);
+            if (itemDef.target === 'ally') {
+              this.battleState = 'ally_select';
+              this.selectedAlly = 0;
+              this.log('Select an ally.');
+              this.updateActionMenu();
+            } else if (itemDef.target === 'enemy') {
+              // Use on enemy directly (only one enemy for now, or first alive)
+              this.useItem(item.name, null);
+            }
+          } else if (this.battleState === 'ally_select') {
+            const aliveAllies = this.party.filter(p => p.alive);
+            if (this.selectedAlly >= aliveAllies.length) this.selectedAlly = 0;
+            const ally = aliveAllies[this.selectedAlly];
+            if (ally) {
+              const inv = this._usableItems();
+              const item = inv[this.selectedItem];
+              if (item) this.useItem(item.name, ally);
+            }
           }
           e.preventDefault(); break;
         case 'x': case 'X': case 'Escape':
@@ -258,6 +313,14 @@ export default class BattleScene extends Phaser.Scene {
             this.log('Select an action.');
             this.updateActionMenu();
             this.updateEnemyLabels();
+          } else if (this.battleState === 'item_select') {
+            this.battleState = 'action_select';
+            this.log('Select an action.');
+            this.updateActionMenu();
+          } else if (this.battleState === 'ally_select') {
+            this.battleState = 'item_select';
+            this.log('Select an item.');
+            this.updateActionMenu();
           }
           e.preventDefault(); break;
       }
@@ -777,19 +840,95 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   updateActionMenu() {
-    const actions = ['FIGHT', 'DEFEND', 'FLEE'];
-    const lines = actions.map((a, i) => {
-      const prefix = i === this.selectedAction ? '▶' : '　';
-      const color = i === this.selectedAction ? '#ffff00' : '#888';
-      return `<span style="color:${color};display:inline-block;width:16px">${prefix}</span> ${a}`;
-    });
-    this.actionMenuDiv.innerHTML = lines.join('<br>');
-    // Show/hide action menu
     if (this.battleState === 'action_select') {
+      const actions = ['FIGHT', 'ITEM', 'DEFEND', 'FLEE'];
       this.actionMenuDiv.style.display = 'block';
+      this.actionMenuDiv.innerHTML = actions.map((a, i) => {
+        const prefix = i === this.selectedAction ? '▶' : '　';
+        const color = i === this.selectedAction ? '#ffff00' : '#888';
+        return `<span style="color:${color};display:inline-block;width:16px">${prefix}</span> ${a}`;
+      }).join('<br>');
+    } else if (this.battleState === 'item_select') {
+      this.actionMenuDiv.style.display = 'block';
+      const inv = this._usableItems();
+      if (inv.length === 0) {
+        this.actionMenuDiv.innerHTML = '<span style="color:#888">No items available.</span>';
+      } else {
+        this.actionMenuDiv.innerHTML = inv.map((item, i) => {
+          const prefix = i === this.selectedItem ? '▶' : '　';
+          const color = i === this.selectedItem ? '#ffff00' : '#888';
+          return `<span style="color:${color};display:inline-block;width:16px">${prefix}</span> ${item.name} x${item.qty}`;
+        }).join('<br>');
+      }
+    } else if (this.battleState === 'ally_select') {
+      this.actionMenuDiv.style.display = 'block';
+      const aliveAllies = this.party.filter(p => p.alive);
+      this.actionMenuDiv.innerHTML = aliveAllies.map((ally, i) => {
+        const prefix = i === this.selectedAlly ? '▶' : '　';
+        const color = i === this.selectedAlly ? '#ffff00' : '#888';
+        return `<span style="color:${color};display:inline-block;width:16px">${prefix}</span> ${ally.name} (${ally.hp}/${ally.maxHp})`;
+      }).join('<br>');
     } else {
       this.actionMenuDiv.style.display = 'none';
     }
+  }
+
+  _usableItems() {
+    return GameState.getInventory().filter(item => {
+      const def = getItem(item.name);
+      return def && item.qty > 0;
+    });
+  }
+
+  useItem(itemName, ally) {
+    const def = getItem(itemName);
+    if (!def) return;
+
+    const user = this.turnOrder[this.currentTurnIndex];
+    const target = ally || this.enemies.find(e => e.alive);
+    if (!target) return;
+
+    this.log(`${user.name} uses ${def.name}!`);
+
+    if (def.type === 'heal') {
+      const healed = Math.min(def.power, target.maxHp - target.hp);
+      target.hp += healed;
+      this.log(`${target.name} recovers ${healed} HP!`);
+      const sprite = target.side === 'player' ? this.playerSprites[target.partyIndex] : this.enemySprites[target.index];
+      if (sprite) this.showDamageNumber(sprite, healed, '#44ff44');
+    } else if (def.type === 'mp_heal') {
+      const restored = Math.min(def.power, target.maxMp - target.mp);
+      target.mp += restored;
+      this.log(`${target.name} recovers ${restored} MP!`);
+    } else if (def.type === 'revive') {
+      if (!target.alive) {
+        target.alive = true;
+        target.hp = def.power;
+        const sprite = this.playerSprites[target.partyIndex];
+        if (sprite) sprite.setVisible(true);
+        this.log(`${target.name} is revived!`);
+      } else {
+        this.log('It has no effect.');
+      }
+    } else if (def.type === 'damage') {
+      target.hp -= def.power;
+      this.log(`${target.name} takes ${def.power} damage!`);
+      this.showDamageNumber(this.enemySprites[target.index], def.power, '#ff4444');
+      if (target.hp <= 0) {
+        target.hp = 0;
+        target.alive = false;
+        this.log(`${target.name} is defeated!`);
+        const ts = this.enemySprites[target.index];
+        if (ts) ts.setVisible(false);
+      }
+    }
+
+    GameState.removeItem(itemName, 1);
+    this.updateAllDom();
+
+    // Advance turn after a short delay
+    this.battleState = 'animating';
+    this._itemTimeout = setTimeout(() => this.afterPlayerAction(), 1000);
   }
 
   updateEnemyLabels() {

@@ -3,6 +3,7 @@
  * Now supports a full party of characters with jobs.
  */
 import { JOBS, getStatsForLevel } from './JobData.js';
+import { getStartingInventory } from './ItemData.js';
 
 function createCharacter(name, jobName, level = 1) {
   const stats = getStatsForLevel(jobName, level);
@@ -38,7 +39,7 @@ let state = {
     createCharacter('Kael', 'Ranger', 1),
   ],
   gold: 0,
-  inventory: [],
+  inventory: getStartingInventory(),
   storyFlags: {},
   unlockedJobs: ['Warrior', 'Mage', 'Ranger', 'Monk'],
   // Position tracking for save/load
@@ -53,6 +54,33 @@ const GameState = {
   getParty() { return state.party; },
 
   getCharacter(index) { return state.party[index]; },
+
+  // --- Inventory management ---
+  getInventory() { return state.inventory; },
+
+  getItemQty(name) {
+    const entry = state.inventory.find(i => i.name === name);
+    return entry ? entry.qty : 0;
+  },
+
+  addItem(name, qty = 1) {
+    const entry = state.inventory.find(i => i.name === name);
+    if (entry) {
+      entry.qty += qty;
+    } else {
+      state.inventory.push({ name, qty });
+    }
+  },
+
+  removeItem(name, qty = 1) {
+    const entry = state.inventory.find(i => i.name === name);
+    if (!entry || entry.qty < qty) return false;
+    entry.qty -= qty;
+    if (entry.qty <= 0) {
+      state.inventory = state.inventory.filter(i => i.name !== name);
+    }
+    return true;
+  },
 
   /**
    * Add a new party member.
@@ -207,7 +235,7 @@ const GameState = {
     state = {
       party: [createCharacter('Soren', 'Warrior', 1)],
       gold: 0,
-      inventory: [],
+      inventory: getStartingInventory(),
       storyFlags: {},
       unlockedJobs: ['Warrior', 'Mage', 'Ranger', 'Monk'],
       scene: 'Overworld',

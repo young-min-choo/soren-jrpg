@@ -112,34 +112,38 @@ export default class BattleScene extends Phaser.Scene {
       this.enemyLabelDivs.push(labelDiv);
     });
 
-    // Party panel (bottom strip)
+    // Party panel (very bottom strip — always visible)
     this.partyPanelDiv = this.createDomText('', container, {
       left: '0px', bottom: '0px',
       width: '768px',
       fontSize: '13px', color: '#ffffff',
       background: 'rgba(20, 20, 50, 0.85)',
       borderTop: '1px solid rgba(255,255,255,0.2)',
-      padding: '6px 10px',
+      padding: '8px 12px',
       boxSizing: 'border-box',
       display: 'flex',
-      gap: '16px',
+      gap: '20px',
+      zIndex: '25',
     });
 
-    // Action menu (overlays the party panel, left side)
+    // Action menu (appears ABOVE party panel when it's player's turn)
     this.actionMenuDiv = this.createDomText('', container, {
-      left: '10px', bottom: '28px',
+      left: '12px', bottom: '90px',
       fontSize: '14px', color: '#ffffff', lineHeight: '1.6',
-      background: 'rgba(30, 30, 60, 0.92)',
+      background: 'rgba(30, 30, 60, 0.95)',
       border: '1px solid rgba(255,255,255,0.3)',
-      padding: '6px 10px',
+      padding: '8px 12px',
       boxSizing: 'border-box',
+      display: 'none',
+      zIndex: '26',
     });
 
     // Battle log (right side, above party panel)
     this.battleLogDiv = this.createDomText('', container, {
-      right: '8px', bottom: '36px',
+      right: '12px', bottom: '90px',
       fontSize: '11px', color: '#aaaaff', lineHeight: '1.4',
       maxWidth: '280px', textAlign: 'right',
+      zIndex: '24',
     });
 
     // Message (center, for win/lose)
@@ -313,6 +317,7 @@ export default class BattleScene extends Phaser.Scene {
     if (this.battleState !== 'ended') {
       this.currentTurnIndex++;
       this.battleState = 'turn_start';
+      this.updateActionMenu(); // hide menu
     }
   }
 
@@ -346,6 +351,7 @@ export default class BattleScene extends Phaser.Scene {
     if (this.battleState !== 'ended') {
       this.currentTurnIndex++;
       this.battleState = 'turn_start';
+      this.updateActionMenu(); // hide menu
     }
   }
 
@@ -509,6 +515,8 @@ export default class BattleScene extends Phaser.Scene {
       (i === this.selectedAction ? '<span style="color:#ffff00">▶ ' : '<span style="color:#888">&nbsp;&nbsp; ') + a + '</span>'
     );
     this.actionMenuDiv.innerHTML = lines.join('<br>');
+    // Show action menu only during player's turn
+    this.actionMenuDiv.style.display = (this.battleState === 'action_select') ? 'block' : 'none';
   }
 
   updateBattleLog() {

@@ -124,6 +124,7 @@ export default class TownScene extends Phaser.Scene {
         case 'ArrowLeft': case 'a': case 'A': this.keys.left = true; e.preventDefault(); break;
         case 'ArrowRight': case 'd': case 'D': this.keys.right = true; e.preventDefault(); break;
         case 'z': case 'Z': case 'Enter': this.confirmPressed = true; e.preventDefault(); break;
+        case 'x': case 'X': case 'Escape': this.openMenu(); e.preventDefault(); break;
       }
     };
 
@@ -584,6 +585,12 @@ export default class TownScene extends Phaser.Scene {
       this.jobMenuDiv = null;
     }
     this.jobMenuState = null;
+  }
+
+  openMenu() {
+    this.player.setVelocity(0, 0);
+    this.scene.launch('Menu', { parentScene: 'Town' });
+    this.scene.pause();
   }
 
   exitTown() {

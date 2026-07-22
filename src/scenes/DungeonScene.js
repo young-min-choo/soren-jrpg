@@ -84,7 +84,8 @@ export default class DungeonScene extends Phaser.Scene {
         case 'ArrowLeft': case 'a': case 'A': this.keys.left = true; e.preventDefault(); break;
         case 'ArrowRight': case 'd': case 'D': this.keys.right = true; e.preventDefault(); break;
         case 'z': case 'Z': case 'Enter': this.confirmPressed = true; e.preventDefault(); break;
-        case 'x': case 'X': case 'Escape': this.interactPressed = true; e.preventDefault(); break;
+        case 'x': case 'X': case 'Escape': this.openMenu(); e.preventDefault(); break;
+        case 'q': case 'Q': this.interactPressed = true; e.preventDefault(); break;
       }
     };
 
@@ -301,6 +302,13 @@ export default class DungeonScene extends Phaser.Scene {
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('Overworld');
     });
+  }
+
+  openMenu() {
+    if (this.transitioning) return;
+    this.player.setVelocity(0, 0);
+    this.scene.launch('Menu', { parentScene: 'Dungeon' });
+    this.scene.pause();
   }
 
   // --- Push block puzzle ---

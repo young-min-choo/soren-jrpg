@@ -153,7 +153,7 @@ export default class OverworldScene extends Phaser.Scene {
 
     // --- Random encounter system ---
     this.encounterSteps = 0;
-    this.encounterThreshold = 15 + Math.floor(Math.random() * 10); // 15-25 steps
+    this.encounterThreshold = 40 + Math.floor(Math.random() * 20); // 40-60 steps (FF1-3 overworld rate)
   }
 
   update(time, delta) {
@@ -228,7 +228,7 @@ export default class OverworldScene extends Phaser.Scene {
       this.encounterSteps++;
       if (this.encounterSteps >= this.encounterThreshold) {
         this.encounterSteps = 0;
-        this.encounterThreshold = 15 + Math.floor(Math.random() * 10);
+        this.encounterThreshold = 40 + Math.floor(Math.random() * 20);
         this.startBattle();
       }
     }

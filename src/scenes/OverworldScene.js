@@ -154,7 +154,7 @@ export default class OverworldScene extends Phaser.Scene {
 
     // --- Random encounter system ---
     this.encounterSteps = 0;
-    this.encounterThreshold = 40 + Math.floor(Math.random() * 20); // 40-60 steps (FF1-3 overworld rate)
+    this.encounterThreshold = 6 + Math.floor(Math.random() * 4); // 6-10 tiles (overworld — ~4-6 encounters per map crossing)
   }
 
   update(time, delta) {
@@ -234,7 +234,7 @@ export default class OverworldScene extends Phaser.Scene {
       const thresholdPx = this.encounterThreshold * TILE_SIZE;
       if (this.encounterDistance >= thresholdPx) {
         this.encounterDistance = 0;
-        this.encounterThreshold = 40 + Math.floor(Math.random() * 20);
+        this.encounterThreshold = 6 + Math.floor(Math.random() * 4);
         this.startBattle();
       }
     }

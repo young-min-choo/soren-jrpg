@@ -32,7 +32,7 @@ export default class DungeonScene extends Phaser.Scene {
     this.transitioning = false;
     this.dialogueActive = false;
     this.encounterSteps = 0;
-    this.encounterThreshold = 25 + Math.floor(Math.random() * 15); // 25-40 steps (dungeon rate)
+    this.encounterThreshold = 6 + Math.floor(Math.random() * 4); // 6-10 tiles (dungeon — slightly more frequent)
 
     // Generate dungeon layout
     this.mapData = this.generateDungeon();
@@ -164,7 +164,7 @@ export default class DungeonScene extends Phaser.Scene {
       const thresholdPx = this.encounterThreshold * TILE_SIZE;
       if (this.encounterDistance >= thresholdPx) {
         this.encounterDistance = 0;
-        this.encounterThreshold = 25 + Math.floor(Math.random() * 15);
+        this.encounterThreshold = 6 + Math.floor(Math.random() * 4);
         this.startBattle();
       }
     } else {

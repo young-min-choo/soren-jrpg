@@ -175,7 +175,10 @@ export default class MenuScene extends Phaser.Scene {
 
   closeMenu() {
     this.scene.stop();
-    this.scene.resume(this.parentScene);
+    const parent = this.scene.manager.getScene(this.parentScene);
+    if (parent && !parent.scene.isActive()) {
+      this.scene.resume(this.parentScene);
+    }
   }
 
   _mainItems() {

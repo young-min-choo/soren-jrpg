@@ -74,7 +74,6 @@ export default class DungeonScene extends Phaser.Scene {
     this.keyShift = this.input.keyboard.addKey('SHIFT');
     this.keys = { up: false, down: false, left: false, right: false };
     this.confirmPressed = false;
-    this.interactPressed = false;
 
     this.handleKeyDown = (e) => {
       if (this.dialogueActive || this.transitioning) return;
@@ -85,7 +84,6 @@ export default class DungeonScene extends Phaser.Scene {
         case 'ArrowRight': case 'd': case 'D': this.keys.right = true; e.preventDefault(); break;
         case 'z': case 'Z': case 'Enter': this.confirmPressed = true; e.preventDefault(); break;
         case 'x': case 'X': case 'Escape': this.openMenu(); e.preventDefault(); break;
-        case 'q': case 'Q': this.interactPressed = true; e.preventDefault(); break;
       }
     };
 
@@ -96,7 +94,6 @@ export default class DungeonScene extends Phaser.Scene {
         case 'ArrowLeft': case 'a': case 'A': this.keys.left = false; break;
         case 'ArrowRight': case 'd': case 'D': this.keys.right = false; break;
         case 'z': case 'Z': case 'Enter': this.confirmPressed = false; break;
-        case 'x': case 'X': case 'Escape': this.interactPressed = false; break;
       }
     };
 
@@ -196,9 +193,8 @@ export default class DungeonScene extends Phaser.Scene {
       this.exitDungeon();
     }
 
-    // Push block interaction (X key)
-    if (this.interactPressed) {
-      this.interactPressed = false;
+    // Push block interaction — auto-push when walking into a block
+    if (moving) {
       this.tryPushBlock();
     }
 
@@ -209,7 +205,6 @@ export default class DungeonScene extends Phaser.Scene {
     this.checkPuzzle();
 
     this.confirmPressed = false;
-    this.interactPressed = false;
   }
 
   startBattle() {
@@ -325,24 +320,23 @@ export default class DungeonScene extends Phaser.Scene {
           const by = y * TILE_SIZE + TILE_SIZE / 2;
           const block = this.add.rectangle(bx, by, 24, 24, 0x886644);
           block.setStrokeStyle(2, 0x443322);
-          block.setData('tileX', x);
-          block.setData('tileY', y);
           block.setData('gridX', x);
           block.setData('gridY', y);
           this.blockSprites.push(block);
-          // Make block collidable with player
-          this.physics.add.existing(block, true);
-          this.physics.add.collider(this.player, block);
           // Remove from tilemap (it's a sprite now)
           this.mapData[y][x] = T_FLOOR;
           this.groundLayer.putTileAt(T_FLOOR, x, y);
         }
       }
     }
+    // Check blocks against switches at start (in case they spawn on one)
+    this.blockSprites.forEach(block => {
+      this.checkBlockOnSwitch(block, block.getData('gridX'), block.getData('gridY'));
+    });
   }
 
   tryPushBlock() {
-    // Find block adjacent to player in facing direction
+    // Auto-push: when player walks into a block, push it in the facing direction
     const playerTileX = Math.floor(this.player.x / TILE_SIZE);
     const playerTileY = Math.floor(this.player.y / TILE_SIZE);
     const dx = { right: 1, left: -1, up: 0, down: 0 }[this.facing] || 0;
@@ -357,26 +351,23 @@ export default class DungeonScene extends Phaser.Scene {
         // Try to push block in facing direction
         const newX = bx + dx;
         const newY = by + dy;
-        // Check if target tile is free (floor or switch)
         if (newX < 0 || newX >= MAP_COLS || newY < 0 || newY >= MAP_ROWS) return;
         const targetTile = this.mapData[newY][newX];
         if (targetTile !== T_FLOOR && targetTile !== T_SWITCH) return;
-        // Check no other block at target
         const blocked = this.blockSprites.some(b => b.getData('gridX') === newX && b.getData('gridY') === newY);
         if (blocked) return;
 
-        // Move block
+        // Move block — direct position update (no tweens, works in all scenes)
         block.setData('gridX', newX);
         block.setData('gridY', newY);
-        this.tweens.add({
-          targets: block,
-          x: newX * TILE_SIZE + TILE_SIZE / 2,
-          y: newY * TILE_SIZE + TILE_SIZE / 2,
-          duration: 200,
-          ease: 'Quad.easeOut',
-        });
+        block.setPosition(newX * TILE_SIZE + TILE_SIZE / 2, newY * TILE_SIZE + TILE_SIZE / 2);
+        // Nudge player back so they don't overlap
+        this.player.x = playerTileX * TILE_SIZE + TILE_SIZE / 2;
+        this.player.y = playerTileY * TILE_SIZE + TILE_SIZE / 2;
+        this.player.setVelocity(0, 0);
         // Check if block is on a switch
         this.checkBlockOnSwitch(block, newX, newY);
+        return; // Only push one block per frame
       }
     }
   }

@@ -224,11 +224,16 @@ export default class OverworldScene extends Phaser.Scene {
       this.enterTown();
     }
 
-    // --- Random encounter check ---
+    // --- Random encounter check — count tiles walked, not frames ---
     if (moving && !nearEntrance) {
-      this.encounterSteps++;
-      if (this.encounterSteps >= this.encounterThreshold) {
-        this.encounterSteps = 0;
+      const distMoved = Phaser.Math.Distance.Between(this.player.x, this.player.y, this._lastPlayerX || this.player.x, this._lastPlayerY || this.player.y);
+      this.encounterDistance = (this.encounterDistance || 0) + distMoved;
+      this._lastPlayerX = this.player.x;
+      this._lastPlayerY = this.player.y;
+      // 1 tile = 32px. Encounter every 40-60 tiles of walking.
+      const thresholdPx = this.encounterThreshold * TILE_SIZE;
+      if (this.encounterDistance >= thresholdPx) {
+        this.encounterDistance = 0;
         this.encounterThreshold = 40 + Math.floor(Math.random() * 20);
         this.startBattle();
       }

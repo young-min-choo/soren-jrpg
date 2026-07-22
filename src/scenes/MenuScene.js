@@ -187,33 +187,50 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   _applyLoadedState(data) {
-    // Restore GameState by mutating the singleton's state object
     const gs = GameState.get();
     Object.keys(gs).forEach(key => {
       if (data[key] !== undefined) {
         gs[key] = data[key];
       }
     });
-    // Close menu and restart the saved scene
+    // Stop all running scenes except Boot, then start the saved scene
     this.scene.stop();
-    this.scene.start(data.scene || 'Overworld');
+    const sceneManager = this.scene.manager;
+    ['Overworld', 'Town', 'Dungeon', 'Dialogue', 'Battle'].forEach(sceneKey => {
+      const scene = sceneManager.getScene(sceneKey);
+      if (scene && scene.scene.isActive()) sceneManager.stop(sceneKey);
+    });
+    sceneManager.start(data.scene || 'Overworld');
   }
 
   updateMenu() {
     if (!this.menuDiv) return;
 
+    const partyColors = ['#4488ff', '#ff8844', '#44ff88', '#ff44ff'];
+    const partyInitials = ['S', 'A', 'K', '?'];
+
     if (this.menuState === 'main') {
       const items = this._mainItems();
       const party = GameState.getParty();
-      let html = '<div style="font-size:16px;color:#ffff00;margin-bottom:12px">▶ Menu</div>';
-      // Party summary
-      html += '<div style="display:flex;gap:12px;margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.2);padding-bottom:12px">';
-      party.forEach(char => {
+      let html = '<div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">';
+      // Party portraits
+      party.forEach((char, i) => {
+        const color = partyColors[i % partyColors.length];
+        const initial = char.name[0] || '?';
         const hpPct = Math.max(0, (char.hp / char.maxHp) * 100);
         const hpColor = hpPct > 50 ? '#44dd44' : hpPct > 25 ? '#ddaa44' : '#dd4444';
-        html += `<div style="flex:1;font-size:11px"><div style="color:#fff;font-weight:bold">${char.name}</div><div style="color:#aaa">${char.job} Lv.${char.level}</div><div style="color:#ccc">HP ${char.hp}/${char.maxHp}</div><div style="height:3px;background:#330000;width:100%;margin:1px 0"><div style="height:3px;background:${hpColor};width:${hpPct}%"></div></div></div>`;
+        html += `<div style="display:flex;align-items:center;gap:6px;flex:1">
+          <div style="width:32px;height:32px;border-radius:4px;background:${color};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:bold;color:#fff;text-shadow:1px 1px 2px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.3)">${initial}</div>
+          <div style="flex:1;font-size:10px">
+            <div style="color:#fff;font-weight:bold">${char.name}</div>
+            <div style="color:#aaa">${char.job} Lv.${char.level}</div>
+            <div style="color:#ccc">HP ${char.hp}/${char.maxHp}</div>
+            <div style="height:3px;background:#330000;width:60px;margin:1px 0;border-radius:2px"><div style="height:3px;background:${hpColor};width:${hpPct}%;border-radius:2px"></div></div>
+          </div>
+        </div>`;
       });
       html += '</div>';
+      html += '<div style="border-top:1px solid rgba(255,255,255,0.2);padding-top:12px"></div>';
       // Menu items
       items.forEach((item, i) => {
         const sel = i === this.selectedIndex;
@@ -288,7 +305,17 @@ export default class MenuScene extends Phaser.Scene {
     if (this.menuState === 'save' || this.menuState === 'load') {
       const isSave = this.menuState === 'save';
       const slots = this._saveSlots();
+      const party = GameState.getParty();
+      const partyColors = ['#4488ff', '#ff8844', '#44ff88', '#ff44ff'];
       let html = `<div style="font-size:16px;color:#ffff00;margin-bottom:12px">${isSave ? 'Save' : 'Load'} Game</div>`;
+      // Show party portraits row
+      html += '<div style="display:flex;gap:6px;margin-bottom:12px;justify-content:center">';
+      party.forEach((char, i) => {
+        const color = partyColors[i % partyColors.length];
+        const initial = char.name[0] || '?';
+        html += `<div style="width:28px;height:28px;border-radius:4px;background:${color};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;color:#fff;border:1px solid rgba(255,255,255,0.3)">${initial}</div>`;
+      });
+      html += '</div>';
       slots.forEach((slot, i) => {
         const sel = i === this.subIndex;
         const prefix = sel ? '▶' : '　';

@@ -156,10 +156,14 @@ export default class DungeonScene extends Phaser.Scene {
       if (this.player.anims.currentAnim?.key !== animKey) {
         this.player.anims.play(animKey, true);
       }
-      // Count steps for random encounters
-      this.encounterSteps++;
-      if (this.encounterSteps >= this.encounterThreshold) {
-        this.encounterSteps = 0;
+      // Count tiles walked for random encounters
+      const distMoved = Phaser.Math.Distance.Between(this.player.x, this.player.y, this._lastPlayerX || this.player.x, this._lastPlayerY || this.player.y);
+      this.encounterDistance = (this.encounterDistance || 0) + distMoved;
+      this._lastPlayerX = this.player.x;
+      this._lastPlayerY = this.player.y;
+      const thresholdPx = this.encounterThreshold * TILE_SIZE;
+      if (this.encounterDistance >= thresholdPx) {
+        this.encounterDistance = 0;
         this.encounterThreshold = 25 + Math.floor(Math.random() * 15);
         this.startBattle();
       }

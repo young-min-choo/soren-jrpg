@@ -150,18 +150,22 @@ export default class DungeonScene extends Phaser.Scene {
 
     // Check if player would enter a block tile — blocks are solid walls
     if (moving) {
-      const nextTileX = Math.floor((this.player.x + vx * 0.1) / TILE_SIZE);
-      const nextTileY = Math.floor((this.player.y + vy * 0.1) / TILE_SIZE);
-      const onBlockTile = this.blockSprites.some(b => b.getData('gridX') === nextTileX && b.getData('gridY') === nextTileY);
-      if (onBlockTile) {
-        // Don't push into block unless tryPushBlock handles it
-        const playerTileX = Math.floor(this.player.x / TILE_SIZE);
-        const playerTileY = Math.floor(this.player.y / TILE_SIZE);
+      // Check current tile — if player is ON a block tile, they've walked through it
+      const curTileX = Math.floor(this.player.x / TILE_SIZE);
+      const curTileY = Math.floor(this.player.y / TILE_SIZE);
+      const onBlock = this.blockSprites.find(b => b.getData('gridX') === curTileX && b.getData('gridY') === curTileY);
+      if (onBlock) {
+        // Player walked into block tile without pushing — push them back
         const dx2 = { right: 1, left: -1, up: 0, down: 0 }[this.facing] || 0;
         const dy2 = { up: -1, down: 1, left: 0, right: 0 }[this.facing] || 0;
-        const blockInFront = (playerTileX + dx2 === nextTileX && playerTileY + dy2 === nextTileY);
-        if (!blockInFront) {
-          // Block is beside the player, not in front — stop
+        // Only allow if block is directly in front (tryPushBlock will handle the push)
+        const playerTileX = Math.floor((this.player.x - dx2 * TILE_SIZE * 0.5) / TILE_SIZE);
+        const playerTileY = Math.floor((this.player.y - dy2 * TILE_SIZE * 0.5) / TILE_SIZE);
+        const blockInFront = (playerTileX + dx2 === curTileX && playerTileY + dy2 === curTileY);
+        if (!blockInFront || !moving) {
+          // Not approaching from correct side — bounce back
+          this.player.x = playerTileX * TILE_SIZE + TILE_SIZE / 2;
+          this.player.y = playerTileY * TILE_SIZE + TILE_SIZE / 2;
           this.player.setVelocity(0, 0);
         }
       }

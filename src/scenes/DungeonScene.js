@@ -337,12 +337,19 @@ export default class DungeonScene extends Phaser.Scene {
 
   tryPushBlock() {
     // Auto-push: when player walks into a block, push it in the facing direction
+    // Only push when player is close to the block tile (within half a tile)
     const playerTileX = Math.floor(this.player.x / TILE_SIZE);
     const playerTileY = Math.floor(this.player.y / TILE_SIZE);
     const dx = { right: 1, left: -1, up: 0, down: 0 }[this.facing] || 0;
     const dy = { up: -1, down: 1, left: 0, right: 0 }[this.facing] || 0;
     const targetX = playerTileX + dx;
     const targetY = playerTileY + dy;
+
+    // Check if player is close enough to the block tile (center of their tile)
+    const playerCenterX = playerTileX * TILE_SIZE + TILE_SIZE / 2;
+    const playerCenterY = playerTileY * TILE_SIZE + TILE_SIZE / 2;
+    const distToCenter = Phaser.Math.Distance.Between(this.player.x, this.player.y, playerCenterX, playerCenterY);
+    if (distToCenter > TILE_SIZE * 0.4) return; // Not close enough to push
 
     for (const block of this.blockSprites) {
       const bx = block.getData('gridX');
@@ -351,11 +358,29 @@ export default class DungeonScene extends Phaser.Scene {
         // Try to push block in facing direction
         const newX = bx + dx;
         const newY = by + dy;
-        if (newX < 0 || newX >= MAP_COLS || newY < 0 || newY >= MAP_ROWS) return;
+        if (newX < 0 || newX >= MAP_COLS || newY < 0 || newY >= MAP_ROWS) {
+          // Can't push — stop player at their tile center
+          this.player.x = playerCenterX;
+          this.player.y = playerCenterY;
+          this.player.setVelocity(0, 0);
+          return;
+        }
         const targetTile = this.mapData[newY][newX];
-        if (targetTile !== T_FLOOR && targetTile !== T_SWITCH) return;
+        if (targetTile !== T_FLOOR && targetTile !== T_SWITCH) {
+          // Wall/obstacle behind block — stop player
+          this.player.x = playerCenterX;
+          this.player.y = playerCenterY;
+          this.player.setVelocity(0, 0);
+          return;
+        }
         const blocked = this.blockSprites.some(b => b.getData('gridX') === newX && b.getData('gridY') === newY);
-        if (blocked) return;
+        if (blocked) {
+          // Another block behind — stop player
+          this.player.x = playerCenterX;
+          this.player.y = playerCenterY;
+          this.player.setVelocity(0, 0);
+          return;
+        }
 
         // Move block — smooth slide via requestAnimationFrame (Zelda-style)
         const fromX = block.x;
@@ -378,9 +403,9 @@ export default class DungeonScene extends Phaser.Scene {
         requestAnimationFrame(animateSlide);
         block.setData('gridX', newX);
         block.setData('gridY', newY);
-        // Nudge player back so they don't overlap
-        this.player.x = playerTileX * TILE_SIZE + TILE_SIZE / 2;
-        this.player.y = playerTileY * TILE_SIZE + TILE_SIZE / 2;
+        // Stop player at their tile center (don't walk into block's old position)
+        this.player.x = playerCenterX;
+        this.player.y = playerCenterY;
         this.player.setVelocity(0, 0);
         // Check if block is on a switch
         this.checkBlockOnSwitch(block, newX, newY);

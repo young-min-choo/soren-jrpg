@@ -148,6 +148,25 @@ export default class DungeonScene extends Phaser.Scene {
 
     this.player.setVelocity(vx, vy);
 
+    // Check if player would enter a block tile — blocks are solid walls
+    if (moving) {
+      const nextTileX = Math.floor((this.player.x + vx * 0.1) / TILE_SIZE);
+      const nextTileY = Math.floor((this.player.y + vy * 0.1) / TILE_SIZE);
+      const onBlockTile = this.blockSprites.some(b => b.getData('gridX') === nextTileX && b.getData('gridY') === nextTileY);
+      if (onBlockTile) {
+        // Don't push into block unless tryPushBlock handles it
+        const playerTileX = Math.floor(this.player.x / TILE_SIZE);
+        const playerTileY = Math.floor(this.player.y / TILE_SIZE);
+        const dx2 = { right: 1, left: -1, up: 0, down: 0 }[this.facing] || 0;
+        const dy2 = { up: -1, down: 1, left: 0, right: 0 }[this.facing] || 0;
+        const blockInFront = (playerTileX + dx2 === nextTileX && playerTileY + dy2 === nextTileY);
+        if (!blockInFront) {
+          // Block is beside the player, not in front — stop
+          this.player.setVelocity(0, 0);
+        }
+      }
+    }
+
     if (moving) {
       const animKey = `walk-${this.facing}`;
       if (this.player.anims.currentAnim?.key !== animKey) {

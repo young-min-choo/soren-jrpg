@@ -123,7 +123,7 @@ export default class DungeonScene extends Phaser.Scene {
       pointer-events: none; z-index: 10;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
     `;
-    this.statusDiv.textContent = 'Ancient Ruins — Find the exit';
+    this.statusDiv.textContent = 'Ancient Ruins — Push blocks onto switches to open the door';
     container.appendChild(this.statusDiv);
     this.domElements.push(this.statusDiv);
 
@@ -289,7 +289,7 @@ export default class DungeonScene extends Phaser.Scene {
     this.statusDiv.textContent = 'Ancient Ruins — Saved! HP/MP restored.';
     setTimeout(() => {
       if (!this.transitioning && !this.dialogueActive) {
-        this.statusDiv.textContent = 'Ancient Ruins — Find the exit';
+        this.statusDiv.textContent = 'Ancient Ruins — Push blocks onto switches to open the door';
       }
     }, 3000);
   }
@@ -357,10 +357,27 @@ export default class DungeonScene extends Phaser.Scene {
         const blocked = this.blockSprites.some(b => b.getData('gridX') === newX && b.getData('gridY') === newY);
         if (blocked) return;
 
-        // Move block — direct position update (no tweens, works in all scenes)
+        // Move block — smooth slide via requestAnimationFrame (Zelda-style)
+        const fromX = block.x;
+        const toX = newX * TILE_SIZE + TILE_SIZE / 2;
+        const fromY = block.y;
+        const toY = newY * TILE_SIZE + TILE_SIZE / 2;
+        const slideStart = performance.now();
+        const SLIDE_MS = 200;
+        const animateSlide = () => {
+          const elapsed = performance.now() - slideStart;
+          if (elapsed < SLIDE_MS) {
+            const t = elapsed / SLIDE_MS;
+            block.x = fromX + (toX - fromX) * t;
+            block.y = fromY + (toY - fromY) * t;
+            requestAnimationFrame(animateSlide);
+          } else {
+            block.setPosition(toX, toY);
+          }
+        };
+        requestAnimationFrame(animateSlide);
         block.setData('gridX', newX);
         block.setData('gridY', newY);
-        block.setPosition(newX * TILE_SIZE + TILE_SIZE / 2, newY * TILE_SIZE + TILE_SIZE / 2);
         // Nudge player back so they don't overlap
         this.player.x = playerTileX * TILE_SIZE + TILE_SIZE / 2;
         this.player.y = playerTileY * TILE_SIZE + TILE_SIZE / 2;
@@ -395,7 +412,7 @@ export default class DungeonScene extends Phaser.Scene {
     if (this.puzzleSolved) return;
     if (this.switchStates.every(s => s)) {
       this.puzzleSolved = true;
-      this.statusDiv.textContent = 'Ancient Ruins — Puzzle solved! The door opens.';
+      this.statusDiv.textContent = 'Ancient Ruins — Puzzle solved! Proceed to the boss room.';
       // Open the door (replace door tiles with floor)
       for (let y = 0; y < MAP_ROWS; y++) {
         for (let x = 0; x < MAP_COLS; x++) {
@@ -485,15 +502,15 @@ export default class DungeonScene extends Phaser.Scene {
     // Add interior walls to create rooms and corridors
     // Room 1: entrance area (bottom)
     this.addWallRect(map, 4, 10, 5, 1); // horizontal wall with gap
-    map[10][6] = T_FLOOR; // gap (door)
 
     // Room 2: puzzle room (middle)
-    // Door (closed until puzzle solved)
+    // Puzzle door (closed until puzzle solved) — at (6,10)
     map[10][6] = T_DOOR;
 
     // Room 3: boss room (top)
     this.addWallRect(map, 4, 5, 5, 1);
-    map[5][6] = T_DOOR; // door to boss room
+    // Boss room door — always open (boss is the gatekeeper)
+    map[5][6] = T_FLOOR;
 
     // Add some pillars/obstacles in the main area
     for (let y = 11; y < MAP_ROWS - 1; y++) {

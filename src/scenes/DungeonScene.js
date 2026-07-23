@@ -46,7 +46,19 @@ export default class DungeonScene extends Phaser.Scene {
     const map = this.make.tilemap({ data: this.mapData, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
     const tileset = map.addTilesetImage('town_tiles', 'town_tiles', TILE_SIZE, TILE_SIZE);
     this.groundLayer = map.createLayer(0, tileset, 0, 0);
-    this.groundLayer.setCollision([T_WALL, T_PIT, T_CHEST, T_DOOR, T_BOSS]);
+    this.groundLayer.setCollision([T_WALL, T_PIT, T_CHEST, T_DOOR]);
+    // Note: T_BOSS is NOT in collision — player must step on it to trigger the fight
+
+    // --- Boss sprite (visible on the boss tile) ---
+    const bossTileX = Math.floor(MAP_COLS / 2);
+    const bossTileY = 2;
+    this.bossSprite = this.add.rectangle(
+      bossTileX * TILE_SIZE + TILE_SIZE / 2,
+      bossTileY * TILE_SIZE + TILE_SIZE / 2,
+      28, 28, 0xdd2222
+    );
+    this.bossSprite.setStrokeStyle(2, 0xff4444);
+    this.bossDefeated = false;
 
     // Player start — entrance at bottom center
     const startX = Math.floor(MAP_COLS / 2) * TILE_SIZE + TILE_SIZE / 2;
@@ -289,14 +301,14 @@ export default class DungeonScene extends Phaser.Scene {
   }
 
   openExit() {
-    // Replace boss tile with floor and open a passage
+    // Boss defeated — hide boss sprite, replace boss tile with exit
+    if (this.bossSprite) this.bossSprite.setVisible(false);
+    this.bossDefeated = true;
     for (let y = 0; y < MAP_ROWS; y++) {
       for (let x = 0; x < MAP_COLS; x++) {
         if (this.mapData[y][x] === T_BOSS) {
           this.mapData[y][x] = T_EXIT;
           this.groundLayer.putTileAt(T_EXIT, x, y);
-          this.groundLayer.setCollision([T_WALL, T_PIT, T_CHEST, T_DOOR, T_BOSS]);
-          // Remove collision from exit tile
         }
       }
     }
@@ -470,7 +482,7 @@ export default class DungeonScene extends Phaser.Scene {
           }
         }
       }
-      this.groundLayer.setCollision([T_WALL, T_PIT, T_CHEST, T_BOSS]);
+      this.groundLayer.setCollision([T_WALL, T_PIT, T_CHEST]);
     }
   }
 

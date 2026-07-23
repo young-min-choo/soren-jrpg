@@ -22,6 +22,10 @@ const ENEMY_TEMPLATES = {
     name: 'Goblin', hp: 20, maxHp: 20, atk: 9, def: 4, agi: 6,
     color: 0xcc6644, exp: 12, gold: 20,
   },
+  boss_goblin: {
+    name: 'Goblin Warlord', hp: 80, maxHp: 80, atk: 15, def: 8, agi: 7,
+    color: 0xdd2222, exp: 100, gold: 200,
+  },
 };
 
 export default class BattleScene extends Phaser.Scene {

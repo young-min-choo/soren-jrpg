@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import GameState from '../game/GameState.js';
+import { playRelicScene, npcDialogue } from '../game/story.js';
 
 /**
  * DungeonScene — first dungeon: Ancient Ruins.
@@ -300,6 +301,10 @@ export default class DungeonScene extends Phaser.Scene {
         if (data && data.battleResult === 'win') {
           // Boss defeated — open the exit
           this.openExit();
+          // Relic story beat — only once (flag guards re-fights)
+          if (!GameState.hasFlag('relicWind')) {
+            playRelicScene(this);
+          }
         }
         this.cameras.main.fadeIn(300, 0, 0, 0);
       });

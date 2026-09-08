@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { SaveSystem } from '../game/SaveSystem.js';
 
 /**
  * TitleScene — uses DOM overlay for text (crisp at any resolution).
@@ -46,23 +47,30 @@ export default class TitleScene extends Phaser.Scene {
     // Subtitle
     createText(128, 120, 'A JRPG', { fontSize: '18px', color: '#888888' });
 
-    // "Press Start" prompt (blinking)
-    const pressStart = createText(128, 190, 'Press Z to Start', { fontSize: '14px', color: '#ffffff' });
+    // "Press Start" prompt (blinking) + hint line
+    const pressStart = createText(128, 182, 'Press Z to Start', { fontSize: '14px', color: '#ffffff' });
+    createText(128, 204, 'Enter = New Game · X = Continue', { fontSize: '10px', color: '#666666' });
 
     // Blink animation via CSS
     this.blinkInterval = setInterval(() => {
       pressStart.style.opacity = pressStart.style.opacity === '0' ? '1' : '0';
     }, 500);
 
-    // Input — Z or Enter to start
-    this.input.keyboard.once('keydown-Z', () => {
+    // Z/Enter → New Game flow (name entry + job choice). If a save exists,
+    // X (or holding Z with a save present) continues into the saved world.
+    const startNewGame = () => {
       this.cleanup();
-      this.scene.start('Overworld');
-    });
+      this.scene.launch('NewGameFlow');
+      this.scene.pause();
+    };
 
-    this.input.keyboard.once('keydown-ENTER', () => {
+    this.input.keyboard.once('keydown-Z', startNewGame);
+    this.input.keyboard.once('keydown-ENTER', startNewGame);
+
+    this.input.keyboard.on('keydown-X', () => {
+      if (!SaveSystem.hasAutosave() && SaveSystem.getSaveSlots().every(s => s.empty)) return;
       this.cleanup();
-      this.scene.start('Overworld');
+      this.scene.start('Overworld'); // player opens menu → Load
     });
 
     // Gamepad support

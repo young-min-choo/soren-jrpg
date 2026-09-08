@@ -1,19 +1,16 @@
 import { test, expect } from 'playwright/test';
-import { boot, tap, activeScene, expectScene, snap, evalIn, GAME_URL } from './helpers.js';
+import { boot, tap, activeScene, expectScene, snap, evalIn, newGameFast } from './helpers.js';
 
 // ─── Smoke: boot, title, movement, scene transitions ───────────────────────
 
-test('boot → title screen → start game', async ({ page }) => {
-  const errors = await boot(page);
-  await expectScene(page, 'Title');
-
-  await tap(page, 'z'); // start
+test('boot → new game flow → playable overworld', async ({ page }) => {
+  const errors = await boot(page, { newGame: true });
   await expectScene(page, 'Overworld');
   expect(errors).toEqual([]);
 });
 
 test('player moves with arrow keys and stays in bounds', async ({ page }) => {
-  await boot(page);
+  await boot(page, { newGame: true });
   await tap(page, 'z');
   await expectScene(page, 'Overworld');
 
@@ -30,7 +27,7 @@ test('player moves with arrow keys and stays in bounds', async ({ page }) => {
 });
 
 test('overworld → town → overworld transition', async ({ page }) => {
-  await boot(page);
+  await boot(page, { newGame: true });
   await tap(page, 'z');
   await expectScene(page, 'Overworld');
 
@@ -48,7 +45,7 @@ test('overworld → town → overworld transition', async ({ page }) => {
 // ─── Menu: open, status, save, load ────────────────────────────────────────
 
 test('X opens menu; Save writes slot; Load restores', async ({ page }) => {
-  await boot(page);
+  await boot(page, { newGame: true });
   await tap(page, 'z');
   await expectScene(page, 'Overworld');
 
@@ -85,7 +82,7 @@ test('X opens menu; Save writes slot; Load restores', async ({ page }) => {
 // ─── Dialogue ──────────────────────────────────────────────────────────────
 
 test('talk to NPC: dialogue opens, advances, closes', async ({ page }) => {
-  await boot(page);
+  await boot(page, { newGame: true });
   await tap(page, 'z');
   await expectScene(page, 'Overworld');
 
@@ -124,7 +121,7 @@ test('talk to NPC: dialogue opens, advances, closes', async ({ page }) => {
 // ─── Battle: full loop via real input ──────────────────────────────────────
 
 test('battle: fight and win a slime battle, rewards applied', async ({ page }) => {
-  await boot(page);
+  await boot(page, { newGame: true });
   await tap(page, 'z');
   await expectScene(page, 'Overworld');
 
@@ -155,7 +152,7 @@ test('battle: fight and win a slime battle, rewards applied', async ({ page }) =
 });
 
 test('battle: items submenu lists inventory and Potion heals', async ({ page }) => {
-  await boot(page);
+  await boot(page, { newGame: true });
   await tap(page, 'z');
   await expectScene(page, 'Overworld');
 
@@ -184,7 +181,7 @@ test('battle: items submenu lists inventory and Potion heals', async ({ page }) 
 });
 
 test('battle: lose path triggers full heal + return', async ({ page }) => {
-  await boot(page);
+  await boot(page, { newGame: true });
   await tap(page, 'z');
   await expectScene(page, 'Overworld');
 
@@ -210,7 +207,7 @@ test('battle: lose path triggers full heal + return', async ({ page }) => {
 // ─── Job system via Job Master ─────────────────────────────────────────────
 
 test('job master: change Soren from Warrior to Mage', async ({ page }) => {
-  await boot(page);
+  await boot(page, { newGame: true });
   await tap(page, 'z');
   await expectScene(page, 'Overworld');
 
@@ -242,7 +239,7 @@ test('job master: change Soren from Warrior to Mage', async ({ page }) => {
 // ─── Dungeon: puzzle, boss, exit ───────────────────────────────────────────
 
 test('dungeon: push-block puzzle solves and door opens', async ({ page }) => {
-  await boot(page);
+  await boot(page, { newGame: true });
   await tap(page, 'z');
   await expectScene(page, 'Overworld');
 
@@ -263,7 +260,7 @@ test('dungeon: push-block puzzle solves and door opens', async ({ page }) => {
 });
 
 test('dungeon: boss fight reachable, win opens exit', async ({ page }) => {
-  await boot(page);
+  await boot(page, { newGame: true });
   await tap(page, 'z');
   await expectScene(page, 'Overworld');
 
@@ -290,7 +287,7 @@ test('dungeon: boss fight reachable, win opens exit', async ({ page }) => {
 // ─── Save → reload → load roundtrip ────────────────────────────────────────
 
 test('save → full page reload → load restores party and position', async ({ page }) => {
-  await boot(page);
+  await boot(page, { newGame: true });
   await tap(page, 'z');
   await expectScene(page, 'Overworld');
 
@@ -315,7 +312,7 @@ test('save → full page reload → load restores party and position', async ({ 
   await page.reload();
   await page.waitForSelector('canvas');
   await page.waitForFunction(() => window.__soren?.activeSceneKey() !== null, { timeout: 15000 });
-  await tap(page, 'z'); // title → overworld
+  await newGameFast(page); // title → new-game flow → overworld
 
   await tap(page, 'x');
   await expectScene(page, 'Menu');

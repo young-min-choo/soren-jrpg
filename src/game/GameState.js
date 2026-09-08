@@ -272,12 +272,28 @@ const GameState = {
     return true;
   },
 
-  reset() {
+  setFlag(name, value = true) {
+    state.storyFlags[name] = value;
+  },
+
+  getFlag(name) {
+    return state.storyFlags[name];
+  },
+
+  hasFlag(name) {
+    return !!state.storyFlags[name];
+  },
+
+  reset(playerName = 'Soren', playerJob = 'Warrior') {
     state = {
-      party: [createCharacter('Soren', 'Warrior', 1)],
+      party: [
+        createCharacter(playerName, playerJob, 1),
+        createCharacter('Aria', 'Monk', 1),
+        createCharacter('Kael', 'Ranger', 1),
+      ],
       gold: 0,
       inventory: getStartingInventory(),
-      storyFlags: {},
+      storyFlags: { startingJob: playerJob },
       unlockedJobs: ['Warrior', 'Mage', 'Ranger', 'Monk'],
       scene: 'Overworld',
       x: 336,

@@ -27,7 +27,11 @@ export default class BootScene extends Phaser.Scene {
       '#c8c8c8', // 2: path
       '#5a5a5a', // 3: building wall
       '#3a3a3a', // 4: building roof
-      '#8a6a4a', // 5: wood floor
+      '#8a6a4a', // 5: wood floor / save point
+      '#4a4a6a', // 6: dungeon door (locked)
+      '#aa3333', // 7: boss tile
+      '#44aa44', // 8: dungeon exit
+      '#5566aa', // 9: exit marker (post-boss)
     ]);
 
     this.generatePlayerSprite('player_field', 16, 24);

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import GameState from '../game/GameState.js';
 import { JOBS, STARTING_JOBS, UNLOCKABLE_JOBS, getStatsForLevel } from '../game/JobData.js';
+import { npcDialogue } from '../game/story.js';
 
 /**
  * TownScene — town interior.
@@ -53,15 +54,7 @@ export default class TownScene extends Phaser.Scene {
     const npc1X = 6 * TILE_SIZE + TILE_SIZE / 2;
     const npc1Y = 5 * TILE_SIZE + TILE_SIZE / 2;
     const npc1 = this.physics.add.staticSprite(npc1X, npc1Y, 'player_field', 1);
-    npc1.setData('dialogue', {
-      speaker: 'Townsfolk', portrait: null,
-      pages: [
-        'Welcome to our town, traveler.',
-        'You seek the ancient relics? Dangerous business, that.',
-        'But I can see it in your eyes... you won\'t be dissuaded.',
-        'Be careful out there. The world is not as kind as this town.'
-      ]
-    });
+    npc1.setData('npcKey', 'townsfolk');
     npc1.setData('name', 'Townsfolk');
     this.npcs.push(npc1);
 
@@ -69,19 +62,7 @@ export default class TownScene extends Phaser.Scene {
     const npc2Y = 5 * TILE_SIZE + TILE_SIZE / 2;
     const npc2 = this.physics.add.staticSprite(npc2X, npc2Y, 'player_field', 1);
     npc2.setTint(0x888888);
-    npc2.setData('dialogue', {
-      speaker: 'Elder', portrait: null,
-      pages: [
-        'The prophecy speaks of one who will gather the ancient relics.',
-        'I had hoped it was just a story told to children.',
-        '...But here you stand before me.',
-        'Will you take on this burden?'
-      ],
-      choices: [
-        { text: 'I will.', value: 'accept' },
-        { text: 'I\'m not sure yet...', value: 'hesitant' }
-      ]
-    });
+    npc2.setData('npcKey', 'elder');
     npc2.setData('name', 'Elder');
     this.npcs.push(npc2);
 
@@ -328,7 +309,10 @@ export default class TownScene extends Phaser.Scene {
       return;
     }
 
-    const dialogueData = npc.getData('dialogue');
+    const dialogueData = npc.getData('npcKey')
+      ? npcDialogue(npc.getData('npcKey'))
+      : npc.getData('dialogue');
+    if (!dialogueData) { this.dialogueActive = false; return; }
     this.scene.launch('Dialogue', {
       ...dialogueData,
       onComplete: (choiceValue) => {

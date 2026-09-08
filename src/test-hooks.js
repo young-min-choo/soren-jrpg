@@ -11,9 +11,20 @@ export function installTestHooks(game) {
   const params = new URLSearchParams(window.location.search);
   if (!params.has('test')) return;
 
+  // ?skipIntro=1 — fast path for the phase-1-6 suites: every GameState.reset
+  // (i.e. every new-game flow completion) re-marks the intro as played, so
+  // the Overworld boots straight into gameplay without the intro cutscene.
+  if (params.has('skipIntro')) {
+    const origReset = GameState.reset.bind(GameState);
+    GameState.reset = (...args) => {
+      origReset(...args);
+      GameState.setFlag('introDone', true);
+    };
+  }
+
   const scene = (key) => game.scene.getScene(key);
   const activeSceneKey = () => {
-    const scenes = ['Overworld', 'Town', 'Dungeon', 'Battle', 'Menu', 'Dialogue', 'Title'];
+    const scenes = ['NewGameFlow', 'Overworld', 'Town', 'Dungeon', 'Battle', 'Menu', 'Dialogue', 'Title'];
     return scenes.find((k) => {
       const s = game.scene.getScene(k);
       return s && s.scene.isActive();

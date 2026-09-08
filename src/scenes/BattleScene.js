@@ -816,6 +816,8 @@ export default class BattleScene extends Phaser.Scene {
   flashSprite(sprite) {
     if (!sprite) return;
     // Manual flash via rAF (Phaser tweens don't run in launched scenes)
+    // Phaser 4: Rectangle uses setFillStyle(color) — setTint only exists on Sprites.
+    const origColor = sprite.fillColor;
     const startTime = performance.now();
     const duration = 240; // 3 flashes × 80ms
     const animateFlash = () => {
@@ -823,13 +825,13 @@ export default class BattleScene extends Phaser.Scene {
       if (elapsed < duration) {
         const phase = Math.floor(elapsed / 80) % 2;
         if (phase === 0) {
-          sprite.setTint(0xff4444);
+          sprite.setFillStyle(0xff4444);
         } else {
-          sprite.setTint(0xffffff);
+          sprite.setFillStyle(origColor);
         }
         requestAnimationFrame(animateFlash);
       } else {
-        sprite.setTint(0xffffff);
+        sprite.setFillStyle(origColor);
       }
     };
     requestAnimationFrame(animateFlash);

@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import GameState from '../game/GameState.js';
+import { playIntro } from '../game/story.js';
 
 /**
  * OverworldScene — world map exploration.
@@ -27,8 +29,12 @@ export default class OverworldScene extends Phaser.Scene {
     super('Overworld');
   }
 
-  create() {
+  create(data) {
     this.domElements = [];
+
+    // Cutscene lock: runCutscene sets this while playing. Field scenes bail
+    // out of update() when set — movement, encounters, interactions all stop.
+    this.cutsceneLock = false;
 
     const mapData = this.generateMapData();
     const map = this.make.tilemap({ data: mapData, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
@@ -155,10 +161,15 @@ export default class OverworldScene extends Phaser.Scene {
     // --- Random encounter system ---
     this.encounterSteps = 0;
     this.encounterThreshold = 6 + Math.floor(Math.random() * 4); // 6-10 tiles (overworld — ~4-6 encounters per map crossing)
+
+    // --- Intro cutscene (first entry of a new game only) ---
+    if (!GameState.hasFlag('introDone')) {
+      playIntro(this);
+    }
   }
 
   update(time, delta) {
-    if (this.transitioning) return;
+    if (this.transitioning || this.cutsceneLock) return;
 
     // Update entrance marker position to follow camera
     const cam = this.cameras.main;

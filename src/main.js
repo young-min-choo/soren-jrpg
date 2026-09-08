@@ -8,6 +8,7 @@ import MenuScene from './scenes/MenuScene.js';
 import DialogueScene from './scenes/DialogueScene.js';
 import BattleScene from './scenes/BattleScene.js';
 import NewGameFlowScene from './scenes/NewGameFlowScene.js';
+import EmbersScene from './scenes/EmbersScene.js';
 import { installTestHooks } from './test-hooks.js';
 
 // Canvas is 256×224 with zoom: 3 (Phaser handles scaling).
@@ -32,7 +33,7 @@ const config = {
   input: {
     gamepad: true
   },
-  scene: [BootScene, TitleScene, NewGameFlowScene, OverworldScene, TownScene, DungeonScene, MenuScene, DialogueScene, BattleScene]
+  scene: [BootScene, TitleScene, NewGameFlowScene, OverworldScene, TownScene, DungeonScene, EmbersScene, MenuScene, DialogueScene, BattleScene]
 };
 
 const game = new Phaser.Game(config);

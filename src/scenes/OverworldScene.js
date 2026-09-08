@@ -23,6 +23,8 @@ const TOWN_ENTRANCE_X = 10;
 const TOWN_ENTRANCE_Y = 8;
 const DUNGEON_ENTRANCE_X = 16;
 const DUNGEON_ENTRANCE_Y = 4;
+const EMBER_ENTRANCE_X = 3;
+const EMBER_ENTRANCE_Y = 2; // northwest — mountains guard the Cave of Embers
 
 export default class OverworldScene extends Phaser.Scene {
   constructor() {
@@ -114,7 +116,7 @@ export default class OverworldScene extends Phaser.Scene {
       pointer-events: none; z-index: 10;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
     `;
-    this.statusDiv.textContent = '▼ Yellow = Town | ▼ Red = Dungeon | Walk to marker and press Z';
+    this.statusDiv.textContent = '▼ Yellow = Town | ▼ Red = Dungeon | ▼ White = Cave of Embers';
     container.appendChild(this.statusDiv);
     this.domElements.push(this.statusDiv);
 
@@ -149,6 +151,23 @@ export default class OverworldScene extends Phaser.Scene {
     this.dungeonDiv.textContent = '▼';
     container.appendChild(this.dungeonDiv);
     this.domElements.push(this.dungeonDiv);
+
+    // Cave of Embers entrance marker (▼) — white/orange, gated post-Wind-Relic
+    const emberX = EMBER_ENTRANCE_X * TILE_SIZE + TILE_SIZE / 2;
+    const emberY = EMBER_ENTRANCE_Y * TILE_SIZE + TILE_SIZE / 2;
+    this.emberDiv = document.createElement('div');
+    this.emberDiv.style.cssText = `
+      position: absolute;
+      color: #ffaa44; font-size: 18px;
+      font-family: "Courier New", monospace;
+      transform: translate(-50%, -50%);
+      pointer-events: none; z-index: 10;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    `;
+    this.emberDiv.textContent = '▼';
+    this.emberDiv.style.display = GameState.hasFlag('relicWind') ? '' : 'none';
+    container.appendChild(this.emberDiv);
+    this.domElements.push(this.emberDiv);
 
     // Blink entrance marker
     this.entranceBlink = setInterval(() => {
@@ -187,6 +206,14 @@ export default class OverworldScene extends Phaser.Scene {
     const dungeonWorldY = DUNGEON_ENTRANCE_Y * TILE_SIZE + TILE_SIZE / 2;
     this.dungeonDiv.style.left = ((dungeonWorldX - cam.scrollX) * sx) + 'px';
     this.dungeonDiv.style.top = ((dungeonWorldY - cam.scrollY) * sy) + 'px';
+
+    // Update Cave of Embers marker position (visible only post-Wind-Relic)
+    if (this.emberDiv && this.emberDiv.style.display !== 'none') {
+      const emberWorldX = EMBER_ENTRANCE_X * TILE_SIZE + TILE_SIZE / 2;
+      const emberWorldY = EMBER_ENTRANCE_Y * TILE_SIZE + TILE_SIZE / 2;
+      this.emberDiv.style.left = ((emberWorldX - cam.scrollX) * sx) + 'px';
+      this.emberDiv.style.top = ((emberWorldY - cam.scrollY) * sy) + 'px';
+    }
 
     const speed = this.keyShift.isDown ? 180 : 100;
     let vx = 0, vy = 0, moving = false;
@@ -231,6 +258,15 @@ export default class OverworldScene extends Phaser.Scene {
       this.confirmPressed = false;
       this.enterDungeon();
     }
+
+    // Check Cave of Embers entrance (gated by story: after Wind Relic)
+    const nearEmbers =
+      Math.abs(playerTileX - EMBER_ENTRANCE_X) <= 1 &&
+      Math.abs(playerTileY - EMBER_ENTRANCE_Y) <= 1;
+    if (nearEmbers && this.confirmPressed) {
+      this.confirmPressed = false;
+      this.enterEmbers();
+    }
     if (nearEntrance && this.gamepad && this.gamepad.A) {
       this.enterTown();
     }
@@ -267,6 +303,23 @@ export default class OverworldScene extends Phaser.Scene {
     this.cameras.main.fadeOut(300, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('Dungeon');
+    });
+  }
+
+  enterEmbers() {
+    if (this.transitioning) return;
+    // Story gate: the elder's texts say the Fire Relic awakens only
+    // after the Wind Relic is claimed. Locked until then.
+    if (!GameState.hasFlag('relicWind')) {
+      const prev = this.statusDiv.textContent;
+      this.statusDiv.textContent = 'The cave mouth breathes heat... but something bars the way. (The omen has not come)';
+      setTimeout(() => { if (this.statusDiv) this.statusDiv.textContent = prev; }, 3000);
+      return;
+    }
+    this.transitioning = true;
+    this.cameras.main.fadeOut(300, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.scene.start('Embers');
     });
   }
 
@@ -336,6 +389,11 @@ export default class OverworldScene extends Phaser.Scene {
         if (x >= 14 && x <= 18 && y >= 1 && y <= 4) tile = T_WATER;
         // Dungeon entrance area — clear water for path
         if (x >= 15 && x <= 17 && y >= 3 && y <= 5) tile = T_PATH;
+        // Cave of Embers — mountain block in the northwest with a path down to town
+        if (x >= 1 && x <= 4 && y >= 1 && y <= 3) tile = T_MOUNTAIN;
+        if (x === EMBER_ENTRANCE_X && y === EMBER_ENTRANCE_Y) tile = T_PATH; // entrance itself
+        if (x >= 2 && x <= 3 && y >= 4 && y <= 6) tile = T_PATH; // path south from cave
+        if (x >= 2 && x <= 9 && y === 7) tile = T_PATH;          // path east toward town
         if (x === 1 && x <= 4 && y >= 11 && y <= 14) tile = T_MOUNTAIN;
         if (x === TOWN_ENTRANCE_X && y > TOWN_ENTRANCE_Y && y < MAP_ROWS - 1) tile = T_PATH;
         if (x === TOWN_ENTRANCE_X && y >= TOWN_ENTRANCE_Y && y <= TOWN_ENTRANCE_Y) tile = T_PATH;

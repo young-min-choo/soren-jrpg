@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import GameState from '../game/GameState.js';
 import { JOBS, STARTING_JOBS, UNLOCKABLE_JOBS, getStatsForLevel } from '../game/JobData.js';
 import { npcDialogue } from '../game/story.js';
+import { getShop, INN_COST } from '../game/ShopData.js';
 
 /**
  * TownScene — town interior.
@@ -82,6 +83,24 @@ export default class TownScene extends Phaser.Scene {
     });
     this.npcs.push(npc3);
 
+    // Shopkeeper — opens the buy menu
+    const npc4X = 3 * TILE_SIZE + TILE_SIZE / 2;
+    const npc4Y = 10 * TILE_SIZE + TILE_SIZE / 2;
+    const npc4 = this.physics.add.staticSprite(npc4X, npc4Y, 'player_field', 1);
+    npc4.setTint(0xffdd44);
+    npc4.setData('name', 'Shopkeeper');
+    npc4.setData('isShopkeeper', true);
+    this.npcs.push(npc4);
+
+    // Innkeeper — rest to restore HP/MP
+    const npc5X = 12 * TILE_SIZE + TILE_SIZE / 2;
+    const npc5Y = 10 * TILE_SIZE + TILE_SIZE / 2;
+    const npc5 = this.physics.add.staticSprite(npc5X, npc5Y, 'player_field', 1);
+    npc5.setTint(0x66aaff);
+    npc5.setData('name', 'Innkeeper');
+    npc5.setData('isInnkeeper', true);
+    this.npcs.push(npc5);
+
     this.npcs.forEach(npc => { this.physics.add.collider(this.player, npc); });
 
     this.nearbyNpc = null;
@@ -96,6 +115,9 @@ export default class TownScene extends Phaser.Scene {
     this.confirmPressed = false;
 
     this.handleKeyDown = (e) => {
+      // Modal menus take priority in order
+      if (this.shopDiv && this._handleShopKey(e)) return;
+      if (this.innDiv && this._handleInnKey(e)) return;
       // Job menu takes priority
       if (this.jobMenuDiv && this._handleJobMenuKey(e)) return;
       if (this.dialogueActive) return;
@@ -309,6 +331,18 @@ export default class TownScene extends Phaser.Scene {
       return;
     }
 
+    // Shopkeeper opens the buy menu
+    if (npc.getData('isShopkeeper')) {
+      this.openShop();
+      return;
+    }
+
+    // Innkeeper offers rest
+    if (npc.getData('isInnkeeper')) {
+      this.openInn();
+      return;
+    }
+
     const dialogueData = npc.getData('npcKey')
       ? npcDialogue(npc.getData('npcKey'))
       : npc.getData('dialogue');
@@ -320,6 +354,194 @@ export default class TownScene extends Phaser.Scene {
         if (choiceValue) console.log(`Player chose: ${choiceValue}`);
       }
     });
+  }
+
+  // ─── Shop (Phase 8) ─────────────────────────────────────────────────────
+
+  openShop() {
+    this.shop = getShop('startingTown');
+    this.shopIndex = 0;
+    this._createShopDom();
+  }
+
+  _createShopDom() {
+    const container = document.getElementById('game-container');
+    this.shopDiv = document.createElement('div');
+    this.shopDiv.style.cssText = `
+      position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+      width: 520px; max-height: 480px;
+      background: rgba(20, 20, 50, 0.95); border: 2px solid rgba(255,255,255,0.3);
+      padding: 16px; box-sizing: border-box;
+      font-family: "Courier New", monospace; color: #ffffff;
+      z-index: 50; pointer-events: none;
+      border-radius: 4px; overflow: hidden;
+    `;
+    container.appendChild(this.shopDiv);
+    this._updateShop();
+  }
+
+  _updateShop() {
+    if (!this.shopDiv) return;
+    const gold = GameState.get().gold;
+    let html = `<div style="font-size:14px;color:#ffff00;margin-bottom:4px">${this.shop.name}</div>`;
+    html += `<div style="font-size:12px;color:#44dd44;margin-bottom:10px">Your gold: ${gold}G</div>`;
+    this.shop.stock.forEach((entry, i) => {
+      const sel = i === this.shopIndex;
+      const prefix = sel ? '▶' : ' ';
+      const color = sel ? '#ffff00' : (gold >= entry.price ? '#ccc' : '#777');
+      const qty = GameState.getItemQty(entry.name);
+      html += `<div style="color:${color};font-size:13px;margin:4px 0"><span style="display:inline-block;width:18px">${prefix}</span>${entry.name} — <span style="color:#44dd44">${entry.price}G</span> <span style="font-size:10px;color:#888">(have ${qty})</span></div>`;
+    });
+    html += `<div style="font-size:11px;color:#888;margin-top:10px">Z: Buy 1 · X: Leave</div>`;
+    this.shopDiv.innerHTML = html;
+  }
+
+  _handleShopKey(e) {
+    if (!this.shopDiv) return false;
+    switch (e.key) {
+      case 'ArrowUp': case 'w': case 'W':
+        this.shopIndex = (this.shopIndex - 1 + this.shop.stock.length) % this.shop.stock.length;
+        this._updateShop();
+        e.preventDefault(); return true;
+      case 'ArrowDown': case 's': case 'S':
+        this.shopIndex = (this.shopIndex + 1) % this.shop.stock.length;
+        this._updateShop();
+        e.preventDefault(); return true;
+      case 'z': case 'Z': case 'Enter': {
+        const entry = this.shop.stock[this.shopIndex];
+        const gold = GameState.get().gold;
+        if (gold < entry.price) {
+          this._shopFlash('Not enough gold!');
+        } else {
+          GameState.get().gold -= entry.price;
+          GameState.addItem(entry.name, 1);
+          this._shopFlash(`Bought ${entry.name}!`);
+        }
+        this._updateShop();
+        e.preventDefault(); return true;
+      }
+      case 'x': case 'X': case 'Escape':
+        this._closeShop();
+        this.dialogueActive = false;
+        e.preventDefault(); return true;
+    }
+    return false;
+  }
+
+  _shopFlash(msg) {
+    if (!this.shopDiv) return;
+    let flash = this.shopDiv.querySelector('.shop-flash');
+    if (!flash) {
+      flash = document.createElement('div');
+      flash.className = 'shop-flash';
+      flash.style.cssText = 'font-size:11px;color:#ffff44;margin-top:4px;min-height:14px';
+      this.shopDiv.appendChild(flash);
+    }
+    flash.textContent = msg;
+    setTimeout(() => { if (flash) flash.textContent = ''; }, 1500);
+  }
+
+  _closeShop() {
+    if (this.shopDiv) {
+      this.shopDiv.remove();
+      this.shopDiv = null;
+    }
+  }
+
+  // ─── Inn (Phase 8) ──────────────────────────────────────────────────────
+
+  openInn() {
+    this.innIndex = 0; // 0 = Rest, 1 = Leave
+    this._createInnDom();
+  }
+
+  _createInnDom() {
+    const container = document.getElementById('game-container');
+    this.innDiv = document.createElement('div');
+    this.innDiv.style.cssText = `
+      position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+      width: 420px;
+      background: rgba(20, 20, 50, 0.95); border: 2px solid rgba(255,255,255,0.3);
+      padding: 16px; box-sizing: border-box;
+      font-family: "Courier New", monospace; color: #ffffff;
+      z-index: 50; pointer-events: none;
+      border-radius: 4px;
+    `;
+    container.appendChild(this.innDiv);
+    this._updateInn();
+  }
+
+  _updateInn() {
+    if (!this.innDiv) return;
+    const gold = GameState.get().gold;
+    const options = ['Rest (' + INN_COST + 'G)', 'Leave'];
+    let html = `<div style="font-size:14px;color:#66aaff;margin-bottom:8px">Inn — A warm bed and a hot meal</div>`;
+    html += `<div style="font-size:12px;color:#44dd44;margin-bottom:10px">Your gold: ${gold}G</div>`;
+    options.forEach((opt, i) => {
+      const sel = i === this.innIndex;
+      const prefix = sel ? '▶' : ' ';
+      const color = sel ? '#ffff00' : '#ccc';
+      html += `<div style="color:${color};font-size:13px;margin:4px 0"><span style="display:inline-block;width:18px">${prefix}</span>${opt}</div>`;
+    });
+    html += `<div style="font-size:11px;color:#888;margin-top:10px">Z: Select · X: Leave</div>`;
+    this.innDiv.innerHTML = html;
+  }
+
+  _handleInnKey(e) {
+    if (!this.innDiv) return false;
+    switch (e.key) {
+      case 'ArrowUp': case 'w': case 'W':
+      case 'ArrowDown': case 's': case 'S':
+        this.innIndex = (this.innIndex + 1) % 2;
+        this._updateInn();
+        e.preventDefault(); return true;
+      case 'z': case 'Z': case 'Enter':
+        if (this.innIndex === 0) {
+          if (GameState.get().gold < INN_COST) {
+            this._innFlash('Not enough gold!');
+          } else {
+            GameState.get().gold -= INN_COST;
+            GameState.fullHeal();
+            this._closeInn();
+            this.dialogueActive = false;
+            // Toast via status bar
+            const prev = this.statusDiv.textContent;
+            this.statusDiv.textContent = 'You feel fully rested! (-' + INN_COST + 'G)';
+            setTimeout(() => { if (this.statusDiv) this.statusDiv.textContent = prev; }, 2500);
+            return true;
+          }
+          this._updateInn();
+        } else {
+          this._closeInn();
+          this.dialogueActive = false;
+        }
+        e.preventDefault(); return true;
+      case 'x': case 'X': case 'Escape':
+        this._closeInn();
+        this.dialogueActive = false;
+        e.preventDefault(); return true;
+    }
+    return false;
+  }
+
+  _innFlash(msg) {
+    if (!this.innDiv) return;
+    let flash = this.innDiv.querySelector('.inn-flash');
+    if (!flash) {
+      flash = document.createElement('div');
+      flash.className = 'inn-flash';
+      flash.style.cssText = 'font-size:11px;color:#ff8888;margin-top:6px;min-height:14px';
+      this.innDiv.appendChild(flash);
+    }
+    flash.textContent = msg;
+    setTimeout(() => { if (flash) flash.textContent = ''; }, 1500);
+  }
+
+  _closeInn() {
+    if (this.innDiv) {
+      this.innDiv.remove();
+      this.innDiv = null;
+    }
   }
 
   openJobMenu() {
@@ -595,6 +817,8 @@ export default class TownScene extends Phaser.Scene {
     this.domElements = [];
     this.interactDiv = null;
     if (this.jobMenuDiv) { this.jobMenuDiv.remove(); this.jobMenuDiv = null; }
+    if (this.shopDiv) { this.shopDiv.remove(); this.shopDiv = null; }
+    if (this.innDiv) { this.innDiv.remove(); this.innDiv = null; }
   }
 
   shutdown() { this.cleanupDom(); }

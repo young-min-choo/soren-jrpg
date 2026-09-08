@@ -24,7 +24,7 @@ export function installTestHooks(game) {
 
   const scene = (key) => game.scene.getScene(key);
   const activeSceneKey = () => {
-    const scenes = ['NewGameFlow', 'Overworld', 'Town', 'Dungeon', 'Battle', 'Menu', 'Dialogue', 'Title'];
+    const scenes = ['NewGameFlow', 'Overworld', 'Town', 'Dungeon', 'Embers', 'Battle', 'Menu', 'Dialogue', 'Title'];
     return scenes.find((k) => {
       const s = game.scene.getScene(k);
       return s && s.scene.isActive();
@@ -121,6 +121,14 @@ export function installTestHooks(game) {
         b.x = gridX * 32 + 16; b.y = gridY * 32 + 16;
         d.checkBlockOnSwitch(b, gridX, gridY);
       },
+    },
+
+    // Cave of Embers helpers
+    embers: {
+      bossDefeated() { return scene('Embers').bossDefeated; },
+      solved() { return scene('Embers').puzzleSolved; },
+      mapTile(x, y) { return scene('Embers').mapData[y][x]; },
+      switches() { return [...scene('Embers').switchStates]; },
     },
   };
 }

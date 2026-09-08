@@ -121,6 +121,48 @@ export function playRelicScene(scene) {
   return runCutscene(scene, relicSteps());
 }
 
+// ─── Fire Relic: Emberlord victory cutscene (Cave of Embers) ───────────────
+
+export function emberRelicSteps() {
+  const name = playerName();
+  return [
+    step.say('Kael', ['Two down. The heat off that thing could melt steel — and you took it head-on.']),
+    step.say('', [
+      'From the Emberlord\'s ashes, a second shard rises —',
+      'crimson, breathing heat like a living thing. It settles beside the first.',
+    ]),
+    step.say('Aria', [
+      `${name}... when it touched your hand, I saw the air bend.`,
+      'The monk\'s stories call this "resonance." It is rare. It is not nothing.',
+    ]),
+    step.choose(
+      'Aria',
+      ['The Fire Relic hums against your palm — hotter, angrier than the Wind.'],
+      [
+        { text: 'I can carry it.', value: 'steady' },
+        { text: 'It\'s... watching me.', value: 'unease' },
+      ],
+    ),
+    step.when(
+      (_, ctx) => ctx.choice === 'steady',
+      [step.say('Kael', ['That\'s the spirit. Three more and this prophecy business is behind us.'])],
+    ),
+    step.when(
+      (_, ctx) => ctx.choice === 'uneasy',
+      [step.say('Kael', ['Relics watch. Mountains watch. Doesn\'t mean they mean harm. ...Probably.'])],
+    ),
+    step.say('', [
+      'Two relics now sing their quiet, dissonant song.',
+      'Deep beneath the world, something ancient stirs — and smiles.',
+    ]),
+    step.flag('relicFire'),
+  ];
+}
+
+export function playRelicEmberScene(scene) {
+  return runCutscene(scene, emberRelicSteps());
+}
+
 // ─── Flag-conditional NPC dialogue (Town) ──────────────────────────────────
 
 /** Returns dialogue data for an NPC, based on current story flags. */

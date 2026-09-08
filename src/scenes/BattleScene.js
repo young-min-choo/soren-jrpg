@@ -2,31 +2,14 @@ import Phaser from 'phaser';
 import GameState from '../game/GameState.js';
 import { ITEMS, getItem } from '../game/ItemData.js';
 import { STATUS_EFFECTS, applyStatus, removeStatus, hasStatus, processStatusTick, getActiveStatuses } from '../game/StatusEffectData.js';
+import { spawnEnemies } from '../game/EnemyData.js';
 
 /**
  * BattleScene — turn-based combat prototype.
  * Side-view battle: player (left) vs enemies (right).
  * Player stats are loaded from GameState (persistent across battles).
+ * Enemy templates live in src/game/EnemyData.js.
  */
-
-const ENEMY_TEMPLATES = {
-  slime: {
-    name: 'Slime', hp: 15, maxHp: 15, atk: 6, def: 2, agi: 4,
-    color: 0x44cc44, exp: 5, gold: 10,
-  },
-  bat: {
-    name: 'Bat', hp: 10, maxHp: 10, atk: 8, def: 1, agi: 10,
-    color: 0x8844cc, exp: 7, gold: 12,
-  },
-  goblin: {
-    name: 'Goblin', hp: 20, maxHp: 20, atk: 9, def: 4, agi: 6,
-    color: 0xcc6644, exp: 12, gold: 20,
-  },
-  boss_goblin: {
-    name: 'Goblin Warlord', hp: 80, maxHp: 80, atk: 15, def: 8, agi: 7,
-    color: 0xdd2222, exp: 100, gold: 200,
-  },
-};
 
 export default class BattleScene extends Phaser.Scene {
   constructor() {
@@ -50,12 +33,9 @@ export default class BattleScene extends Phaser.Scene {
       statusEffects: {},
     }));
 
-    // Enemies (1-3 from data, or random)
+    // Enemies — spawned from EnemyData (type names → deep-copied instances)
     const enemyTypes = data?.enemies || ['slime'];
-    this.enemies = enemyTypes.map((type, i) => {
-      const tmpl = ENEMY_TEMPLATES[type] || ENEMY_TEMPLATES.slime;
-      return { ...JSON.parse(JSON.stringify(tmpl)), type, index: i, defending: false, alive: true, side: 'enemy', id: 'enemy_' + i };
-    });
+    this.enemies = spawnEnemies(enemyTypes);
 
     // Build turn order: all alive party members + enemies, sorted by AGI
     this.allUnits = [

@@ -9,7 +9,20 @@ npx vite
 # Open in browser (Vite prints the URL, usually http://localhost:5173)
 ```
 
-## Manual Testing Checklist
+## Automated Testing (E2E — ACTIVE as of 2026-09)
+
+The game plays itself: a Playwright suite drives the real keyboard channel and fails on any console/page error.
+
+```bash
+npm test          # runs the full suite (auto-starts dev server on :5176)
+npx playwright test --headed   # watch it play
+```
+
+- **Tests:** `tests/e2e/soren.spec.js` — boot, movement, scene transitions, menu save/load, dialogue, battle (win/items/lose), job change, dungeon puzzle, boss fight, save→reload→load roundtrip.
+- **Hooks:** `src/test-hooks.js` — exposed as `window.__soren` ONLY when the URL has `?test=1`. Never contains game logic; read/actuate only.
+- **Rule:** any new feature ships with a test that plays it through real input. No manual screenshot verification needed for regressions.
+
+## Manual Testing Checklist (still useful for feel/balance)
 
 ### Per-Feature Verification
 After implementing a feature, verify these points:

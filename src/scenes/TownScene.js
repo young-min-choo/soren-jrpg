@@ -134,12 +134,15 @@ export default class TownScene extends Phaser.Scene {
         case 'ArrowDown': case 's': case 'S': this.keys.down = false; break;
         case 'ArrowLeft': case 'a': case 'A': this.keys.left = false; break;
         case 'ArrowRight': case 'd': case 'D': this.keys.right = false; break;
-        case 'z': case 'Z': case 'Enter': this.confirmPressed = false; break;
+        // NOTE: 'z' is intentionally NOT cleared here. update() consumes
+        // confirmPressed each frame; clearing on keyup drops taps whose
+        // keydown+keyup land between two rendered frames (input loss).
       }
     };
 
     this.handleBlur = () => {
       this.keys.up = false; this.keys.down = false; this.keys.left = false; this.keys.right = false;
+      this.confirmPressed = false;
     };
 
     window.addEventListener('keydown', this.handleKeyDown);

@@ -105,12 +105,15 @@ export default class DungeonScene extends Phaser.Scene {
         case 'ArrowDown': case 's': case 'S': this.keys.down = false; break;
         case 'ArrowLeft': case 'a': case 'A': this.keys.left = false; break;
         case 'ArrowRight': case 'd': case 'D': this.keys.right = false; break;
-        case 'z': case 'Z': case 'Enter': this.confirmPressed = false; break;
+        // NOTE: 'z' is intentionally NOT cleared here — see TownScene.
+        // Clearing confirmPressed on keyup drops taps whose keydown+keyup
+        // both land between two rendered frames.
       }
     };
 
     this.handleBlur = () => {
       this.keys.up = false; this.keys.down = false; this.keys.left = false; this.keys.right = false;
+      this.confirmPressed = false;
     };
 
     window.addEventListener('keydown', this.handleKeyDown);
@@ -288,7 +291,10 @@ export default class DungeonScene extends Phaser.Scene {
 
     if (!this._bossResumeRegistered) {
       this._bossResumeRegistered = true;
-      this.events.on('resume', (data) => {
+      // Phaser emits RESUME as (systems, data) — the payload is the 2nd arg.
+      // Reading only the 1st arg silently missed battleResult, so beating the
+      // boss never opened the exit.
+      this.events.on('resume', (sys, data) => {
         this.transitioning = false;
         this.domElements.forEach(el => el.style.display = '');
         if (data && data.battleResult === 'win') {

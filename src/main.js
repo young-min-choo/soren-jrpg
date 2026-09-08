@@ -7,6 +7,7 @@ import DungeonScene from './scenes/DungeonScene.js';
 import MenuScene from './scenes/MenuScene.js';
 import DialogueScene from './scenes/DialogueScene.js';
 import BattleScene from './scenes/BattleScene.js';
+import { installTestHooks } from './test-hooks.js';
 
 // Canvas is 256×224 with zoom: 3 (Phaser handles scaling).
 // pixelArt: true gives crisp sprites. Text uses setResolution(3)
@@ -37,6 +38,9 @@ const game = new Phaser.Game(config);
 
 // Expose for debugging/testing
 window.game = game;
+
+// E2E test hooks — inert unless URL has ?test=1
+installTestHooks(game);
 
 // Force keyboard focus on the game canvas once it's created
 game.events.once('ready', function() {

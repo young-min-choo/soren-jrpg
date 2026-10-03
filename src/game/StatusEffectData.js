@@ -1,5 +1,6 @@
 /**
  * StatusEffectData — status effect definitions for combat.
+ * Phase 8 adds: silence (blocks magic), stun (skip 1 turn).
  */
 
 export const STATUS_EFFECTS = {
@@ -42,6 +43,25 @@ export const STATUS_EFFECTS = {
     duration: 2,
     cureItems: [],
     wakeOnDamage: true,
+  },
+  silence: {
+    name: 'Silence',
+    description: 'Cannot cast magic.',
+    type: 'debuff',
+    color: '#ddaaaa',
+    icon: 'SIL',
+    duration: 3,
+    cureItems: ['EchoHerb'],
+  },
+  stun: {
+    name: 'Stun',
+    description: 'Cannot act this turn.',
+    type: 'debuff',
+    skipTurn: true,
+    color: '#ffdd44',
+    icon: 'STN',
+    duration: 1,
+    cureItems: [],
   },
 };
 
@@ -98,10 +118,10 @@ export function processStatusTick(unit, logFn) {
       }
     }
 
-    // Skip turn (sleep)
+    // Skip turn (sleep/stun)
     if (def.skipTurn) {
       skipped = true;
-      messages.push(`${unit.name} is asleep and cannot act!`);
+      messages.push(`${unit.name} cannot act!`);
     }
 
     // Decrement duration

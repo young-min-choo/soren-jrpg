@@ -72,6 +72,6 @@ export async function snap(page) {
   return page.evaluate(() => window.__soren.battleSnapshot());
 }
 
-export async function evalIn(page, fn) {
-  return page.evaluate(fn);
+export async function evalIn(page, fn, arg) {
+  return page.evaluate(fn, arg);
 }

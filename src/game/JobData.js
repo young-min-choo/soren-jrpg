@@ -13,6 +13,7 @@ export const JOBS = {
     abilities: [
       { name: 'Power Strike', mpCost: 3, jpCost: 30, level: 1, type: 'physical', power: 1.5, description: 'A powerful melee strike.' },
       { name: 'Guard', mpCost: 2, jpCost: 50, level: 3, type: 'buff', description: 'Raise defense for 3 turns.' },
+      { name: 'Cleave', mpCost: 6, jpCost: 90, level: 6, type: 'physical', power: 1.7, description: 'A wide, heavy swing.' },
     ],
   },
   Mage: {
@@ -34,6 +35,7 @@ export const JOBS = {
     abilities: [
       { name: 'Quick Shot', mpCost: 3, jpCost: 30, level: 1, type: 'physical', power: 1.3, description: 'A fast arrow strike.' },
       { name: 'Aim', mpCost: 2, jpCost: 50, level: 4, type: 'buff', description: 'Raise crit rate for 3 turns.' },
+      { name: 'Barrage', mpCost: 8, jpCost: 90, level: 6, type: 'physical', power: 1.8, description: 'A hail of arrows.' },
     ],
   },
   Monk: {
@@ -44,6 +46,7 @@ export const JOBS = {
     abilities: [
       { name: 'Heal', mpCost: 5, jpCost: 40, level: 1, type: 'heal', power: 1.5, description: 'Restore HP to one ally.' },
       { name: 'Palm Strike', mpCost: 3, jpCost: 30, level: 3, type: 'physical', power: 1.3, description: 'A focused melee strike.' },
+      { name: 'Focus', mpCost: 4, jpCost: 80, level: 6, type: 'buff', description: 'Gather ki — defense up.' },
     ],
   },
 
@@ -56,6 +59,7 @@ export const JOBS = {
     abilities: [
       { name: 'Steal', mpCost: 0, jpCost: 40, level: 1, type: 'steal', description: 'Steal an item from an enemy.' },
       { name: 'Flee', mpCost: 0, jpCost: 20, level: 1, type: 'flee', description: 'Higher flee success rate.' },
+      { name: 'Mug', mpCost: 4, jpCost: 80, level: 6, type: 'physical', power: 1.4, description: 'Strike and steal in one move.' },
     ],
   },
   Knight: {
@@ -66,6 +70,7 @@ export const JOBS = {
     abilities: [
       { name: 'Cover', mpCost: 3, jpCost: 40, level: 1, type: 'buff', description: 'Protect an ally from physical attacks.' },
       { name: 'Slash', mpCost: 4, jpCost: 50, level: 3, type: 'physical', power: 1.5, description: 'A heavy sword slash.' },
+      { name: 'Smite', mpCost: 8, jpCost: 90, level: 6, type: 'physical', power: 1.9, description: 'A punishing overhead blow.' },
     ],
   },
   Priest: {
@@ -76,6 +81,7 @@ export const JOBS = {
     abilities: [
       { name: 'Heal', mpCost: 4, jpCost: 40, level: 1, type: 'heal', power: 1.8, description: 'Restore HP to one ally.' },
       { name: 'Cure', mpCost: 6, jpCost: 60, level: 3, type: 'heal', power: 1.2, description: 'Cure status effects.' },
+      { name: 'Blessing', mpCost: 10, jpCost: 90, level: 6, type: 'heal', power: 2.2, description: 'A powerful burst of healing.' },
     ],
   },
   Berserker: {
@@ -86,6 +92,7 @@ export const JOBS = {
     abilities: [
       { name: 'Rage', mpCost: 0, jpCost: 50, level: 1, type: 'buff', description: 'Double ATK for 3 turns, lose control.' },
       { name: 'Crush', mpCost: 3, jpCost: 80, level: 5, type: 'physical', power: 2.0, description: 'A devastating blow.' },
+      { name: 'Bloodrush', mpCost: 6, jpCost: 110, level: 8, type: 'physical', power: 2.4, description: 'Reckless overhead smash.' },
     ],
   },
   Sage: {
@@ -97,6 +104,7 @@ export const JOBS = {
       { name: 'Fire', mpCost: 4, jpCost: 30, level: 1, type: 'magic', power: 1.4, element: 'fire', description: 'Fire damage to one enemy.' },
       { name: 'Heal', mpCost: 4, jpCost: 40, level: 1, type: 'heal', power: 1.8, description: 'Restore HP to one ally.' },
       { name: 'Blizzard', mpCost: 8, jpCost: 80, level: 5, type: 'magic', power: 2.0, element: 'ice', description: 'Ice damage to all enemies.' },
+      { name: 'Meteor', mpCost: 14, jpCost: 130, level: 9, type: 'magic', power: 2.6, element: 'none', description: 'Star-flames strike all enemies.' },
     ],
   },
   Paladin: {
@@ -107,6 +115,7 @@ export const JOBS = {
     abilities: [
       { name: 'Holy Strike', mpCost: 5, jpCost: 50, level: 1, type: 'physical', power: 1.5, element: 'holy', description: 'A holy-imbued strike.' },
       { name: 'Heal', mpCost: 5, jpCost: 40, level: 3, type: 'heal', power: 1.5, description: 'Restore HP to one ally.' },
+      { name: 'Martyr', mpCost: 12, jpCost: 120, level: 8, type: 'heal', power: 2.0, description: 'Sacrifice HP to heal an ally fully.' },
     ],
   },
   DarkKnight: {
@@ -117,6 +126,7 @@ export const JOBS = {
     abilities: [
       { name: 'Dark Drain', mpCost: 6, jpCost: 50, level: 1, type: 'drain', power: 1.3, description: 'Damage enemy and heal self.' },
       { name: 'Shadow Slash', mpCost: 5, jpCost: 80, level: 5, type: 'physical', power: 1.8, element: 'dark', description: 'A dark-imbued slash.' },
+      { name: 'Soul Eater', mpCost: 12, jpCost: 130, level: 8, type: 'drain', power: 2.0, description: 'Devour vitality from the enemy.' },
     ],
   },
   Ninja: {
@@ -127,6 +137,7 @@ export const JOBS = {
     abilities: [
       { name: 'Throw', mpCost: 3, jpCost: 40, level: 1, type: 'physical', power: 1.5, description: 'Throw a weapon for damage.' },
       { name: 'Shadow Clone', mpCost: 8, jpCost: 80, level: 5, type: 'buff', description: 'Create a decoy that absorbs one hit.' },
+      { name: 'Assassinate', mpCost: 10, jpCost: 130, level: 8, type: 'physical', power: 2.3, description: 'Strike a vital point.' },
     ],
   },
 };

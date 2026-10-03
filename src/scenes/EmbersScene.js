@@ -79,6 +79,8 @@ export default class EmbersScene extends Phaser.Scene {
     this.confirmPressed = false;
 
     this.handleKeyDown = (e) => {
+      // Paused scenes (Menu/Battle/GameOver on top) must not react to input
+      if (!this.scene.isActive()) return;
       if (this.cutsceneLock || this.transitioning) return;
       switch (e.key) {
         case 'ArrowUp': case 'w': case 'W': this.keys.up = true; e.preventDefault(); break;

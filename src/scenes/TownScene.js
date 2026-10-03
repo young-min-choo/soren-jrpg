@@ -2,10 +2,15 @@ import Phaser from 'phaser';
 import GameState from '../game/GameState.js';
 import { JOBS, STARTING_JOBS, UNLOCKABLE_JOBS, getStatsForLevel } from '../game/JobData.js';
 import { npcDialogue } from '../game/story.js';
-import { getShop, INN_COST } from '../game/ShopData.js';
+import { getShop, sellPrice, INN_COST } from '../game/ShopData.js';
+import { getTown } from '../game/WorldData.js';
+import { getEquip } from '../game/EquipmentData.js';
 
 /**
- * TownScene — town interior.
+ * TownScene — town interior (base for all 5 towns).
+ * The default export is the Village of Verdan (original map — kept exact so
+ * existing tests + saves stay valid). Other towns instantiate via
+ * `makeTownScene(townKey)` (see townInstances.js) with layout from WorldData.
  * Uses DOM overlays for all text (crisp at any resolution).
  */
 
@@ -24,13 +29,23 @@ const EXIT_X = 8;
 const EXIT_Y = 11;
 
 export default class TownScene extends Phaser.Scene {
-  constructor() {
-    super('Town');
+  constructor(sceneKey = 'Town', townKey = 'village') {
+    super(sceneKey);
+    this.townKey = townKey; // WorldData.TOWNS key
+  }
+
+  /** Town config (WorldData). */
+  _town() {
+    return getTown(this.townKey) || getTown('village');
   }
 
   create() {
     this.domElements = [];
     const container = document.getElementById('game-container');
+
+    const town = this._town();
+    // NPCs from config (5 standard roles per town)
+    this.npcCfgs = town.npcs;
 
     const mapData = this.generateMapData();
     const map = this.make.tilemap({ data: mapData, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
@@ -52,54 +67,20 @@ export default class TownScene extends Phaser.Scene {
     // --- NPCs ---
     this.npcs = [];
 
-    const npc1X = 6 * TILE_SIZE + TILE_SIZE / 2;
-    const npc1Y = 5 * TILE_SIZE + TILE_SIZE / 2;
-    const npc1 = this.physics.add.staticSprite(npc1X, npc1Y, 'player_field', 1);
-    npc1.setData('npcKey', 'townsfolk');
-    npc1.setData('name', 'Townsfolk');
-    this.npcs.push(npc1);
-
-    const npc2X = 11 * TILE_SIZE + TILE_SIZE / 2;
-    const npc2Y = 5 * TILE_SIZE + TILE_SIZE / 2;
-    const npc2 = this.physics.add.staticSprite(npc2X, npc2Y, 'player_field', 1);
-    npc2.setTint(0x888888);
-    npc2.setData('npcKey', 'elder');
-    npc2.setData('name', 'Elder');
-    this.npcs.push(npc2);
-
-    // Job Master NPC — allows changing party jobs (FF3-style)
-    const npc3X = 8 * TILE_SIZE + TILE_SIZE / 2;
-    const npc3Y = 8 * TILE_SIZE + TILE_SIZE / 2;
-    const npc3 = this.physics.add.staticSprite(npc3X, npc3Y, 'player_field', 1);
-    npc3.setTint(0x44ff44);
-    npc3.setData('name', 'Job Master');
-    npc3.setData('isJobMaster', true);
-    npc3.setData('dialogue', {
-      speaker: 'Job Master', portrait: null,
-      pages: [
-        'I can help you and your party change jobs.',
-        'The path you walk is yours to choose.',
-      ],
+    this.npcCfgs.forEach(cfg => {
+      const npc = this.physics.add.staticSprite(
+        cfg.x * TILE_SIZE + TILE_SIZE / 2,
+        cfg.y * TILE_SIZE + TILE_SIZE / 2,
+        'player_field', 1
+      );
+      if (cfg.tint) npc.setTint(cfg.tint);
+      npc.setData('name', cfg.name);
+      if (cfg.npcKey) npc.setData('npcKey', cfg.npcKey);
+      if (cfg.role === 'jobMaster') npc.setData('isJobMaster', true);
+      if (cfg.role === 'shopkeeper') npc.setData('isShopkeeper', true);
+      if (cfg.role === 'innkeeper') npc.setData('isInnkeeper', true);
+      this.npcs.push(npc);
     });
-    this.npcs.push(npc3);
-
-    // Shopkeeper — opens the buy menu
-    const npc4X = 3 * TILE_SIZE + TILE_SIZE / 2;
-    const npc4Y = 10 * TILE_SIZE + TILE_SIZE / 2;
-    const npc4 = this.physics.add.staticSprite(npc4X, npc4Y, 'player_field', 1);
-    npc4.setTint(0xffdd44);
-    npc4.setData('name', 'Shopkeeper');
-    npc4.setData('isShopkeeper', true);
-    this.npcs.push(npc4);
-
-    // Innkeeper — rest to restore HP/MP
-    const npc5X = 12 * TILE_SIZE + TILE_SIZE / 2;
-    const npc5Y = 10 * TILE_SIZE + TILE_SIZE / 2;
-    const npc5 = this.physics.add.staticSprite(npc5X, npc5Y, 'player_field', 1);
-    npc5.setTint(0x66aaff);
-    npc5.setData('name', 'Innkeeper');
-    npc5.setData('isInnkeeper', true);
-    this.npcs.push(npc5);
 
     this.npcs.forEach(npc => { this.physics.add.collider(this.player, npc); });
 
@@ -115,6 +96,8 @@ export default class TownScene extends Phaser.Scene {
     this.confirmPressed = false;
 
     this.handleKeyDown = (e) => {
+      // Paused scenes (Menu/Battle/GameOver on top) must not react to input
+      if (!this.scene.isActive()) return;
       // Modal menus take priority in order
       if (this.shopDiv && this._handleShopKey(e)) return;
       if (this.innDiv && this._handleInnKey(e)) return;
@@ -359,8 +342,10 @@ export default class TownScene extends Phaser.Scene {
   // ─── Shop (Phase 8) ─────────────────────────────────────────────────────
 
   openShop() {
-    this.shop = getShop('startingTown');
+    this.shop = getShop(this._town().shopKey);
     this.shopIndex = 0;
+    this.shopMode = 'buy';
+    this._shopFlashMsg = '';
     this._createShopDom();
   }
 
@@ -383,39 +368,83 @@ export default class TownScene extends Phaser.Scene {
   _updateShop() {
     if (!this.shopDiv) return;
     const gold = GameState.get().gold;
-    let html = `<div style="font-size:14px;color:#ffff00;margin-bottom:4px">${this.shop.name}</div>`;
-    html += `<div style="font-size:12px;color:#44dd44;margin-bottom:10px">Your gold: ${gold}G</div>`;
-    this.shop.stock.forEach((entry, i) => {
-      const sel = i === this.shopIndex;
-      const prefix = sel ? '▶' : ' ';
-      const color = sel ? '#ffff00' : (gold >= entry.price ? '#ccc' : '#777');
-      const qty = GameState.getItemQty(entry.name);
-      html += `<div style="color:${color};font-size:13px;margin:4px 0"><span style="display:inline-block;width:18px">${prefix}</span>${entry.name} — <span style="color:#44dd44">${entry.price}G</span> <span style="font-size:10px;color:#888">(have ${qty})</span></div>`;
-    });
-    html += `<div style="font-size:11px;color:#888;margin-top:10px">Z: Buy 1 · X: Leave</div>`;
+    let html = `<div style="font-size:14px;color:#ffff00;margin-bottom:4px">${this.shop.name} — <span style="font-size:10px">[Q] Buy/Sell · [X] Leave</span></div>`;
+    html += `<div style="font-size:12px;color:#44dd44;margin-bottom:10px">Your gold: ${gold}G${this.shopMode === 'sell' ? ' — SELLING' : ''}</div>`;
+    if (this.shopMode === 'sell') {
+      // Sell mode: inventory items + owned equipment at half price
+      const sellables = [];
+      GameState.getInventory().forEach(it => {
+        if (it.qty > 0) sellables.push({ name: it.name, qty: it.qty, unit: sellPrice(it.name), kind: 'item' });
+      });
+      Object.entries(GameState.getOwnedEquipment()).forEach(([name, qty]) => {
+        if (qty > 0) sellables.push({ name, qty, unit: sellPrice(name), kind: 'equip' });
+      });
+      this._sellables = sellables;
+      if (sellables.length === 0) {
+        html += `<div style="color:#888;font-size:13px">Nothing to sell.</div>`;
+      } else {
+        sellables.forEach((entry, i) => {
+          const sel = i === this.shopIndex;
+          const prefix = sel ? '▶' : ' ';
+          const color = sel ? '#ffff00' : '#ccc';
+          html += `<div style="color:${color};font-size:13px;margin:4px 0"><span style="display:inline-block;width:18px">${prefix}</span>${entry.name} x${entry.qty} — <span style="color:#44dd44">sell ${entry.unit}G</span></div>`;
+        });
+      }
+    } else {
+      this.shop.stock.forEach((entry, i) => {
+        const sel = i === this.shopIndex;
+        const prefix = sel ? '▶' : ' ';
+        const color = sel ? '#ffff00' : (gold >= entry.price ? '#ccc' : '#777');
+        const qty = entry.kind === 'equip' ? GameState.getEquipQty(entry.name) : GameState.getItemQty(entry.name);
+        const tag = entry.kind === 'equip' ? ' <span style="font-size:10px;color:#88f">(equip)</span>' : '';
+        html += `<div style="color:${color};font-size:13px;margin:4px 0"><span style="display:inline-block;width:18px">${prefix}</span>${entry.name}${tag} — <span style="color:#44dd44">${entry.price}G</span> <span style="font-size:10px;color:#888">(have ${qty})</span></div>`;
+      });
+    }
+    if (this._shopFlashMsg) {
+      html += `<div class="flash-live" style="font-size:11px;color:#ffff44;margin-top:4px;min-height:14px">${this._shopFlashMsg}</div>`;
+    }
     this.shopDiv.innerHTML = html;
   }
 
   _handleShopKey(e) {
     if (!this.shopDiv) return false;
+    const listLen = () => this.shopMode === 'buy'
+      ? this.shop.stock.length
+      : (this._sellables ? this._sellables.length : 0);
     switch (e.key) {
       case 'ArrowUp': case 'w': case 'W':
-        this.shopIndex = (this.shopIndex - 1 + this.shop.stock.length) % this.shop.stock.length;
-        this._updateShop();
+        if (listLen() > 0) { this.shopIndex = (this.shopIndex - 1 + listLen()) % listLen(); this._updateShop(); }
         e.preventDefault(); return true;
       case 'ArrowDown': case 's': case 'S':
-        this.shopIndex = (this.shopIndex + 1) % this.shop.stock.length;
+        if (listLen() > 0) { this.shopIndex = (this.shopIndex + 1) % listLen(); this._updateShop(); }
+        e.preventDefault(); return true;
+      case 'q': case 'Q':
+        // Toggle buy/sell mode
+        this.shopMode = this.shopMode === 'buy' ? 'sell' : 'buy';
+        this.shopIndex = 0;
         this._updateShop();
         e.preventDefault(); return true;
       case 'z': case 'Z': case 'Enter': {
-        const entry = this.shop.stock[this.shopIndex];
-        const gold = GameState.get().gold;
-        if (gold < entry.price) {
-          this._shopFlash('Not enough gold!');
+        if (this.shopMode === 'buy') {
+          const entry = this.shop.stock[this.shopIndex];
+          const gold = GameState.get().gold;
+          if (!entry) return true;
+          if (gold < entry.price) {
+            this._shopFlash('Not enough gold!');
+          } else {
+            GameState.get().gold -= entry.price;
+            if (entry.kind === 'equip') GameState.addEquipment(entry.name, 1);
+            else GameState.addItem(entry.name, 1);
+            this._shopFlash(`Bought ${entry.name}!`);
+          }
         } else {
-          GameState.get().gold -= entry.price;
-          GameState.addItem(entry.name, 1);
-          this._shopFlash(`Bought ${entry.name}!`);
+          const entry = this._sellables && this._sellables[this.shopIndex];
+          if (entry) {
+            if (entry.kind === 'equip') GameState.removeEquipment(entry.name, 1);
+            else GameState.removeItem(entry.name, 1);
+            GameState.get().gold += entry.unit;
+            this._shopFlash(`Sold ${entry.name} for ${entry.unit}G!`);
+          }
         }
         this._updateShop();
         e.preventDefault(); return true;
@@ -429,16 +458,12 @@ export default class TownScene extends Phaser.Scene {
   }
 
   _shopFlash(msg) {
-    if (!this.shopDiv) return;
-    let flash = this.shopDiv.querySelector('.shop-flash');
-    if (!flash) {
-      flash = document.createElement('div');
-      flash.className = 'shop-flash';
-      flash.style.cssText = 'font-size:11px;color:#ffff44;margin-top:4px;min-height:14px';
-      this.shopDiv.appendChild(flash);
-    }
-    flash.textContent = msg;
-    setTimeout(() => { if (flash) flash.textContent = ''; }, 1500);
+    this._shopFlashMsg = msg;
+    this._updateShop();
+    setTimeout(() => {
+      this._shopFlashMsg = '';
+      if (this.shopDiv) this._updateShop();
+    }, 1500);
   }
 
   _closeShop() {
@@ -474,7 +499,8 @@ export default class TownScene extends Phaser.Scene {
   _updateInn() {
     if (!this.innDiv) return;
     const gold = GameState.get().gold;
-    const options = ['Rest (' + INN_COST + 'G)', 'Leave'];
+    const cost = this._town().innCost;
+    const options = ['Rest (' + cost + 'G)', 'Leave'];
     let html = `<div style="font-size:14px;color:#66aaff;margin-bottom:8px">Inn — A warm bed and a hot meal</div>`;
     html += `<div style="font-size:12px;color:#44dd44;margin-bottom:10px">Your gold: ${gold}G</div>`;
     options.forEach((opt, i) => {
@@ -497,16 +523,17 @@ export default class TownScene extends Phaser.Scene {
         e.preventDefault(); return true;
       case 'z': case 'Z': case 'Enter':
         if (this.innIndex === 0) {
-          if (GameState.get().gold < INN_COST) {
+          const cost = this._town().innCost;
+          if (GameState.get().gold < cost) {
             this._innFlash('Not enough gold!');
           } else {
-            GameState.get().gold -= INN_COST;
+            GameState.get().gold -= cost;
             GameState.fullHeal();
             this._closeInn();
             this.dialogueActive = false;
             // Toast via status bar
             const prev = this.statusDiv.textContent;
-            this.statusDiv.textContent = 'You feel fully rested! (-' + INN_COST + 'G)';
+            this.statusDiv.textContent = 'You feel fully rested! (-' + cost + 'G)';
             setTimeout(() => { if (this.statusDiv) this.statusDiv.textContent = prev; }, 2500);
             return true;
           }
@@ -798,7 +825,7 @@ export default class TownScene extends Phaser.Scene {
 
   openMenu() {
     this.player.setVelocity(0, 0);
-    this.scene.launch('Menu', { parentScene: 'Town' });
+    this.scene.launch('Menu', { parentScene: this.scene.settings.key });
     this.scene.pause();
   }
 
@@ -833,6 +860,40 @@ export default class TownScene extends Phaser.Scene {
   }
 
   generateMapData() {
+    const town = this._town();
+    // Non-village towns render from WorldData config
+    if (this.townKey !== 'village') {
+      const map = [];
+      for (let y = 0; y < town.rows; y++) {
+        const row = [];
+        for (let x = 0; x < town.cols; x++) {
+          let tile = T_FLOOR;
+          if (x === 0 || x === town.cols - 1 || y === 0) tile = T_WALL;
+          if (y === town.rows - 1) { tile = x === town.exitX ? T_PATH : T_WALL; }
+          row.push(tile);
+        }
+        map.push(row);
+      }
+      town.buildings.forEach(([x, y, w, h]) => {
+        for (let dy = 0; dy < h; dy++) {
+          for (let dx = 0; dx < w; dx++) {
+            if (map[y + dy] && map[y + dy][x + dx] !== undefined) {
+              map[y + dy][x + dx] = dy === 0 ? T_BUILDING_ROOF : T_BUILDING_WALL;
+            }
+          }
+        }
+      });
+      town.paths.forEach(p => {
+        if (p.dir === 'v') {
+          for (let y = p.from; y <= p.to; y++) map[y][p.x] = T_PATH;
+        } else {
+          for (let x = p.from; x <= p.to; x++) map[p.y][x] = T_PATH;
+        }
+      });
+      town.woods.forEach(([x, y]) => { if (map[y] && map[y][x] !== undefined) map[y][x] = T_WOOD; });
+      return map;
+    }
+    // Village of Verdan — legacy exact map (tests + saves depend on it)
     const map = [];
     for (let y = 0; y < MAP_ROWS; y++) {
       const row = [];

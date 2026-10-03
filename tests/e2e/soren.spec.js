@@ -53,8 +53,8 @@ test('X opens menu; Save writes slot; Load restores', async ({ page }) => {
   await tap(page, 'x');
   await expectScene(page, 'Menu');
 
-  // Navigate to Save (Status, Items, Jobs, Save) — 3 downs then confirm
-  await tap(page, 'ArrowDown', 3);
+  // Navigate to Save (Status, Items, Equip, Jobs, Save) — 4 downs then confirm
+  await tap(page, 'ArrowDown', 4);
   await tap(page, 'z'); // Save
   await page.waitForTimeout(200);
   // Slot 1 selected by default; confirm
@@ -71,7 +71,7 @@ test('X opens menu; Save writes slot; Load restores', async ({ page }) => {
   // Now load: open menu, go to Load
   await tap(page, 'x');
   await expectScene(page, 'Menu');
-  await tap(page, 'ArrowDown', 4);
+  await tap(page, 'ArrowDown', 5);
   await tap(page, 'z'); // Load
   await page.waitForTimeout(200);
   await tap(page, 'z'); // slot 1
@@ -180,7 +180,7 @@ test('battle: items submenu lists inventory and Potion heals', async ({ page }) 
   expect(qty).toBe(2); // started with 3, used 1
 });
 
-test('battle: lose path triggers full heal + return', async ({ page }) => {
+test('battle: lose path triggers Game Over (load/Title, no free heal)', async ({ page }) => {
   await boot(page, { newGame: true });
   await tap(page, 'z');
   await expectScene(page, 'Overworld');
@@ -195,13 +195,19 @@ test('battle: lose path triggers full heal + return', async ({ page }) => {
   // Goblin (atk 9) wipes the 1-HP party in ~3 rounds
   await page.waitForFunction(() => window.__soren.battleSnapshot() === null, { timeout: 60000 });
   await page.evaluate(() => { if (window.__soren._auto) window.__soren._auto(); });
+  // Give the death fade + GameOver input-lockout time to settle
+  await page.waitForTimeout(1500);
 
-  await expectScene(page, 'Overworld', 10000);
+  // Party wipe now goes to the GameOver scene (design doc §408)
+  await expectScene(page, 'GameOver', 10000);
 
+  // No free full-heal: party HP stays wiped
   const hps = await evalIn(page, () => window.__soren.GameState.get().party.map(p => p.hp));
-  const maxes = await evalIn(page, () => window.__soren.GameState.get().party.map(p => p.maxHp));
-  // Full heal on defeat (classic FF prototype behavior)
-  hps.forEach((hp, i) => expect(hp).toBe(maxes[i]));
+  hps.forEach((hp) => expect(hp).toBe(0));
+
+  // X = Return to Title
+  await tap(page, 'x');
+  await expectScene(page, 'Title', 10000);
 });
 
 // ─── Job system via Job Master ─────────────────────────────────────────────
@@ -296,7 +302,7 @@ test('save → full page reload → load restores party and position', async ({ 
 
   await tap(page, 'x');
   await expectScene(page, 'Menu');
-  await tap(page, 'ArrowDown', 3);
+  await tap(page, 'ArrowDown', 4);
   await tap(page, 'z'); // Save
   await page.waitForTimeout(200);
   await tap(page, 'z'); // slot 1
@@ -316,7 +322,7 @@ test('save → full page reload → load restores party and position', async ({ 
 
   await tap(page, 'x');
   await expectScene(page, 'Menu');
-  await tap(page, 'ArrowDown', 4);
+  await tap(page, 'ArrowDown', 5);
   await tap(page, 'z'); // Load
   await page.waitForTimeout(200);
   await tap(page, 'z'); // slot 1

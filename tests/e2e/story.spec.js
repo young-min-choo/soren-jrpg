@@ -170,7 +170,7 @@ test('relic flag persists through save/reload (world state)', async ({ page }) =
   await evalIn(page, () => window.__soren.GameState.setFlag('relicWind'));
   await tap(page, 'x');
   await expectScene(page, 'Menu');
-  await tap(page, 'ArrowDown', 3);
+  await tap(page, 'ArrowDown', 4);
   await tap(page, 'z');
   await page.waitForTimeout(200);
   await tap(page, 'z');
@@ -185,7 +185,7 @@ test('relic flag persists through save/reload (world state)', async ({ page }) =
   await newGameFast(page); // title → new-game flow → overworld
   await tap(page, 'x');
   await expectScene(page, 'Menu');
-  await tap(page, 'ArrowDown', 4);
+  await tap(page, 'ArrowDown', 5);
   await tap(page, 'z');
   await page.waitForTimeout(200);
   await tap(page, 'z');

@@ -1,9 +1,10 @@
 /**
  * GameState — persistent player state across scenes and battles.
- * Now supports a full party of characters with jobs.
+ * Full party (up to 4), equipment, story flags.
  */
 import { JOBS, getStatsForLevel } from './JobData.js';
 import { getStartingInventory } from './ItemData.js';
+import { getEquip, EQUIP_BONUS_KEYS } from './EquipmentData.js';
 
 function createCharacter(name, jobName, level = 1) {
   const stats = getStatsForLevel(jobName, level);
@@ -31,19 +32,30 @@ function createCharacter(name, jobName, level = 1) {
     // JP (job points) for spending on abilities — per job
     jp: {},
     unlockedJobs: [jobName],
+    // Phase 8: equipment { weapon: name|null, armor: name|null, accessory: name|null }
+    equipment: { weapon: null, armor: null, accessory: null },
   };
 }
 
-let state = {
-  party: [
-    createCharacter('Soren', 'Warrior', 1),
+function startingParty(playerName, playerJob) {
+  // Design doc §3: Soren + thief (Kael) + "white mage" (actually monk, Aria).
+  // Kael arrives as a Thief — his sister subplot (Neve, Port Meridian) opens early.
+  return [
+    createCharacter(playerName, playerJob, 1),
     createCharacter('Aria', 'Monk', 1),
-    createCharacter('Kael', 'Ranger', 1),
-  ],
+    createCharacter('Kael', 'Thief', 1),
+  ];
+}
+
+const BASE_JOBS = ['Warrior', 'Mage', 'Ranger', 'Monk', 'Thief'];
+
+let state = {
+  party: startingParty('Soren', 'Warrior'),
   gold: 0,
   inventory: getStartingInventory(),
+  equipment: {},       // owned equipment: { name: qty }
   storyFlags: {},
-  unlockedJobs: ['Warrior', 'Mage', 'Ranger', 'Monk'],
+  unlockedJobs: [...BASE_JOBS],
   // Position tracking for save/load
   scene: 'Overworld',
   x: 336,
@@ -84,16 +96,85 @@ const GameState = {
     return true;
   },
 
+  // --- Equipment (Phase 8) ---
+  getOwnedEquipment() { return state.equipment; },
+
+  getEquipQty(name) { return state.equipment[name] || 0; },
+
+  addEquipment(name, qty = 1) {
+    state.equipment[name] = (state.equipment[name] || 0) + qty;
+  },
+
+  removeEquipment(name, qty = 1) {
+    if (!state.equipment[name] || state.equipment[name] < qty) return false;
+    state.equipment[name] -= qty;
+    if (state.equipment[name] <= 0) delete state.equipment[name];
+    return true;
+  },
+
+  equip(charIndex, slot, equipName) {
+    const char = state.party[charIndex];
+    if (!char) return false;
+    const def = getEquip(equipName);
+    if (!def || def.slot !== slot) return false;
+    // Must own it (or it's already equipped — no-op)
+    if (!state.equipment[equipName]) return false;
+    // Return previously equipped piece to inventory
+    const prev = char.equipment[slot];
+    if (prev) state.equipment[prev] = (state.equipment[prev] || 0) + 1;
+    state.equipment[equipName] -= 1;
+    if (state.equipment[equipName] <= 0) delete state.equipment[equipName];
+    char.equipment[slot] = equipName;
+    return true;
+  },
+
+  unequip(charIndex, slot) {
+    const char = state.party[charIndex];
+    if (!char || !char.equipment[slot]) return false;
+    state.equipment[char.equipment[slot]] = (state.equipment[char.equipment[slot]] || 0) + 1;
+    char.equipment[slot] = null;
+    return true;
+  },
+
+  /** Character stats + equipment bonuses. Returns a NEW object (safe to mutate). */
+  effectiveChar(charIndex) {
+    const char = state.party[charIndex];
+    if (!char) return null;
+    const eff = { ...char };
+    for (const slot of ['weapon', 'armor', 'accessory']) {
+      const eqName = char.equipment && char.equipment[slot];
+      if (!eqName) continue;
+      const def = getEquip(eqName);
+      if (!def) continue;
+      for (const key of EQUIP_BONUS_KEYS) {
+        if (def[key]) eff[key] = (eff[key] || 0) + def[key];
+      }
+    }
+    return eff;
+  },
+
+  // --- Party roster (story arc) ---
+
   /**
-   * Add a new party member.
+   * Add a new party member (e.g. Aldric the Knight joins after the Wind Relic).
    */
   addMember(name, jobName, level = 1) {
+    if (state.party.length >= 4) return null;          // design: party of 4 max
+    if (state.party.some(p => p.name === name)) return null;
     const char = createCharacter(name, jobName, level);
     state.party.push(char);
-    if (!state.unlockedJobs.includes(jobName)) {
-      state.unlockedJobs.push(jobName);
-    }
+    GameState.unlockJob(jobName);
     return char;
+  },
+
+  /**
+   * Remove a party member by name (the betrayal: Aldric leaves with the relics).
+   */
+  removeMember(name) {
+    const idx = state.party.findIndex(p => p.name === name);
+    if (idx === -1) return false;
+    state.party.splice(idx, 1);
+    return true;
   },
 
   /**
@@ -123,17 +204,23 @@ const GameState = {
     char.mdef = stats.mdef;
     char.agi = stats.agi;
     char.luck = stats.luck;
-    char.hp = Math.floor(char.maxHp * hpRatio);
+    char.hp = Math.max(1, Math.floor(char.maxHp * hpRatio));
     char.mp = Math.floor(char.maxMp * mpRatio);
     // Add new job's level-1 abilities if not already learned
     if (!char.learnedAbilities[newJobName]) {
       char.learnedAbilities[newJobName] = JOBS[newJobName].abilities
         .filter(a => a.level <= 1).map(a => a.name);
     }
-    // Unlock job if new
-    if (!state.unlockedJobs.includes(newJobName)) {
-      state.unlockedJobs.push(newJobName);
+    GameState.unlockJob(newJobName);
+  },
+
+  /** Unlock a job for the whole party (story progression). */
+  unlockJob(jobName) {
+    if (!JOBS[jobName]) return false;
+    if (!state.unlockedJobs.includes(jobName)) {
+      state.unlockedJobs.push(jobName);
     }
+    return true;
   },
 
   /**
@@ -150,8 +237,8 @@ const GameState = {
           // Award JP to current job
           if (!char.jp) char.jp = {};
           char.jp[char.job] = (char.jp[char.job] || 0) + jpEarned;
-          // Level up check (every 100 exp)
-          while (char.exp >= char.level * 100) {
+          // Level up check (every 100 exp, level cap 50 — design doc §9)
+          while (char.exp >= char.level * 100 && char.level < 50) {
             char.exp -= char.level * 100;
             char.level++;
             const stats = getStatsForLevel(char.job, char.level);
@@ -182,7 +269,7 @@ const GameState = {
       });
     }
     if (result === 'lose') {
-      // Full heal on game over (classic FF behavior)
+      // Full heal on game over (classic FF behavior — Game Over screen comes in Phase 9)
       state.party.forEach(char => {
         char.hp = char.maxHp;
         char.mp = char.maxMp;
@@ -286,15 +373,12 @@ const GameState = {
 
   reset(playerName = 'Soren', playerJob = 'Warrior') {
     state = {
-      party: [
-        createCharacter(playerName, playerJob, 1),
-        createCharacter('Aria', 'Monk', 1),
-        createCharacter('Kael', 'Ranger', 1),
-      ],
+      party: startingParty(playerName, playerJob),
       gold: 0,
       inventory: getStartingInventory(),
+      equipment: {},
       storyFlags: { startingJob: playerJob },
-      unlockedJobs: ['Warrior', 'Mage', 'Ranger', 'Monk'],
+      unlockedJobs: [...BASE_JOBS],
       scene: 'Overworld',
       x: 336,
       y: 336,

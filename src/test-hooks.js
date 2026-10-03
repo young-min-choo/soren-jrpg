@@ -24,7 +24,7 @@ export function installTestHooks(game) {
 
   const scene = (key) => game.scene.getScene(key);
   const activeSceneKey = () => {
-    const scenes = ['NewGameFlow', 'Overworld', 'Town', 'Dungeon', 'Embers', 'Battle', 'Menu', 'Dialogue', 'Title'];
+    const scenes = ['NewGameFlow', 'Overworld', 'Town', 'PortMeridian', 'Stonewatch', 'Skyhold', 'Aurelia', 'Dungeon', 'TideTemple', 'HollowDeep', 'StormSpire', 'ConduitGate', 'Conduit', 'Embers', 'Battle', 'Menu', 'Dialogue', 'GameOver', 'Title'];
     return scenes.find((k) => {
       const s = game.scene.getScene(k);
       return s && s.scene.isActive();

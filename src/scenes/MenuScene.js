@@ -3,6 +3,7 @@ import GameState from '../game/GameState.js';
 import { SaveSystem } from '../game/SaveSystem.js';
 import { JOBS } from '../game/JobData.js';
 import { ITEMS } from '../game/ItemData.js';
+import { getEquip } from '../game/EquipmentData.js';
 import { getActiveStatuses, STATUS_EFFECTS } from '../game/StatusEffectData.js';
 
 /**
@@ -95,6 +96,15 @@ export default class MenuScene extends Phaser.Scene {
     } else if (this.menuState === 'party') {
       const party = GameState.getParty();
       this.subIndex = (this.subIndex - 1 + party.length) % party.length;
+    } else if (this.menuState === 'equip_member') {
+      const party = GameState.getParty();
+      this.subIndex = (this.subIndex - 1 + party.length) % party.length;
+    } else if (this.menuState === 'equip_slot') {
+      const slots = ['weapon', 'armor', 'accessory'];
+      this.subIndex = (this.subIndex - 1 + slots.length) % slots.length;
+    } else if (this.menuState === 'equip_item') {
+      const opts = this._equipOptions();
+      if (opts.length > 0) this.subIndex = (this.subIndex - 1 + opts.length) % opts.length;
     }
     this.updateMenu();
   }
@@ -109,6 +119,15 @@ export default class MenuScene extends Phaser.Scene {
     } else if (this.menuState === 'party') {
       const party = GameState.getParty();
       this.subIndex = (this.subIndex + 1) % party.length;
+    } else if (this.menuState === 'equip_member') {
+      const party = GameState.getParty();
+      this.subIndex = (this.subIndex + 1) % party.length;
+    } else if (this.menuState === 'equip_slot') {
+      const slots = ['weapon', 'armor', 'accessory'];
+      this.subIndex = (this.subIndex + 1) % slots.length;
+    } else if (this.menuState === 'equip_item') {
+      const opts = this._equipOptions();
+      if (opts.length > 0) this.subIndex = (this.subIndex + 1) % opts.length;
     }
     this.updateMenu();
   }
@@ -126,6 +145,10 @@ export default class MenuScene extends Phaser.Scene {
       } else if (action === 'Items') {
         this.menuState = 'items';
         this.subIndex = 0;
+      } else if (action === 'Equip') {
+        this.menuState = 'equip_member';
+        this.subIndex = 0;
+        this.equipSlot = null;
       } else if (action === 'Jobs') {
         this.menuState = 'jobs';
         this.subIndex = 0;
@@ -159,6 +182,26 @@ export default class MenuScene extends Phaser.Scene {
     } else if (this.menuState === 'party' || this.menuState === 'items' || this.menuState === 'jobs') {
       // Sub-screens are view-only for now
       this.menuState = 'main';
+    } else if (this.menuState === 'equip_member') {
+      this.equipMemberIndex = this.subIndex;
+      this.menuState = 'equip_slot';
+      this.subIndex = 0;
+    } else if (this.menuState === 'equip_slot') {
+      this.menuState = 'equip_item';
+      this.equipSlot = ['weapon', 'armor', 'accessory'][this.subIndex];
+      this.subIndex = 0;
+    } else if (this.menuState === 'equip_item') {
+      const opts = this._equipOptions();
+      const pick = opts[this.subIndex];
+      if (pick) {
+        if (pick.remove) {
+          GameState.unequip(this.equipMemberIndex, this.equipSlot);
+        } else {
+          GameState.equip(this.equipMemberIndex, this.equipSlot, pick.name);
+        }
+        this.menuState = 'equip_slot'; // stay on slots, show updated gear
+        this.subIndex = ['weapon', 'armor', 'accessory'].indexOf(this.equipSlot);
+      }
     }
     this.updateMenu();
   }
@@ -166,6 +209,15 @@ export default class MenuScene extends Phaser.Scene {
   cancel() {
     if (this.menuState === 'main') {
       this.closeMenu();
+    } else if (this.menuState === 'equip_item') {
+      this.menuState = 'equip_slot';
+      this.subIndex = ['weapon', 'armor', 'accessory'].indexOf(this.equipSlot);
+    } else if (this.menuState === 'equip_slot') {
+      this.menuState = 'equip_member';
+      this.subIndex = this.equipMemberIndex || 0;
+    } else if (this.menuState === 'equip_member') {
+      this.menuState = 'main';
+      this.selectedIndex = 0;
     } else {
       this.menuState = 'main';
       this.selectedIndex = 0;
@@ -182,7 +234,23 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   _mainItems() {
-    return ['Status', 'Items', 'Jobs', 'Save', 'Load', 'Resume'];
+    return ['Status', 'Items', 'Equip', 'Jobs', 'Save', 'Load', 'Resume'];
+  }
+
+  /** Options for the current equip slot: owned items of that slot type. */
+  _equipOptions() {
+    if (this.equipSlot == null) return [];
+    const owned = GameState.getOwnedEquipment();
+    const eq = GameState.getParty()[this.equipMemberIndex].equipment || {};
+    const opts = [];
+    // "Remove" option when something is equipped
+    if (eq[this.equipSlot]) opts.push({ remove: true, label: '(remove)' });
+    Object.entries(owned).forEach(([name, qty]) => {
+      const def = getEquip(name);
+      if (!def || def.type !== this.equipSlot) return;
+      opts.push({ name, label: `${name} x${qty}`, desc: def.description });
+    });
+    return opts;
   }
 
   _saveSlots() {
@@ -301,6 +369,57 @@ export default class MenuScene extends Phaser.Scene {
       html += `<div style="font-size:11px;color:#aaa;margin-top:12px">Unlocked: ${unlocked.join(', ')}</div>`;
       html += '<div style="color:#888;font-size:10px;margin-top:8px">Visit Job Master in town to change jobs or learn abilities.</div>';
       html += '<div style="color:#888;font-size:10px;margin-top:8px">X: Back</div>';
+      this.menuDiv.innerHTML = html;
+      return;
+    }
+
+    if (this.menuState === 'equip_member') {
+      const party = GameState.getParty();
+      let html = '<div style="font-size:16px;color:#ffff00;margin-bottom:12px">Equip — Choose a member</div>';
+      party.forEach((char, i) => {
+        const sel = i === this.subIndex;
+        const prefix = sel ? '▶' : '　';
+        const color = sel ? '#ffff00' : '#ccc';
+        const eq = char.equipment || {};
+        html += `<div style="color:${color};font-size:13px;margin:6px 0">${prefix} ${char.name} — ${char.job} <span style="font-size:10px;color:#888">[${eq.weapon || '—'} / ${eq.armor || '—'} / ${eq.accessory || '—'}]</span></div>`;
+      });
+      html += '<div style="color:#888;font-size:10px;margin-top:8px">Z: Select | X: Back</div>';
+      this.menuDiv.innerHTML = html;
+      return;
+    }
+
+    if (this.menuState === 'equip_slot') {
+      const char = GameState.getParty()[this.equipMemberIndex];
+      const slots = ['weapon', 'armor', 'accessory'];
+      let html = `<div style="font-size:16px;color:#ffff00;margin-bottom:12px">Equip — ${char.name}</div>`;
+      slots.forEach((slot, i) => {
+        const sel = i === this.subIndex;
+        const prefix = sel ? '▶' : '　';
+        const color = sel ? '#ffff00' : '#ccc';
+        const current = char.equipment[slot] || '—';
+        html += `<div style="color:${color};font-size:13px;margin:6px 0">${prefix} ${slot}: ${current}</div>`;
+      });
+      html += '<div style="color:#888;font-size:10px;margin-top:8px">Z: Change | X: Back</div>';
+      this.menuDiv.innerHTML = html;
+      return;
+    }
+
+    if (this.menuState === 'equip_item') {
+      const char = GameState.getParty()[this.equipMemberIndex];
+      const opts = this._equipOptions();
+      let html = `<div style="font-size:16px;color:#ffff00;margin-bottom:12px">Equip ${this.equipSlot} — ${char.name}</div>`;
+      if (opts.length === 0) {
+        html += '<div style="color:#888;font-size:13px">Nothing owned to equip.</div>';
+      } else {
+        opts.forEach((opt, i) => {
+          const sel = i === this.subIndex;
+          const prefix = sel ? '▶' : '　';
+          const color = sel ? '#ffff00' : '#ccc';
+          const desc = opt.remove ? 'unequip current' : opt.desc;
+          html += `<div style="color:${color};font-size:13px;margin:4px 0">${prefix} ${opt.label} <span style="font-size:10px;color:#888">${desc}</span></div>`;
+        });
+      }
+      html += '<div style="color:#888;font-size:10px;margin-top:8px">Z: Equip | X: Back</div>';
       this.menuDiv.innerHTML = html;
       return;
     }

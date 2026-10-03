@@ -52,6 +52,14 @@ export const ITEMS = {
     status: 'blind',
     price: 30,
   },
+  EchoHerb: {
+    name: 'Echo Herb',
+    description: 'Cures silence from one ally.',
+    type: 'cure_status',
+    target: 'ally',
+    status: 'silence',
+    price: 60,
+  },
   Bomb: {
     name: 'Bomb',
     description: 'Deals 30 damage to one enemy.',
@@ -60,18 +68,22 @@ export const ITEMS = {
     power: 30,
     price: 100,
   },
+  BigBomb: {
+    name: 'Big Bomb',
+    description: 'Deals 100 damage to one enemy.',
+    type: 'damage',
+    target: 'enemy',
+    power: 100,
+    price: 400,
+  },
 };
 
-/**
- * Get item definition by name.
- */
+/** Get item definition by name. */
 export function getItem(name) {
   return ITEMS[name] || null;
 }
 
-/**
- * Get starting inventory for a new game.
- */
+/** Get starting inventory for a new game. */
 export function getStartingInventory() {
   return [
     { name: 'Potion', qty: 3 },

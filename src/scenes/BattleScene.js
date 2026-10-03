@@ -21,10 +21,10 @@ export default class BattleScene extends Phaser.Scene {
     this.transitioning = false;
 
     // --- Battle setup ---
-    // Load full party from persistent GameState
+    // Load full party from persistent GameState (with equipment bonuses applied)
     const gs = GameState.get();
     this.party = gs.party.map((char, i) => ({
-      ...char,
+      ...GameState.effectiveChar(i),
       alive: char.hp > 0,
       defending: false,
       side: 'player',
@@ -32,6 +32,8 @@ export default class BattleScene extends Phaser.Scene {
       partyIndex: i,
       statusEffects: {},
     }));
+    this.battleData = data || {};
+    this._phaseMorphed = false;
 
     // Enemies — spawned from EnemyData (type names → deep-copied instances)
     const enemyTypes = data?.enemies || ['slime'];
@@ -305,13 +307,18 @@ export default class BattleScene extends Phaser.Scene {
                 this.updateEnemyLabels();
               }
             } else if (action === 'MAGIC') {
-              const abilities = this._magicAbilities();
-              if (abilities.length === 0) {
-                this.log('No magic available.');
+              const caster = this.turnOrder[this.currentTurnIndex];
+              if (hasStatus(caster, 'silence')) {
+                this.log(`${caster.name} is silenced — cannot cast magic!`);
               } else {
-                this.selectedSpell = 0;
-                this.battleState = 'magic_select';
-                this.updateActionMenu();
+                const abilities = this._magicAbilities();
+                if (abilities.length === 0) {
+                  this.log('No magic available.');
+                } else {
+                  this.selectedSpell = 0;
+                  this.battleState = 'magic_select';
+                  this.updateActionMenu();
+                }
               }
             } else if (action === 'ITEM') {
               this.selectedItem = 0;
@@ -471,9 +478,13 @@ export default class BattleScene extends Phaser.Scene {
         const { skipped } = processStatusTick(unit, (msg) => this.log(msg));
         this.updateAllDom();
         if (!unit.alive) {
-          // Unit died from status tick damage
-          this.currentTurnIndex++;
-          this._turnTimeout = setTimeout(() => this.processNextTurn(), 500);
+          // Unit died from status tick damage — check end/morph before advancing
+          this.updateAllDom();
+          this.checkBattleEnd();
+          if (this.battleState !== 'ended') {
+            this.currentTurnIndex++;
+            this._turnTimeout = setTimeout(() => this.processNextTurn(), 500);
+          }
           return;
         }
         if (skipped) {
@@ -522,8 +533,16 @@ export default class BattleScene extends Phaser.Scene {
         this.log(player.name + ' is defending! (damage halved next turn)');
         break;
 
-      case 'FLEE':
-        if (Math.random() < 0.5) {
+      case 'FLEE': {
+        // Bosses block escape (design doc §9)
+        const isBossFight = this.enemies.some(e => e.alive && e.boss) || !!this.battleData.isBoss;
+        if (isBossFight) {
+          this.log('Cannot escape this battle!');
+          break;
+        }
+        const fleeAbility = (GameState.getAllAbilities(this.party.indexOf(player)).some(a => a.type === 'flee'));
+        const fleeChance = fleeAbility ? 0.75 : 0.5;
+        if (Math.random() < fleeChance) {
           this.log('Fled successfully!');
           setTimeout(() => this.endBattle('flee'), 800);
           return;
@@ -532,6 +551,7 @@ export default class BattleScene extends Phaser.Scene {
         }
         player.defending = false;
         break;
+      }
     }
 
     this.updateAllDom();
@@ -591,6 +611,8 @@ export default class BattleScene extends Phaser.Scene {
             }
           };
           requestAnimationFrame(animateFade);
+          // Counter attack (counter archetype): retaliates even as it dies — no.
+          // Counter only triggers on non-fatal hits.
           // Lunge back immediately (parallel with fade)
           const backStart = performance.now();
           const animateBack = () => {
@@ -609,6 +631,20 @@ export default class BattleScene extends Phaser.Scene {
         } else {
           // Hold at lunge position for 300ms (visible impact pause), then lunge back
           this._lungeBackTimeout = setTimeout(() => {
+            // Counter-attack hook: physical attackers get retaliated against
+            if (target.counterPhysical && target.alive) {
+              const counterDmg = Math.max(1, Math.floor(this.calcDamage(target.atk, player.def) * 0.6));
+              player.hp -= counterDmg;
+              this.log(`${target.name} counters! ${player.name} takes ${counterDmg} damage!`);
+              this.flashSprite(playerSprite);
+              this.showDamageNumber(playerSprite, counterDmg, '#ff8888');
+              if (player.hp <= 0) {
+                player.hp = 0;
+                player.alive = false;
+                this.log(`${player.name} has fallen!`);
+                playerSprite.setVisible(false);
+              }
+            }
             const backStart = performance.now();
             const backFromX = lungeX;
             const animateBack = () => {
@@ -662,17 +698,72 @@ export default class BattleScene extends Phaser.Scene {
     if (!player.alive) return;
 
     this.battleState = 'animating';
-    const enemySprite = this.enemySprites[enemy.index];
-    // Target a random alive party member
+
+    // ── Enemy AI (design doc §8): weighted, situation-aware ──
     const aliveParty = this.party.filter(p => p.alive);
+    if (aliveParty.length === 0) return;
     const target = aliveParty[Math.floor(Math.random() * aliveParty.length)];
+    const enemySprite = this.enemySprites[enemy.index];
+
+    // Healer archetype: heal the most wounded OTHER enemy if any is hurt
+    if (enemy.healAlly) {
+      const wounded = this.enemies.filter(e => e.alive && e !== enemy && e.hp < e.maxHp * 0.5);
+      if (wounded.length > 0 && Math.random() < 0.6) {
+        const ally = wounded[0];
+        const healed = Math.floor(ally.maxHp * 0.25);
+        ally.hp = Math.min(ally.maxHp, ally.hp + healed);
+        this.log(`${enemy.name} heals ${ally.name}! (+${healed} HP)`);
+        const sprite = this.enemySprites[ally.index];
+        if (sprite) this.showDamageNumber(sprite, healed, '#44ff44');
+        this.updateAllDom();
+        this._enemyDelayTimeout = setTimeout(() => {
+          this.currentTurnIndex++;
+          this.battleState = 'turn_start';
+          this._turnTimeout = setTimeout(() => this.processNextTurn(), 400);
+        }, 800);
+        return;
+      }
+    }
+
+    // Spellcasters: sometimes cast instead of attacking
+    if (enemy.spell && Math.random() < 0.45) {
+      const spellDmg = Math.floor(enemy.spell.power * enemy.atk * (0.9 + Math.random() * 0.2));
+      let dmg = spellDmg;
+      if (target.defending) dmg = Math.floor(dmg / 2);
+      target.hp -= dmg;
+      this.log(`${enemy.name} casts ${enemy.spell.name}! ${target.name} takes ${dmg} damage!`);
+      const playerSprite = this.playerSprites[target.partyIndex];
+      this.flashSprite(playerSprite);
+      this.screenShake();
+      this.showDamageNumber(playerSprite, dmg, '#aa88ff');
+      // Spell secondary effects
+      if (enemy.stunChance && Math.random() < enemy.stunChance) {
+        applyStatus(target, 'stun');
+        this.log(`${target.name} is stunned!`);
+      }
+      if (target.hp <= 0) {
+        target.hp = 0;
+        target.alive = false;
+        this.log(`${target.name} has fallen!`);
+        playerSprite.setVisible(false);
+      }
+      this.updateAllDom();
+      this._enemyDelayTimeout = setTimeout(() => {
+        this.currentTurnIndex++;
+        this.battleState = 'turn_start';
+        this._turnTimeout = setTimeout(() => this.processNextTurn(), 100);
+      }, 1000);
+      return;
+    }
+
+    // Physical attack with lunge (existing pattern)
     const playerSprite = this.playerSprites[target.partyIndex];
     const origX = enemySprite.x;
     const lungeX = playerSprite.x + 50;
+    const LUNGE_MS = 400;
 
     // Manual lunge via requestAnimationFrame
     const startTime = performance.now();
-    const LUNGE_MS = 400;
     const animateLunge = () => {
       const elapsed = performance.now() - startTime;
       if (elapsed < LUNGE_MS) {
@@ -698,10 +789,19 @@ export default class BattleScene extends Phaser.Scene {
           this.log(`${target.name} has fallen!`);
           // Hide fallen party member's sprite
           playerSprite.setVisible(false);
-        } else if (Math.random() < 0.2) {
-          // 20% chance to inflict poison
-          applyStatus(target, 'poison');
-          this.log(`${target.name} is poisoned!`);
+        } else {
+          // Status-on-hit chances (per-enemy hooks; default small poison chance)
+          const poisonChance = enemy.poisonChance !== undefined ? enemy.poisonChance : 0.2;
+          if (Math.random() < poisonChance) {
+            applyStatus(target, 'poison');
+            this.log(`${target.name} is poisoned!`);
+          } else if (enemy.silenceChance && Math.random() < enemy.silenceChance) {
+            applyStatus(target, 'silence');
+            this.log(`${target.name} is silenced!`);
+          } else if (enemy.stunChance && Math.random() < enemy.stunChance) {
+            applyStatus(target, 'stun');
+            this.log(`${target.name} is stunned!`);
+          }
         }
 
         // Lunge back via rAF
@@ -752,6 +852,33 @@ export default class BattleScene extends Phaser.Scene {
     // Check all enemies dead
     const aliveEnemies = this.enemies.filter(e => e.alive);
     if (aliveEnemies.length === 0) {
+      // Finale two-phase morph: Aldric p1 → p2 (design doc: phase transitions)
+      if (!this._phaseMorphed && this.enemies.some(e => e.type === 'boss_aldric_p1')) {
+        this._phaseMorphed = true;
+        this.battleState = 'ended'; // freeze callers — our timeout resumes the battle
+        const idx = this.enemies.findIndex(e => e.type === 'boss_aldric_p1');
+        const p1 = this.enemies[idx];
+        const p2 = spawnEnemies(['boss_aldric_p2'])[0];
+        p2.index = idx;
+        this.enemies[idx] = p2;
+        // Shared-reference swap in turn order (p1 may have been filtered out already)
+        const toIdx = this.turnOrder.indexOf(p1);
+        if (toIdx >= 0) this.turnOrder[toIdx] = p2; else this.turnOrder.push(p2);
+        this.log('Aldric rises — hollowed by grief. The relics scream.');
+        this.messageDiv.textContent = 'HE WON\'T FALL.';
+        this.messageDiv.style.display = 'block';
+        setTimeout(() => { this.messageDiv.style.display = 'none'; }, 1200);
+        const sprite = this.enemySprites[idx];
+        if (sprite) {
+          sprite.setVisible(true);
+          sprite.setFillStyle(p2.color);
+          sprite.setStrokeStyle(2, 0x8833aa);
+        }
+        this.updateAllDom();
+        this.currentTurnIndex = 0; // new round
+        this._turnTimeout = setTimeout(() => this.processNextTurn(), 1200);
+        return;
+      }
       const totalExp = this.enemies.reduce((sum, e) => sum + e.exp, 0);
       const totalGold = this.enemies.reduce((sum, e) => sum + e.gold, 0);
       this.log(`Victory! Gained ${totalExp} EXP and ${totalGold} gold.`);
@@ -770,8 +897,8 @@ export default class BattleScene extends Phaser.Scene {
     if (result === 'win') {
       GameState.applyBattleResult(result, rewards);
     } else if (result === 'lose') {
-      // On defeat, restore to full HP (for prototype — later this goes to game over)
-      GameState.fullHeal();
+      // Party wiped → real Game Over (design doc §408): load save or Title.
+      // No more free full-heal on defeat.
     }
 
     let message = '';
@@ -785,10 +912,14 @@ export default class BattleScene extends Phaser.Scene {
     setTimeout(() => {
       this.cameras.main.fadeOut(500, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
-        // Resume the previous scene (Overworld/Town was paused)
         const returnScene = this.scene.settings.data?.returnScene || 'Overworld';
         this.scene.stop('Battle');
-        this.scene.resume(returnScene, { battleResult: result, rewards });
+        if (result === 'lose') {
+          // Game Over: launch the GameOver scene over the (paused) return scene
+          this.scene.launch('GameOver');
+        } else {
+          this.scene.resume(returnScene, { battleResult: result, rewards });
+        }
       });
     });
   }

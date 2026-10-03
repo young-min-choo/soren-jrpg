@@ -3,12 +3,16 @@ import BootScene from './scenes/BootScene.js';
 import TitleScene from './scenes/TitleScene.js';
 import OverworldScene from './scenes/OverworldScene.js';
 import TownScene from './scenes/TownScene.js';
+import { PortMeridianScene, StonewatchScene, SkyholdScene, AureliaScene } from './scenes/TownInstances.js';
 import DungeonScene from './scenes/DungeonScene.js';
+import { TideTempleScene, HollowDeepScene, StormSpireScene } from './scenes/DungeonInstances.js';
+import { ConduitGateScene, ConduitScene } from './scenes/ConduitScenes.js';
 import MenuScene from './scenes/MenuScene.js';
 import DialogueScene from './scenes/DialogueScene.js';
 import BattleScene from './scenes/BattleScene.js';
 import NewGameFlowScene from './scenes/NewGameFlowScene.js';
 import EmbersScene from './scenes/EmbersScene.js';
+import GameOverScene from './scenes/GameOverScene.js';
 import { installTestHooks } from './test-hooks.js';
 
 // Canvas is 256×224 with zoom: 3 (Phaser handles scaling).
@@ -33,7 +37,7 @@ const config = {
   input: {
     gamepad: true
   },
-  scene: [BootScene, TitleScene, NewGameFlowScene, OverworldScene, TownScene, DungeonScene, EmbersScene, MenuScene, DialogueScene, BattleScene]
+  scene: [BootScene, TitleScene, NewGameFlowScene, OverworldScene, TownScene, PortMeridianScene, StonewatchScene, SkyholdScene, AureliaScene, DungeonScene, TideTempleScene, HollowDeepScene, StormSpireScene, ConduitGateScene, ConduitScene, EmbersScene, MenuScene, DialogueScene, BattleScene, GameOverScene]
 };
 
 const game = new Phaser.Game(config);

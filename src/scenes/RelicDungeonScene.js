@@ -148,7 +148,7 @@ export function makeRelicDungeon(config) {
       this.statusDiv.style.cssText = `
         position: absolute; left: 4px; top: 4px;
         color: #ffffff; background: rgba(0,0,0,0.7);
-        font-family: "Courier New", monospace; font-size: 11px;
+        font-family: "VT323", monospace; font-size: 16px;
         padding: 2px 4px; border-radius: 2px;
         pointer-events: none; z-index: 10;
         text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
@@ -364,7 +364,7 @@ export function makeRelicDungeon(config) {
           this.interactDiv.style.cssText = `
             position: absolute;
             color: #ffff00; background: rgba(0,0,0,0.7);
-            font-family: "Courier New", monospace; font-size: 11px;
+            font-family: "VT323", monospace; font-size: 16px;
             padding: 2px 4px; border-radius: 2px;
             transform: translate(-50%, -100%);
             pointer-events: none; z-index: 15;

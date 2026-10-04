@@ -116,7 +116,7 @@ export default class OverworldScene extends Phaser.Scene {
     this.statusDiv.style.cssText = `
       position: absolute; left: 4px; top: 4px;
       color: #ffffff; background: rgba(0,0,0,0.7);
-      font-family: "Courier New", monospace; font-size: 11px;
+      font-family: "VT323", monospace; font-size: 16px;
       padding: 2px 4px; border-radius: 2px;
       pointer-events: none; z-index: 10;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
@@ -131,8 +131,8 @@ export default class OverworldScene extends Phaser.Scene {
       const div = document.createElement('div');
       div.style.cssText = `
         position: absolute;
-        color: ${m.color}; font-size: 18px;
-        font-family: "Courier New", monospace;
+        color: ${m.color}; font-size: 26px;
+        font-family: "VT323", monospace;
         transform: translate(-50%, -50%);
         pointer-events: none; z-index: 10;
         text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
@@ -152,8 +152,8 @@ export default class OverworldScene extends Phaser.Scene {
         const div = document.createElement('div');
         div.style.cssText = `
           position: absolute;
-          color: #66ddff; font-size: 16px;
-          font-family: "Courier New", monospace;
+          color: #66ddff; font-size: 22px;
+          font-family: "VT323", monospace;
           transform: translate(-50%, -50%);
           pointer-events: none; z-dock: 10;
           text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
@@ -327,7 +327,7 @@ export default class OverworldScene extends Phaser.Scene {
       width: 400px;
       background: rgba(20, 20, 50, 0.95); border: 2px solid rgba(255,255,255,0.3);
       padding: 16px; box-sizing: border-box;
-      font-family: "Courier New", monospace; color: #ffffff;
+      font-family: "VT323", monospace; color: #ffffff;
       z-index: 50; pointer-events: none;
       border-radius: 4px;
     `;
@@ -364,14 +364,14 @@ export default class OverworldScene extends Phaser.Scene {
 
   _renderAirshipMenu() {
     if (!this.airshipDiv) return;
-    let html = '<div style="font-size:14px;color:#66ddff;margin-bottom:8px">The Zephyr — Where to?</div>';
+    let html = '<div style="font-size: 20px;color:#66ddff;margin-bottom:8px">The Zephyr — Where to?</div>';
     this._airshipOptions.forEach((opt, i) => {
       const sel = i === this._airshipIndex;
       const prefix = sel ? '▶' : ' ';
       const color = sel ? '#ffff00' : '#ccc';
-      html += `<div style="color:${color};font-size:13px;margin:4px 0"><span style="display:inline-block;width:18px">${prefix}</span>${opt.name}</div>`;
+      html += `<div style="color:${color};font-size: 18px;margin:4px 0"><span style="display:inline-block;width:18px">${prefix}</span>${opt.name}</div>`;
     });
-    html += '<div style="font-size:11px;color:#888;margin-top:8px">Z: Fly · X: Stay</div>';
+    html += '<div style="font-size: 16px;color:#888;margin-top:8px">Z: Fly · X: Stay</div>';
     this.airshipDiv.innerHTML = html;
   }
 

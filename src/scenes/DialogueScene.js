@@ -51,7 +51,7 @@ export default class DialogueScene extends Phaser.Scene {
       align-items: center;
       justify-content: center;
       margin-right: 8px;
-      font-size: 20px;
+      font-size: 28px;
       color: #aaa;
     `;
     portrait.textContent = '?';
@@ -71,8 +71,8 @@ export default class DialogueScene extends Phaser.Scene {
     this.nameDiv = document.createElement('div');
     this.nameDiv.style.cssText = `
       color: #ffff00;
-      font-family: "Courier New", monospace;
-      font-size: 14px;
+      font-family: "VT323", monospace;
+      font-size: 20px;
       font-weight: bold;
       margin-bottom: 4px;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
@@ -84,8 +84,8 @@ export default class DialogueScene extends Phaser.Scene {
     this.textDiv = document.createElement('div');
     this.textDiv.style.cssText = `
       color: #ffffff;
-      font-family: "Courier New", monospace;
-      font-size: 13px;
+      font-family: "VT323", monospace;
+      font-size: 18px;
       line-height: 1.5;
       flex: 1;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
@@ -98,7 +98,7 @@ export default class DialogueScene extends Phaser.Scene {
       position: absolute;
       right: 12px; bottom: 8px;
       color: #ffffff;
-      font-size: 14px;
+      font-size: 20px;
       display: none;
     `;
     this.indicatorDiv.textContent = '▼';
@@ -203,8 +203,8 @@ export default class DialogueScene extends Phaser.Scene {
       const div = document.createElement('div');
       div.style.cssText = `
         color: #ffffff;
-        font-family: "Courier New", monospace;
-        font-size: 13px;
+        font-family: "VT323", monospace;
+        font-size: 18px;
         text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
       `;
       div.textContent = (i === 0 ? '> ' : '  ') + choice.text;

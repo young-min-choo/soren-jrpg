@@ -39,7 +39,7 @@ export default class GameOverScene extends Phaser.Scene {
     const title = document.createElement('div');
     title.textContent = 'GAME OVER';
     title.style.cssText = `
-      font-family: "Courier New", monospace; font-size: 36px; font-weight: bold;
+      font-family: "Press Start 2P", monospace; font-size: 36px; font-weight: bold;
       color: #dd4444; letter-spacing: 4px; margin-bottom: 24px;
       text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
     `;
@@ -102,7 +102,7 @@ export default class GameOverScene extends Phaser.Scene {
       const sel = i === this.index;
       const prefix = sel ? '▶' : '　';
       const color = opt.disabled ? '#666' : (sel ? '#ffff00' : '#ccc');
-      html += `<div style="color:${color};font-size:16px;font-family:'Courier New',monospace;margin:10px 0;pointer-events:none">${prefix} ${opt.label}</div>`;
+      html += `<div style="color:${color};font-size: 22px;font-family:'VT323',monospace;margin:10px 0;pointer-events:none">${prefix} ${opt.label}</div>`;
     });
     this.optionsDiv.innerHTML = html;
   }

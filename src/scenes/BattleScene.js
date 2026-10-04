@@ -1010,9 +1010,9 @@ export default class BattleScene extends Phaser.Scene {
       top: ${sprite.y * scaleY - 10}px;
       transform: translate(-50%, 0);
       color: ${color || '#ffff44'};
-      font-size: 18px;
+      font-size: 26px;
       font-weight: bold;
-      font-family: "Courier New", monospace;
+      font-family: "VT323", monospace;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.9);
       pointer-events: none;
       z-index: 40;
@@ -1047,7 +1047,7 @@ export default class BattleScene extends Phaser.Scene {
     if (styles.width) cssParts.push('width: ' + styles.width);
     if (styles.transform) cssParts.push('transform: ' + styles.transform);
     cssParts.push('color: ' + (styles.color || '#ffffff'));
-    cssParts.push('font-family: "Courier New", monospace');
+    cssParts.push('font-family: "VT323", monospace');
     cssParts.push('font-size: ' + (styles.fontSize || '14px'));
     if (styles.fontWeight) cssParts.push('font-weight: ' + styles.fontWeight);
     if (styles.lineHeight) cssParts.push('line-height: ' + styles.lineHeight);
@@ -1087,17 +1087,17 @@ export default class BattleScene extends Phaser.Scene {
       const statuses = getActiveStatuses(p);
       const statusIcons = statuses.map(s => {
         const def = STATUS_EFFECTS[s];
-        return def ? `<span style="color:${def.color};font-size:9px;margin-left:4px">${def.icon}</span>` : '';
+        return def ? `<span style="color:${def.color};font-size: 13px;margin-left:4px">${def.icon}</span>` : '';
       }).join('');
       return `
         <div style="flex:1;min-width:120px;max-width:200px;padding:4px 8px;border-right:1px solid rgba(255,255,255,0.1)">
           <div style="color:${nameColor};font-weight:${isActive?'bold':'normal'}">${isActive?'▶ ':''}${p.name}${statusIcons}</div>
-          <div style="font-size:10px;color:#aaa">${p.job} Lv.${p.level}</div>
-          <div style="font-size:10px;color:#ccc;margin-top:2px">HP: ${p.hp}/${p.maxHp}</div>
+          <div style="font-size: 14px;color:#aaa">${p.job} Lv.${p.level}</div>
+          <div style="font-size: 14px;color:#ccc;margin-top:2px">HP: ${p.hp}/${p.maxHp}</div>
           <div style="height:4px;background:#330000;width:100%;margin:1px 0;border-radius:2px">
             <div style="height:4px;background:${hpColor};width:${hpPct}%;border-radius:2px"></div>
           </div>
-          <div style="font-size:10px;color:#ccc;margin-top:1px">MP: ${p.mp}/${p.maxMp}</div>
+          <div style="font-size: 14px;color:#ccc;margin-top:1px">MP: ${p.mp}/${p.maxMp}</div>
           <div style="height:3px;background:#000033;width:100%;margin:1px 0;border-radius:2px">
             <div style="height:3px;background:#4444dd;width:${mpPct}%;border-radius:2px"></div>
           </div>
@@ -1346,7 +1346,7 @@ export default class BattleScene extends Phaser.Scene {
     const markerY = (sprite.y - 22) * scaleY;
 
     this.allyMarkerDiv = document.createElement('div');
-    this.allyMarkerDiv.style.cssText = `position:absolute;left:${markerX}px;top:${markerY}px;transform:translate(-50%,0);color:#ffff00;font-size:16px;font-family:'Courier New',monospace;text-shadow:1px 1px 2px rgba(0,0,0,0.9);pointer-events:none;z-index:40;`;
+    this.allyMarkerDiv.style.cssText = `position:absolute;left:${markerX}px;top:${markerY}px;transform:translate(-50%,0);color:#ffff00;font-size: 22px;font-family:'VT323',monospace;text-shadow:1px 1px 2px rgba(0,0,0,0.9);pointer-events:none;z-index:40;`;
     this.allyMarkerDiv.textContent = '▼';
     container.appendChild(this.allyMarkerDiv);
 
@@ -1372,7 +1372,7 @@ export default class BattleScene extends Phaser.Scene {
         const nameColor = isTargeted ? '#ffff00' : '#ffaaaa';
         div.innerHTML =
           `<div style="color:${nameColor}">${enemy.name}</div>` +
-          `<div style="font-size:10px;color:#ccc">${enemy.hp}/${enemy.maxHp}</div>` +
+          `<div style="font-size: 14px;color:#ccc">${enemy.hp}/${enemy.maxHp}</div>` +
           `<div style="height:3px;background:#440000;width:60px;margin:1px auto 0;border-radius:2px">` +
             `<div style="height:3px;background:#dd4444;width:${hpPct}%;border-radius:2px"></div>` +
           `</div>`;
@@ -1406,8 +1406,8 @@ export default class BattleScene extends Phaser.Scene {
         top: ${((worldY - 22) * SCALE)}px;
         transform: translateX(-50%);
         color: #ffff00;
-        font-size: 18px;
-        font-family: "Courier New", monospace;
+        font-size: 26px;
+        font-family: "VT323", monospace;
         pointer-events: none;
         z-index: 25;
         text-shadow: 1px 1px 2px rgba(0,0,0,0.8);

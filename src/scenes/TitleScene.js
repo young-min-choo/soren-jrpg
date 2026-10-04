@@ -26,7 +26,7 @@ export default class TitleScene extends Phaser.Scene {
         top: ${(y / 224) * 100}%;
         transform: translate(-50%, -50%);
         color: ${options.color || '#ffffff'};
-        font-family: "Courier New", monospace;
+        font-family: ${options.fontFamily || '"VT323", monospace'};
         font-size: ${options.fontSize || '16px'};
         font-weight: ${options.bold ? 'bold' : 'normal'};
         text-align: center;
@@ -42,7 +42,7 @@ export default class TitleScene extends Phaser.Scene {
   };
 
     // Title text
-    createText(128, 80, 'SOREN', { fontSize: '48px', bold: true, color: '#ffffff' });
+    createText(128, 80, 'SOREN', { fontSize: '48px', bold: true, color: '#ffffff', fontFamily: '"Press Start 2P", monospace' });
 
     // Subtitle
     createText(128, 120, 'A JRPG', { fontSize: '18px', color: '#888888' });

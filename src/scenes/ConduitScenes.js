@@ -108,7 +108,7 @@ export class ConduitGateScene extends Phaser.Scene {
     this.statusDiv.style.cssText = `
       position: absolute; left: 4px; top: 4px;
       color: #ffffff; background: rgba(0,0,0,0.7);
-      font-family: "Courier New", monospace; font-size: 11px;
+      font-family: "VT323", monospace; font-size: 16px;
       padding: 2px 4px; border-radius: 2px;
       pointer-events: none; z-index: 10;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
@@ -339,7 +339,7 @@ export class ConduitScene extends Phaser.Scene {
     this.statusDiv.style.cssText = `
       position: absolute; left: 4px; top: 4px;
       color: #ffffff; background: rgba(0,0,0,0.7);
-      font-family: "Courier New", monospace; font-size: 11px;
+      font-family: "VT323", monospace; font-size: 16px;
       padding: 2px 4px; border-radius: 2px;
       pointer-events: none; z-index: 10;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.8);

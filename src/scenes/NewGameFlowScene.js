@@ -34,7 +34,7 @@ export default class NewGameFlowScene extends Phaser.Scene {
     this.overlayDiv.style.cssText = `
       position: absolute; left: 0; top: 0; width: 768px; height: 672px;
       background: rgba(0, 0, 10, 0.92); z-index: 100; pointer-events: none;
-      font-family: "Courier New", monospace;
+      font-family: "VT323", monospace;
     `;
     this.container.appendChild(this.overlayDiv);
     this.domElements.push(this.overlayDiv);
@@ -45,7 +45,7 @@ export default class NewGameFlowScene extends Phaser.Scene {
       width: 600px; min-height: 300px; padding: 24px; box-sizing: border-box;
       background: rgba(20, 20, 50, 0.95); border: 2px solid rgba(255,255,255,0.3);
       border-radius: 6px; color: #fff; z-index: 101; pointer-events: none;
-      font-family: "Courier New", monospace;
+      font-family: "VT323", monospace;
     `;
     this.container.appendChild(this.panelDiv);
     this.domElements.push(this.panelDiv);
@@ -104,9 +104,9 @@ export default class NewGameFlowScene extends Phaser.Scene {
     if (this.stage === 'name') {
       const shown = this.playerName + (Math.floor(Date.now() / 500) % 2 === 0 ? '_' : '');
       this.panelDiv.innerHTML = `
-        <div style="font-size:18px;color:#ffff00;margin-bottom:8px">Name your hero</div>
-        <div style="font-size:26px;letter-spacing:6px;min-height:40px;color:#fff;border-bottom:2px solid rgba(255,255,255,0.4);padding:4px 0">${shown || '<span style="color:#555">Soren</span>'}</div>
-        <div style="font-size:11px;color:#888;margin-top:10px">Type letters · Backspace deletes · Enter confirms${this.playerName ? '' : ' (blank = Soren)'} · Esc skips all</div>
+        <div style="font-size: 26px;color:#ffff00;margin-bottom:8px">Name your hero</div>
+        <div style="font-size: 36px;letter-spacing:6px;min-height:40px;color:#fff;border-bottom:2px solid rgba(255,255,255,0.4);padding:4px 0">${shown || '<span style="color:#555">Soren</span>'}</div>
+        <div style="font-size: 16px;color:#888;margin-top:10px">Type letters · Backspace deletes · Enter confirms${this.playerName ? '' : ' (blank = Soren)'} · Esc skips all</div>
       `;
     } else {
       const jobName = STARTING_JOBS[this.jobIndex];
@@ -122,20 +122,20 @@ export default class NewGameFlowScene extends Phaser.Scene {
         const sel = i === this.jobIndex;
         const color = sel ? '#ffff00' : '#ccc';
         const prefix = sel ? '▶' : ' ';
-        return `<div style="color:${color};font-size:14px;margin:3px 0"><span style="display:inline-block;width:18px">${prefix}</span>${JOBS[j].name}</div>`;
+        return `<div style="color:${color};font-size: 20px;margin:3px 0"><span style="display:inline-block;width:18px">${prefix}</span>${JOBS[j].name}</div>`;
       }).join('');
       this.panelDiv.innerHTML = `
-        <div style="font-size:18px;color:#ffff00;margin-bottom:6px">Choose your path — ${this.playerName}</div>
+        <div style="font-size: 26px;color:#ffff00;margin-bottom:6px">Choose your path — ${this.playerName}</div>
         <div style="display:flex;gap:24px">
           <div style="min-width:180px">${rows}</div>
-          <div style="flex:1;font-size:12px;color:#ccc">
+          <div style="flex:1;font-size: 17px;color:#ccc">
             <div style="color:#fff;font-weight:bold;margin-bottom:4px">${job.name}</div>
             <div style="color:#aaa;margin-bottom:8px">${job.description}</div>
-            <div style="font-size:11px;color:#888;margin-bottom:8px">HP ${stats.hp} · MP ${stats.mp} · ATK ${stats.atk} · DEF ${stats.def} · MAG ${stats.mag} · AGI ${stats.agi}</div>
-            <div style="font-size:11px;color:#6f6f9f;font-style:italic">${texture}</div>
+            <div style="font-size: 16px;color:#888;margin-bottom:8px">HP ${stats.hp} · MP ${stats.mp} · ATK ${stats.atk} · DEF ${stats.def} · MAG ${stats.mag} · AGI ${stats.agi}</div>
+            <div style="font-size: 16px;color:#6f6f9f;font-style:italic">${texture}</div>
           </div>
         </div>
-        <div style="font-size:11px;color:#888;margin-top:14px">↑↓ choose · Enter begin · Esc back</div>
+        <div style="font-size: 16px;color:#888;margin-top:14px">↑↓ choose · Enter begin · Esc back</div>
       `;
     }
   }

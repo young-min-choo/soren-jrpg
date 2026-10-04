@@ -154,8 +154,8 @@ export default class TownScene extends Phaser.Scene {
     this.exitDiv = document.createElement('div');
     this.exitDiv.style.cssText = `
       position: absolute;
-      color: #ffff00; font-size: 18px;
-      font-family: "Courier New", monospace;
+      color: #ffff00; font-size: 26px;
+      font-family: "VT323", monospace;
       transform: translate(-50%, -50%);
       pointer-events: none; z-index: 10;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
@@ -188,7 +188,7 @@ export default class TownScene extends Phaser.Scene {
     this.statusDiv.style.cssText = `
       position: absolute; left: 4px; top: 4px;
       color: #ffffff; background: rgba(0,0,0,0.7);
-      font-family: "Courier New", monospace; font-size: 11px;
+      font-family: "VT323", monospace; font-size: 16px;
       padding: 2px 4px; border-radius: 2px;
       pointer-events: none; z-index: 10;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
@@ -265,7 +265,7 @@ export default class TownScene extends Phaser.Scene {
         this.interactDiv.style.cssText = `
           position: absolute;
           color: #ffff00; background: rgba(0,0,0,0.7);
-          font-family: "Courier New", monospace; font-size: 11px;
+          font-family: "VT323", monospace; font-size: 16px;
           padding: 2px 4px; border-radius: 2px;
           transform: translate(-50%, -100%);
           pointer-events: none; z-index: 15;
@@ -357,7 +357,7 @@ export default class TownScene extends Phaser.Scene {
       width: 520px; max-height: 480px;
       background: rgba(20, 20, 50, 0.95); border: 2px solid rgba(255,255,255,0.3);
       padding: 16px; box-sizing: border-box;
-      font-family: "Courier New", monospace; color: #ffffff;
+      font-family: "VT323", monospace; color: #ffffff;
       z-index: 50; pointer-events: none;
       border-radius: 4px; overflow: hidden;
     `;
@@ -368,8 +368,8 @@ export default class TownScene extends Phaser.Scene {
   _updateShop() {
     if (!this.shopDiv) return;
     const gold = GameState.get().gold;
-    let html = `<div style="font-size:14px;color:#ffff00;margin-bottom:4px">${this.shop.name} — <span style="font-size:10px">[Q] Buy/Sell · [X] Leave</span></div>`;
-    html += `<div style="font-size:12px;color:#44dd44;margin-bottom:10px">Your gold: ${gold}G${this.shopMode === 'sell' ? ' — SELLING' : ''}</div>`;
+    let html = `<div style="font-size: 20px;color:#ffff00;margin-bottom:4px">${this.shop.name} — <span style="font-size: 14px">[Q] Buy/Sell · [X] Leave</span></div>`;
+    html += `<div style="font-size: 17px;color:#44dd44;margin-bottom:10px">Your gold: ${gold}G${this.shopMode === 'sell' ? ' — SELLING' : ''}</div>`;
     if (this.shopMode === 'sell') {
       // Sell mode: inventory items + owned equipment at half price
       const sellables = [];
@@ -381,13 +381,13 @@ export default class TownScene extends Phaser.Scene {
       });
       this._sellables = sellables;
       if (sellables.length === 0) {
-        html += `<div style="color:#888;font-size:13px">Nothing to sell.</div>`;
+        html += `<div style="color:#888;font-size: 18px">Nothing to sell.</div>`;
       } else {
         sellables.forEach((entry, i) => {
           const sel = i === this.shopIndex;
           const prefix = sel ? '▶' : ' ';
           const color = sel ? '#ffff00' : '#ccc';
-          html += `<div style="color:${color};font-size:13px;margin:4px 0"><span style="display:inline-block;width:18px">${prefix}</span>${entry.name} x${entry.qty} — <span style="color:#44dd44">sell ${entry.unit}G</span></div>`;
+          html += `<div style="color:${color};font-size: 18px;margin:4px 0"><span style="display:inline-block;width:18px">${prefix}</span>${entry.name} x${entry.qty} — <span style="color:#44dd44">sell ${entry.unit}G</span></div>`;
         });
       }
     } else {
@@ -396,12 +396,12 @@ export default class TownScene extends Phaser.Scene {
         const prefix = sel ? '▶' : ' ';
         const color = sel ? '#ffff00' : (gold >= entry.price ? '#ccc' : '#777');
         const qty = entry.kind === 'equip' ? GameState.getEquipQty(entry.name) : GameState.getItemQty(entry.name);
-        const tag = entry.kind === 'equip' ? ' <span style="font-size:10px;color:#88f">(equip)</span>' : '';
-        html += `<div style="color:${color};font-size:13px;margin:4px 0"><span style="display:inline-block;width:18px">${prefix}</span>${entry.name}${tag} — <span style="color:#44dd44">${entry.price}G</span> <span style="font-size:10px;color:#888">(have ${qty})</span></div>`;
+        const tag = entry.kind === 'equip' ? ' <span style="font-size: 14px;color:#88f">(equip)</span>' : '';
+        html += `<div style="color:${color};font-size: 18px;margin:4px 0"><span style="display:inline-block;width:18px">${prefix}</span>${entry.name}${tag} — <span style="color:#44dd44">${entry.price}G</span> <span style="font-size: 14px;color:#888">(have ${qty})</span></div>`;
       });
     }
     if (this._shopFlashMsg) {
-      html += `<div class="flash-live" style="font-size:11px;color:#ffff44;margin-top:4px;min-height:14px">${this._shopFlashMsg}</div>`;
+      html += `<div class="flash-live" style="font-size: 16px;color:#ffff44;margin-top:4px;min-height:14px">${this._shopFlashMsg}</div>`;
     }
     this.shopDiv.innerHTML = html;
   }
@@ -488,7 +488,7 @@ export default class TownScene extends Phaser.Scene {
       width: 420px;
       background: rgba(20, 20, 50, 0.95); border: 2px solid rgba(255,255,255,0.3);
       padding: 16px; box-sizing: border-box;
-      font-family: "Courier New", monospace; color: #ffffff;
+      font-family: "VT323", monospace; color: #ffffff;
       z-index: 50; pointer-events: none;
       border-radius: 4px;
     `;
@@ -501,15 +501,15 @@ export default class TownScene extends Phaser.Scene {
     const gold = GameState.get().gold;
     const cost = this._town().innCost;
     const options = ['Rest (' + cost + 'G)', 'Leave'];
-    let html = `<div style="font-size:14px;color:#66aaff;margin-bottom:8px">Inn — A warm bed and a hot meal</div>`;
-    html += `<div style="font-size:12px;color:#44dd44;margin-bottom:10px">Your gold: ${gold}G</div>`;
+    let html = `<div style="font-size: 20px;color:#66aaff;margin-bottom:8px">Inn — A warm bed and a hot meal</div>`;
+    html += `<div style="font-size: 17px;color:#44dd44;margin-bottom:10px">Your gold: ${gold}G</div>`;
     options.forEach((opt, i) => {
       const sel = i === this.innIndex;
       const prefix = sel ? '▶' : ' ';
       const color = sel ? '#ffff00' : '#ccc';
-      html += `<div style="color:${color};font-size:13px;margin:4px 0"><span style="display:inline-block;width:18px">${prefix}</span>${opt}</div>`;
+      html += `<div style="color:${color};font-size: 18px;margin:4px 0"><span style="display:inline-block;width:18px">${prefix}</span>${opt}</div>`;
     });
-    html += `<div style="font-size:11px;color:#888;margin-top:10px">Z: Select · X: Leave</div>`;
+    html += `<div style="font-size: 16px;color:#888;margin-top:10px">Z: Select · X: Leave</div>`;
     this.innDiv.innerHTML = html;
   }
 
@@ -557,7 +557,7 @@ export default class TownScene extends Phaser.Scene {
     if (!flash) {
       flash = document.createElement('div');
       flash.className = 'inn-flash';
-      flash.style.cssText = 'font-size:11px;color:#ff8888;margin-top:6px;min-height:14px';
+      flash.style.cssText = 'font-size: 16px;color:#ff8888;margin-top:6px;min-height:14px';
       this.innDiv.appendChild(flash);
     }
     flash.textContent = msg;
@@ -588,7 +588,7 @@ export default class TownScene extends Phaser.Scene {
       width: 500px; max-height: 450px;
       background: rgba(20, 20, 50, 0.95); border: 2px solid rgba(255,255,255,0.3);
       padding: 16px; box-sizing: border-box;
-      font-family: "Courier New", monospace; color: #ffffff;
+      font-family: "VT323", monospace; color: #ffffff;
       z-index: 50; pointer-events: none;
       border-radius: 4px; overflow: hidden;
     `;
@@ -602,29 +602,29 @@ export default class TownScene extends Phaser.Scene {
 
     if (this.jobMenuState === 'main_menu') {
       const options = ['Change Job', 'Learn Abilities'];
-      let html = '<div style="font-size:14px;color:#ffff00;margin-bottom:8px">Job Master</div>';
-      html += '<div style="font-size:12px;color:#aaa;margin-bottom:10px">What would you like to do?</div>';
+      let html = '<div style="font-size: 20px;color:#ffff00;margin-bottom:8px">Job Master</div>';
+      html += '<div style="font-size: 17px;color:#aaa;margin-bottom:10px">What would you like to do?</div>';
       options.forEach((opt, i) => {
         const sel = i === this.jobSelectedJob;
         const prefix = sel ? '▶' : '　';
         const color = sel ? '#ffff00' : '#ccc';
-        html += `<div style="color:${color};font-size:13px;margin:6px 0"><span style="display:inline-block;width:16px">${prefix}</span>${opt}</div>`;
+        html += `<div style="color:${color};font-size: 18px;margin:6px 0"><span style="display:inline-block;width:16px">${prefix}</span>${opt}</div>`;
       });
-      html += '<div style="color:#888;font-size:11px;margin-top:8px">Z: Select | X: Leave</div>';
+      html += '<div style="color:#888;font-size: 16px;margin-top:8px">Z: Select | X: Leave</div>';
       this.jobMenuDiv.innerHTML = html;
       return;
     }
 
     if (this.jobMenuState === 'member_select') {
-      let html = '<div style="font-size:14px;color:#ffff00;margin-bottom:8px">Choose a party member:</div>';
+      let html = '<div style="font-size: 20px;color:#ffff00;margin-bottom:8px">Choose a party member:</div>';
       party.forEach((char, i) => {
         const sel = i === this.jobSelectedMember;
         const prefix = sel ? '▶' : '　';
         const color = sel ? '#ffff00' : '#ccc';
         const jp = char.jp && char.jp[char.job] || 0;
-        html += `<div style="color:${color};font-size:13px;margin:4px 0"><span style="display:inline-block;width:16px">${prefix}</span>${char.name} — ${char.job} (Lv.${char.level}, ${jp}JP)</div>`;
+        html += `<div style="color:${color};font-size: 18px;margin:4px 0"><span style="display:inline-block;width:16px">${prefix}</span>${char.name} — ${char.job} (Lv.${char.level}, ${jp}JP)</div>`;
       });
-      html += '<div style="color:#888;font-size:11px;margin-top:8px">Z: Select | X: Back</div>';
+      html += '<div style="color:#888;font-size: 16px;margin-top:8px">Z: Select | X: Back</div>';
       this.jobMenuDiv.innerHTML = html;
       return;
     }
@@ -632,8 +632,8 @@ export default class TownScene extends Phaser.Scene {
     if (this.jobMenuState === 'job_select') {
       const char = party[this.jobSelectedMember];
       const unlockedJobs = GameState.get().unlockedJobs;
-      let html = `<div style="font-size:14px;color:#ffff00;margin-bottom:8px">${char.name} — Current: ${char.job}</div>`;
-      html += '<div style="font-size:12px;color:#aaa;margin-bottom:6px">Choose a new job:</div>';
+      let html = `<div style="font-size: 20px;color:#ffff00;margin-bottom:8px">${char.name} — Current: ${char.job}</div>`;
+      html += '<div style="font-size: 17px;color:#aaa;margin-bottom:6px">Choose a new job:</div>';
       unlockedJobs.forEach((jobName, i) => {
         const sel = i === this.jobSelectedJob;
         const prefix = sel ? '▶' : '　';
@@ -642,9 +642,9 @@ export default class TownScene extends Phaser.Scene {
         const currentTag = isCurrent ? ' <span style="color:#888">(current)</span>' : '';
         const job = JOBS[jobName];
         const desc = job ? job.description : '';
-        html += `<div style="color:${color};font-size:13px;margin:4px 0"><span style="display:inline-block;width:16px">${prefix}</span>${jobName}${currentTag} — <span style="font-size:10px;color:#888">${desc}</span></div>`;
+        html += `<div style="color:${color};font-size: 18px;margin:4px 0"><span style="display:inline-block;width:16px">${prefix}</span>${jobName}${currentTag} — <span style="font-size: 14px;color:#888">${desc}</span></div>`;
       });
-      html += '<div style="color:#888;font-size:11px;margin-top:8px">Z: Confirm | X: Back</div>';
+      html += '<div style="color:#888;font-size: 16px;margin-top:8px">Z: Confirm | X: Back</div>';
       this.jobMenuDiv.innerHTML = html;
       return;
     }
@@ -654,23 +654,23 @@ export default class TownScene extends Phaser.Scene {
       const jp = char.jp && char.jp[char.job] || 0;
       const purchasable = GameState.getPurchasableAbilities(this.jobSelectedMember);
       const learned = char.learnedAbilities[char.job] || [];
-      let html = `<div style="font-size:14px;color:#ffff00;margin-bottom:8px">${char.name} — ${char.job} (${jp} JP)</div>`;
+      let html = `<div style="font-size: 20px;color:#ffff00;margin-bottom:8px">${char.name} — ${char.job} (${jp} JP)</div>`;
       if (learned.length > 0) {
-        html += '<div style="font-size:11px;color:#44dd44;margin-bottom:6px">Learned: ' + learned.join(', ') + '</div>';
+        html += '<div style="font-size: 16px;color:#44dd44;margin-bottom:6px">Learned: ' + learned.join(', ') + '</div>';
       }
       if (purchasable.length === 0) {
-        html += '<div style="color:#888;font-size:12px">All abilities for this job have been learned!</div>';
+        html += '<div style="color:#888;font-size: 17px">All abilities for this job have been learned!</div>';
       } else {
-        html += '<div style="font-size:12px;color:#aaa;margin-bottom:6px">Available to learn:</div>';
+        html += '<div style="font-size: 17px;color:#aaa;margin-bottom:6px">Available to learn:</div>';
         purchasable.forEach((ab, i) => {
           const sel = i === this.jobSelectedAbility;
           const prefix = sel ? '▶' : '　';
           const color = sel ? '#ffff00' : (ab.affordable ? '#ccc' : '#666');
           const costColor = ab.affordable ? '#44dd44' : '#ff4444';
-          html += `<div style="color:${color};font-size:13px;margin:4px 0"><span style="display:inline-block;width:16px">${prefix}</span>${ab.name} (<span style="color:${costColor}">${ab.jpCost}JP</span>) — <span style="font-size:10px;color:#888">${ab.description}</span></div>`;
+          html += `<div style="color:${color};font-size: 18px;margin:4px 0"><span style="display:inline-block;width:16px">${prefix}</span>${ab.name} (<span style="color:${costColor}">${ab.jpCost}JP</span>) — <span style="font-size: 14px;color:#888">${ab.description}</span></div>`;
         });
       }
-      html += '<div style="color:#888;font-size:11px;margin-top:8px">Z: Learn | X: Back</div>';
+      html += '<div style="color:#888;font-size: 16px;margin-top:8px">Z: Learn | X: Back</div>';
       this.jobMenuDiv.innerHTML = html;
       return;
     }
@@ -679,10 +679,10 @@ export default class TownScene extends Phaser.Scene {
       const char = party[this.jobSelectedMember];
       const unlockedJobs = GameState.get().unlockedJobs;
       const newJob = unlockedJobs[this.jobSelectedJob];
-      let html = `<div style="font-size:14px;color:#ffff00;margin-bottom:8px">Confirm job change?</div>`;
-      html += `<div style="font-size:13px;margin:4px 0">${char.name}: ${char.job} → ${newJob}</div>`;
-      html += '<div style="font-size:11px;color:#aaa;margin-top:8px">HP/MP will be adjusted. Learned abilities are kept.</div>';
-      html += '<div style="font-size:12px;color:#888;margin-top:8px">Z: Confirm | X: Cancel</div>';
+      let html = `<div style="font-size: 20px;color:#ffff00;margin-bottom:8px">Confirm job change?</div>`;
+      html += `<div style="font-size: 18px;margin:4px 0">${char.name}: ${char.job} → ${newJob}</div>`;
+      html += '<div style="font-size: 16px;color:#aaa;margin-top:8px">HP/MP will be adjusted. Learned abilities are kept.</div>';
+      html += '<div style="font-size: 17px;color:#888;margin-top:8px">Z: Confirm | X: Cancel</div>';
       this.jobMenuDiv.innerHTML = html;
       return;
     }
@@ -692,10 +692,10 @@ export default class TownScene extends Phaser.Scene {
       const purchasable = GameState.getPurchasableAbilities(this.jobSelectedMember);
       const ab = purchasable[this.jobSelectedAbility];
       if (!ab) { this.jobMenuState = 'ability_select'; this._updateJobMenu(); return; }
-      let html = `<div style="font-size:14px;color:#ffff00;margin-bottom:8px">Learn ${ab.name}?</div>`;
-      html += `<div style="font-size:13px;margin:4px 0">Cost: ${ab.jpCost} JP (You have ${char.jp[char.job] || 0} JP)</div>`;
-      html += `<div style="font-size:11px;color:#aaa;margin-top:4px">${ab.description}</div>`;
-      html += '<div style="font-size:12px;color:#888;margin-top:8px">Z: Confirm | X: Cancel</div>';
+      let html = `<div style="font-size: 20px;color:#ffff00;margin-bottom:8px">Learn ${ab.name}?</div>`;
+      html += `<div style="font-size: 18px;margin:4px 0">Cost: ${ab.jpCost} JP (You have ${char.jp[char.job] || 0} JP)</div>`;
+      html += `<div style="font-size: 16px;color:#aaa;margin-top:4px">${ab.description}</div>`;
+      html += '<div style="font-size: 17px;color:#888;margin-top:8px">Z: Confirm | X: Cancel</div>';
       this.jobMenuDiv.innerHTML = html;
       return;
     }

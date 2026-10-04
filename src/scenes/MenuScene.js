@@ -43,7 +43,7 @@ export default class MenuScene extends Phaser.Scene {
       width: 600px; max-height: 580px;
       background: rgba(20, 20, 50, 0.95); border: 2px solid rgba(255,255,255,0.3);
       padding: 20px; box-sizing: border-box;
-      font-family: "Courier New", monospace; color: #ffffff;
+      font-family: "VT323", monospace; color: #ffffff;
       z-index: 101; pointer-events: none;
       border-radius: 6px; overflow: hidden;
     `;
@@ -291,8 +291,8 @@ export default class MenuScene extends Phaser.Scene {
         const hpPct = Math.max(0, (char.hp / char.maxHp) * 100);
         const hpColor = hpPct > 50 ? '#44dd44' : hpPct > 25 ? '#ddaa44' : '#dd4444';
         html += `<div style="display:flex;align-items:center;gap:6px;flex:1">
-          <div style="width:32px;height:32px;border-radius:4px;background:${color};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:bold;color:#fff;text-shadow:1px 1px 2px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.3)">${initial}</div>
-          <div style="flex:1;font-size:10px">
+          <div style="width:32px;height:32px;border-radius:4px;background:${color};display:flex;align-items:center;justify-content:center;font-size: 26px;font-weight:bold;color:#fff;text-shadow:1px 1px 2px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.3)">${initial}</div>
+          <div style="flex:1;font-size: 14px">
             <div style="color:#fff;font-weight:bold">${char.name}</div>
             <div style="color:#aaa">${char.job} Lv.${char.level}</div>
             <div style="color:#ccc">HP ${char.hp}/${char.maxHp}</div>
@@ -307,39 +307,39 @@ export default class MenuScene extends Phaser.Scene {
         const sel = i === this.selectedIndex;
         const prefix = sel ? '▶' : '　';
         const color = sel ? '#ffff00' : '#ccc';
-        html += `<div style="color:${color};font-size:14px;margin:6px 0"><span style="display:inline-block;width:16px">${prefix}</span>${item}</div>`;
+        html += `<div style="color:${color};font-size: 20px;margin:6px 0"><span style="display:inline-block;width:16px">${prefix}</span>${item}</div>`;
       });
-      html += '<div style="color:#888;font-size:10px;margin-top:12px">Z: Select | X: Close</div>';
+      html += '<div style="color:#888;font-size: 14px;margin-top:12px">Z: Select | X: Close</div>';
       this.menuDiv.innerHTML = html;
       return;
     }
 
     if (this.menuState === 'party') {
       const party = GameState.getParty();
-      let html = '<div style="font-size:16px;color:#ffff00;margin-bottom:12px">Party Status</div>';
+      let html = '<div style="font-size: 22px;color:#ffff00;margin-bottom:12px">Party Status</div>';
       party.forEach((char, i) => {
         const sel = i === this.subIndex;
         const prefix = sel ? '▶' : '　';
         const color = sel ? '#ffff00' : '#ccc';
         const jp = (char.jp && char.jp[char.job]) || 0;
         const abilities = char.learnedAbilities[char.job] || [];
-        html += `<div style="color:${color};font-size:13px;margin:8px 0;padding:6px;border:1px solid rgba(255,255,255,0.1);border-radius:3px">`;
-        html += `<div style="font-weight:bold;font-size:14px">${prefix} ${char.name} — ${char.job} Lv.${char.level}</div>`;
-        html += `<div style="font-size:11px;color:#aaa;margin-top:4px">HP: ${char.hp}/${char.maxHp} | MP: ${char.mp}/${char.maxMp} | JP: ${jp}</div>`;
-        html += `<div style="font-size:11px;color:#aaa">ATK ${char.atk} DEF ${char.def} MAG ${char.mag} MDEF ${char.mdef} AGI ${char.agi} LUCK ${char.luck}</div>`;
-        html += `<div style="font-size:10px;color:#888;margin-top:2px">Abilities: ${abilities.join(', ') || 'none'}</div>`;
+        html += `<div style="color:${color};font-size: 18px;margin:8px 0;padding:6px;border:1px solid rgba(255,255,255,0.1);border-radius:3px">`;
+        html += `<div style="font-weight:bold;font-size: 20px">${prefix} ${char.name} — ${char.job} Lv.${char.level}</div>`;
+        html += `<div style="font-size: 16px;color:#aaa;margin-top:4px">HP: ${char.hp}/${char.maxHp} | MP: ${char.mp}/${char.maxMp} | JP: ${jp}</div>`;
+        html += `<div style="font-size: 16px;color:#aaa">ATK ${char.atk} DEF ${char.def} MAG ${char.mag} MDEF ${char.mdef} AGI ${char.agi} LUCK ${char.luck}</div>`;
+        html += `<div style="font-size: 14px;color:#888;margin-top:2px">Abilities: ${abilities.join(', ') || 'none'}</div>`;
         html += `</div>`;
       });
-      html += '<div style="color:#888;font-size:10px;margin-top:8px">X: Back</div>';
+      html += '<div style="color:#888;font-size: 14px;margin-top:8px">X: Back</div>';
       this.menuDiv.innerHTML = html;
       return;
     }
 
     if (this.menuState === 'items') {
       const inv = GameState.getInventory();
-      let html = '<div style="font-size:16px;color:#ffff00;margin-bottom:12px">Items</div>';
+      let html = '<div style="font-size: 22px;color:#ffff00;margin-bottom:12px">Items</div>';
       if (inv.length === 0) {
-        html += '<div style="color:#888;font-size:13px">No items.</div>';
+        html += '<div style="color:#888;font-size: 18px">No items.</div>';
       } else {
         inv.forEach((item, i) => {
           const sel = i === this.subIndex;
@@ -347,10 +347,10 @@ export default class MenuScene extends Phaser.Scene {
           const color = sel ? '#ffff00' : '#ccc';
           const def = ITEMS[item.name];
           const desc = def ? def.description : '';
-          html += `<div style="color:${color};font-size:13px;margin:4px 0"><span style="display:inline-block;width:16px">${prefix}</span>${item.name} x${item.qty} — <span style="font-size:10px;color:#888">${desc}</span></div>`;
+          html += `<div style="color:${color};font-size: 18px;margin:4px 0"><span style="display:inline-block;width:16px">${prefix}</span>${item.name} x${item.qty} — <span style="font-size: 14px;color:#888">${desc}</span></div>`;
         });
       }
-      html += '<div style="color:#888;font-size:10px;margin-top:8px">X: Back</div>';
+      html += '<div style="color:#888;font-size: 14px;margin-top:8px">X: Back</div>';
       this.menuDiv.innerHTML = html;
       return;
     }
@@ -358,32 +358,32 @@ export default class MenuScene extends Phaser.Scene {
     if (this.menuState === 'jobs') {
       const party = GameState.getParty();
       const unlocked = GameState.get().unlockedJobs;
-      let html = '<div style="font-size:16px;color:#ffff00;margin-bottom:12px">Jobs</div>';
+      let html = '<div style="font-size: 22px;color:#ffff00;margin-bottom:12px">Jobs</div>';
       party.forEach((char, i) => {
         const sel = i === this.subIndex;
         const prefix = sel ? '▶' : '　';
         const color = sel ? '#ffff00' : '#ccc';
         const jp = (char.jp && char.jp[char.job]) || 0;
-        html += `<div style="color:${color};font-size:13px;margin:6px 0">${prefix} ${char.name} — ${char.job} (${jp} JP) | Lv.${char.level}</div>`;
+        html += `<div style="color:${color};font-size: 18px;margin:6px 0">${prefix} ${char.name} — ${char.job} (${jp} JP) | Lv.${char.level}</div>`;
       });
-      html += `<div style="font-size:11px;color:#aaa;margin-top:12px">Unlocked: ${unlocked.join(', ')}</div>`;
-      html += '<div style="color:#888;font-size:10px;margin-top:8px">Visit Job Master in town to change jobs or learn abilities.</div>';
-      html += '<div style="color:#888;font-size:10px;margin-top:8px">X: Back</div>';
+      html += `<div style="font-size: 16px;color:#aaa;margin-top:12px">Unlocked: ${unlocked.join(', ')}</div>`;
+      html += '<div style="color:#888;font-size: 14px;margin-top:8px">Visit Job Master in town to change jobs or learn abilities.</div>';
+      html += '<div style="color:#888;font-size: 14px;margin-top:8px">X: Back</div>';
       this.menuDiv.innerHTML = html;
       return;
     }
 
     if (this.menuState === 'equip_member') {
       const party = GameState.getParty();
-      let html = '<div style="font-size:16px;color:#ffff00;margin-bottom:12px">Equip — Choose a member</div>';
+      let html = '<div style="font-size: 22px;color:#ffff00;margin-bottom:12px">Equip — Choose a member</div>';
       party.forEach((char, i) => {
         const sel = i === this.subIndex;
         const prefix = sel ? '▶' : '　';
         const color = sel ? '#ffff00' : '#ccc';
         const eq = char.equipment || {};
-        html += `<div style="color:${color};font-size:13px;margin:6px 0">${prefix} ${char.name} — ${char.job} <span style="font-size:10px;color:#888">[${eq.weapon || '—'} / ${eq.armor || '—'} / ${eq.accessory || '—'}]</span></div>`;
+        html += `<div style="color:${color};font-size: 18px;margin:6px 0">${prefix} ${char.name} — ${char.job} <span style="font-size: 14px;color:#888">[${eq.weapon || '—'} / ${eq.armor || '—'} / ${eq.accessory || '—'}]</span></div>`;
       });
-      html += '<div style="color:#888;font-size:10px;margin-top:8px">Z: Select | X: Back</div>';
+      html += '<div style="color:#888;font-size: 14px;margin-top:8px">Z: Select | X: Back</div>';
       this.menuDiv.innerHTML = html;
       return;
     }
@@ -391,15 +391,15 @@ export default class MenuScene extends Phaser.Scene {
     if (this.menuState === 'equip_slot') {
       const char = GameState.getParty()[this.equipMemberIndex];
       const slots = ['weapon', 'armor', 'accessory'];
-      let html = `<div style="font-size:16px;color:#ffff00;margin-bottom:12px">Equip — ${char.name}</div>`;
+      let html = `<div style="font-size: 22px;color:#ffff00;margin-bottom:12px">Equip — ${char.name}</div>`;
       slots.forEach((slot, i) => {
         const sel = i === this.subIndex;
         const prefix = sel ? '▶' : '　';
         const color = sel ? '#ffff00' : '#ccc';
         const current = char.equipment[slot] || '—';
-        html += `<div style="color:${color};font-size:13px;margin:6px 0">${prefix} ${slot}: ${current}</div>`;
+        html += `<div style="color:${color};font-size: 18px;margin:6px 0">${prefix} ${slot}: ${current}</div>`;
       });
-      html += '<div style="color:#888;font-size:10px;margin-top:8px">Z: Change | X: Back</div>';
+      html += '<div style="color:#888;font-size: 14px;margin-top:8px">Z: Change | X: Back</div>';
       this.menuDiv.innerHTML = html;
       return;
     }
@@ -407,19 +407,19 @@ export default class MenuScene extends Phaser.Scene {
     if (this.menuState === 'equip_item') {
       const char = GameState.getParty()[this.equipMemberIndex];
       const opts = this._equipOptions();
-      let html = `<div style="font-size:16px;color:#ffff00;margin-bottom:12px">Equip ${this.equipSlot} — ${char.name}</div>`;
+      let html = `<div style="font-size: 22px;color:#ffff00;margin-bottom:12px">Equip ${this.equipSlot} — ${char.name}</div>`;
       if (opts.length === 0) {
-        html += '<div style="color:#888;font-size:13px">Nothing owned to equip.</div>';
+        html += '<div style="color:#888;font-size: 18px">Nothing owned to equip.</div>';
       } else {
         opts.forEach((opt, i) => {
           const sel = i === this.subIndex;
           const prefix = sel ? '▶' : '　';
           const color = sel ? '#ffff00' : '#ccc';
           const desc = opt.remove ? 'unequip current' : opt.desc;
-          html += `<div style="color:${color};font-size:13px;margin:4px 0">${prefix} ${opt.label} <span style="font-size:10px;color:#888">${desc}</span></div>`;
+          html += `<div style="color:${color};font-size: 18px;margin:4px 0">${prefix} ${opt.label} <span style="font-size: 14px;color:#888">${desc}</span></div>`;
         });
       }
-      html += '<div style="color:#888;font-size:10px;margin-top:8px">Z: Equip | X: Back</div>';
+      html += '<div style="color:#888;font-size: 14px;margin-top:8px">Z: Equip | X: Back</div>';
       this.menuDiv.innerHTML = html;
       return;
     }
@@ -429,13 +429,13 @@ export default class MenuScene extends Phaser.Scene {
       const slots = this._saveSlots();
       const party = GameState.getParty();
       const partyColors = ['#4488ff', '#ff8844', '#44ff88', '#ff44ff'];
-      let html = `<div style="font-size:16px;color:#ffff00;margin-bottom:12px">${isSave ? 'Save' : 'Load'} Game</div>`;
+      let html = `<div style="font-size: 22px;color:#ffff00;margin-bottom:12px">${isSave ? 'Save' : 'Load'} Game</div>`;
       // Show party portraits row
       html += '<div style="display:flex;gap:6px;margin-bottom:12px;justify-content:center">';
       party.forEach((char, i) => {
         const color = partyColors[i % partyColors.length];
         const initial = char.name[0] || '?';
-        html += `<div style="width:28px;height:28px;border-radius:4px;background:${color};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;color:#fff;border:1px solid rgba(255,255,255,0.3)">${initial}</div>`;
+        html += `<div style="width:28px;height:28px;border-radius:4px;background:${color};display:flex;align-items:center;justify-content:center;font-size: 20px;font-weight:bold;color:#fff;border:1px solid rgba(255,255,255,0.3)">${initial}</div>`;
       });
       html += '</div>';
       slots.forEach((slot, i) => {
@@ -443,12 +443,12 @@ export default class MenuScene extends Phaser.Scene {
         const prefix = sel ? '▶' : '　';
         const color = sel ? '#ffff00' : '#ccc';
         if (slot.empty) {
-          html += `<div style="color:${color};font-size:13px;margin:6px 0"><span style="display:inline-block;width:16px">${prefix}</span>Slot ${i + 1}: <span style="color:#666">Empty</span></div>`;
+          html += `<div style="color:${color};font-size: 18px;margin:6px 0"><span style="display:inline-block;width:16px">${prefix}</span>Slot ${i + 1}: <span style="color:#666">Empty</span></div>`;
         } else {
-          html += `<div style="color:${color};font-size:13px;margin:6px 0"><span style="display:inline-block;width:16px">${prefix}</span>Slot ${i + 1}: ${slot.name} Lv.${slot.level} ${slot.gold}G — <span style="font-size:10px;color:#888">${slot.timeText}</span></div>`;
+          html += `<div style="color:${color};font-size: 18px;margin:6px 0"><span style="display:inline-block;width:16px">${prefix}</span>Slot ${i + 1}: ${slot.name} Lv.${slot.level} ${slot.gold}G — <span style="font-size: 14px;color:#888">${slot.timeText}</span></div>`;
         }
       });
-      html += '<div style="color:#888;font-size:10px;margin-top:8px">Z: Confirm | X: Back</div>';
+      html += '<div style="color:#888;font-size: 14px;margin-top:8px">Z: Confirm | X: Back</div>';
       this.menuDiv.innerHTML = html;
       return;
     }

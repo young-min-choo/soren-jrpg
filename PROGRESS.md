@@ -3,71 +3,114 @@
 This file tracks what has been implemented, tested, and what's next.
 Read this before starting new work.
 
+> **2026-10-05:** This log had gone stale at "Phase 1" since July while 107 more
+> commits landed. Rebuilt below from the full commit history. Keep it current.
+
 ---
 
-## Status: Design Complete — Ready for Phase 1
+## Status: Phase 9 (Polish) — slices 1-9 complete. Next: manual playtest.
 
-### Completed
-- [x] Design document (`DESIGN-DOCUMENT.md`)
-- [x] Agent skills (`.agent/` directory)
-  - [x] SKILL.md — table of contents
-  - [x] PREREQUISITES.md — environment setup
-  - [x] WORKFLOW.md — AI behavior rules
-  - [x] GAME-ENGINE.md — Phaser 3 patterns
-  - [x] ASSETS.md — asset handling
-  - [x] DATA-STRUCTURE.md — JSON data formats
-  - [x] TESTING.md — testing approach
-- [x] Data structure templates (`src/data/` templates defined in DATA-STRUCTURE.md)
-
-### Current Phase: Phase 1 — Engine Skeleton
-**Goal:** Walk around an overworld, enter a town, walk around town.
-
-### Build Phases Overview
 | Phase | Status | Deliverable |
 |---|---|---|
-| 1. Engine Skeleton | ⬜ Next | Walk overworld, enter town, walk around |
-| 2. Dialogue System | ⬜ | Talk to NPCs, portraits, choices |
-| 3. Combat Prototype | ⬜ | One battle, win/lose |
-| 4. Party & Jobs | ⬜ | Full party, job switching, abilities |
-| 5. First Dungeon | ⬜ | Explore, puzzle, boss, save |
-| 6. Save System | ⬜ | Save/load all state |
-| 7. Story & Events | ⬜ | Cutscenes, triggers, branching |
-| 8. Content Expansion | ⬜ | All towns, dungeons, enemies, items |
-| 9. Polish | ⬜ | Audio, balance, bug fixing |
+| 1. Engine Skeleton | ✅ 2026-07-20 | Walk overworld, enter town, walk around |
+| 2. Dialogue System | ✅ 2026-07-20→21 | Talk to NPCs, portraits, choices |
+| 3. Combat Prototype | ✅ 2026-07-21 | Battle, win/lose, Game Over |
+| 4. Party & Jobs | ✅ 2026-07-21 | Party of 4, items, status effects, magic, JP, FF3-style job change |
+| 5. First Dungeon | ✅ 2026-07-21 | Push-block puzzle, save point, boss (goblin) |
+| 6. Save System | ✅ 2026-07-22 | 3 slots + X-menu (Status/Items/Jobs/Save/Load) |
+| 7. Story & Events | ✅ 2026-09-08 | New game flow, cutscenes, story flags, NPC dialogue reacts to flags |
+| 8. Content Expansion | ✅ 2026-10-03 | Full world: towns, dungeons, finale, equipment, economy, Game Over |
+| 9. Polish (art/audio) | ✅ 2026-10-04 | Slices 1-9 below |
 
----
+### Phase 9 slices (all committed 2026-10-04)
+1. AI art pipeline: master palette, overworld tiles, player sprite
+2. Battle sprites: chroma-key pipeline, manifest loader, in-game swap
+3. Pixel fonts (VT323 + Press Start 2P), 121 size bumps, title/dialogue verified
+4. MusicManager + procedural chiptune soundtrack
+5. Themed dungeon tilesets — 6 strips, per-scene themes, fallback chain
+6. Complete battle roster + all tile strips, zero fallbacks
+7. ART BIBLE v2 + gate battery + visual standards overhaul
+8. ART BIBLE v2 standards sweep — sprites, terrain, walk anims
+9. MP2K-style orchestral soundtrack v2.2 — all music gates pass
 
-## Phase 1 Tasks
-- [x] Initialize Phaser 3 project (package.json, vite, index.html)
-- [x] Create main.js with Phaser config (256×224, pixelArt, zoom)
-- [x] BootScene — generate placeholder assets (tilesets + player sprite)
-- [x] TitleScene — "Press Z" → transitions to Overworld
-- [x] OverworldScene — tilemap, player movement (4-dir + sprint), collision
-- [x] TownScene — tilemap, player movement, transition back to overworld
-- [x] Scene transitions (overworld ↔ town, with fade)
-- [x] Test: verified scene transitions, player movement, sprint, collision, camera
+## Verification
 
-### Notes
-- Using Phaser 4.2.1 (latest, installed via npm)
-- Vite 8.1.5 as dev server
-- All assets generated programmatically in BootScene (no external files needed yet)
-- Player sprite: 16×24, 12 frames (4 directions × 3 walk frames)
-- Overworld: 20×16 tiles (640×512px), grass/forest/mountain/water/path
-- Town: 16×12 tiles (512×384px), buildings/walls/paths
-- Bug fixed: canvas textures need explicit `texture.add()` calls for frame registration
+- **E2E suite: 32/32 passing** (2026-10-05, headless run on omarchy desktop).
+  Covers: movement/encounters, fight+win+rewards, items, Game Over path,
+  job change, push-block puzzle, boss fight, save→reload→load, new-game flow,
+  intro cutscene, flag-driven NPC dialogue, relic cutscene once-only,
+  flag persistence through save/reload, cutscene input lockout.
+- **Manual playtest: NOT started.** `PLAYTEST-QUESTS.md` (Phases 7-8, ~30-40 min,
+  7 zones) exists and every quest is unchecked. The E2E suite proves the code
+  works; this quest log proves the GAME works. Do it before new features.
+
+## How to run
+
+```bash
+npm ci                # first time only
+npm run dev           # http://localhost:5173
+npx playwright test   # 32 specs, self-playing, ~3 min
+npm run build && npm run preview   # production build (dist/ is gitignored)
+```
+
+Desktop (omarchy) keeps a dev server running for tailnet play:
+**http://omarchy:5173** (or http://100.106.214.96:5173 from any tailnet device).
+
+## What's next
+
+1. **Manual playtest** — work through `PLAYTEST-QUESTS.md`, report bugs in the
+   one-line format it specifies (zone + quest + what-happened).
+2. **Fix whatever the playtest surfaces**, then balance tuning (Lv curve,
+   encounter rate feel, economy: Potion 50G / inn 30G vs. earn rate).
+3. **Then** remaining Phase 9 scope: full playthrough polish pass, and decide
+   deployment (serve `dist/` over tailscale, or GitHub Pages once playtested).
 
 ---
 
 ## Change Log
 
-### 2026-07-20 — Phase 1 Complete
-- Created design document
-- Created agent skills harness (7 files in .agent/)
-- Initialized Phaser project (package.json, vite, index.html, main.js)
-- Implemented BootScene (programmatic asset generation)
-- Implemented TitleScene (title screen, Z/Enter to start)
-- Implemented OverworldScene (tilemap, 4-dir movement, sprint, collision, town entrance)
-- Implemented TownScene (tilemap, buildings, exit back to overworld)
-- Fixed frame registration bug in BootScene
-- Verified: scene transitions, movement, sprint, collision, camera all working
-- Dev server running at http://localhost:5173
+### 2026-10-05 — Audit day (this file)
+- GitHub brought current: desktop repo was 10 commits ahead; pushed to origin
+  (62d5808 → 41e1184, Phase 8 full content + all Phase 9 slices).
+- All clones (laptop, omarchy desktop) synced to 41e1184.
+- E2E 32/32 green. PROGRESS.md rewritten from commit history.
+- Dev server restarted on omarchy for tailnet play.
+- Setup: deploy keypair for omarchy created (needs registration; gh token on
+  desktop is dead — re-auth `gh auth login` there or register the deploy key).
+
+### 2026-10-04 — Phase 9 complete (slices 1-9)
+AI art pipeline + master palette; chroma-key battle sprites; VT323/Press Start 2P
+pixel fonts; MusicManager + procedural chiptune; six themed dungeon tilesets;
+complete battle roster with zero fallbacks; ART BIBLE v2 gate battery; v2
+standards sweep (sprites/terrain/walk anims); MP2K-style orchestral soundtrack
+v2.2 passing all music gates.
+
+### 2026-10-03 — Phase 8 complete
+Full world content: all towns, dungeons, finale, equipment system, Game Over.
+
+### 2026-09-08 — Phase 7 complete
+Story & event scripting: new game flow (name entry, job choice), intro/relic
+cutscenes, story flags, flag-aware NPC dialogue. Self-playing E2E suite added;
+fixed dropped Z-presses and boss-exit resume. Phase 8 slice 1: economy + Cave
+of Embers. Manual playtest quest log for Phases 7-8.
+
+### 2026-07-22 / 23 — Phases 5-6 fixes
+Save system + X-menu. Dungeon: Zelda-style walk-into push blocks, smooth rAF
+slide, separate puzzle/boss doors, boss_goblin + visible boss sprite. Encounter
+rate retuned toward FF1-3 feel (6-10 tiles maps, counts tiles not frames). Menu
+resume crash fix, party portraits on menu/save screen.
+
+### 2026-07-21 — Phases 3-5 complete
+Battle systems: party turn order, enemy AI targeting fix, action menu, items,
+status effects (poison/sleep/blind/defend), magic with MP + targeting, FFT-style
+JP + ability shop, FF3-style job change via Job Master NPC, DOM battle log
+anchoring + marker cleanup. First dungeon with push-block puzzle, save point,
+boss.
+
+### 2026-07-20 — Phase 1-2 complete
+Created design document and agent skills harness (7 files in .agent/).
+Initialized Phaser project (vite, index.html, main.js). BootScene programmatic
+asset generation, TitleScene, OverworldScene (4-dir movement, sprint,
+collision), TownScene, scene transitions with fade. Dialogue system.
+Note: canvas textures need explicit `texture.add()` calls for frame
+registration. Dev server at http://localhost:5173.

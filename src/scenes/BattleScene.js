@@ -61,18 +61,25 @@ export default class BattleScene extends Phaser.Scene {
     this.add.rectangle(128, 80, 256, 160, 0x2a2a4e);
     this.add.rectangle(128, 150, 256, 48, 0x1a3a1a); // ground
 
-    // Player sprites (placeholder — colored squares, one per party member)
+    // Player sprites (Phase 9: AI battle sprite if texture exists, else legacy rect)
     this.playerSprites = [];
     const partyColors = [0x4488ff, 0xff8844, 0x44ff88, 0xff44ff];
     this.party.forEach((char, i) => {
       const x = 40 + i * 30;
-      const sprite = this.add.rectangle(x, 120, 20, 28, partyColors[i % partyColors.length]);
-      sprite.setStrokeStyle(1, 0xffffff, 0.5);
+      const texKey = `bsprite_party_${char.name}`;
+      let sprite;
+      if (this.textures.exists(texKey)) {
+        sprite = this.add.image(x, 120, texKey);
+        sprite._isSprite = true;
+      } else {
+        sprite = this.add.rectangle(x, 120, 20, 28, partyColors[i % partyColors.length]);
+        sprite.setStrokeStyle(1, 0xffffff, 0.5);
+      }
       this.playerSprites.push(sprite);
     });
     this.playerSprite = this.playerSprites[0]; // primary for backwards-compat
 
-    // Enemy sprites (placeholder — colored squares)
+    // Enemy sprites (Phase 9: AI battle sprite if texture exists, else legacy rect)
     // Spread them out more for readability
     this.enemySprites = [];
     this.enemyLabelDivs = [];
@@ -81,8 +88,15 @@ export default class BattleScene extends Phaser.Scene {
       const startX = 180;
       const x = startX + (i % 2) * spacing;
       const y = 90 + Math.floor(i / 2) * 50;
-      const sprite = this.add.rectangle(x, y, 24, 24, enemy.color);
-      sprite.setStrokeStyle(1, 0xffffff, 0.5);
+      const texKey = `bsprite_${enemy.type}`;
+      let sprite;
+      if (this.textures.exists(texKey)) {
+        sprite = this.add.image(x, y, texKey);
+        sprite._isSprite = true;
+      } else {
+        sprite = this.add.rectangle(x, y, 24, 24, enemy.color);
+        sprite.setStrokeStyle(1, 0xffffff, 0.5);
+      }
       this.enemySprites.push(sprite);
     });
 
@@ -871,8 +885,14 @@ export default class BattleScene extends Phaser.Scene {
         const sprite = this.enemySprites[idx];
         if (sprite) {
           sprite.setVisible(true);
-          sprite.setFillStyle(p2.color);
-          sprite.setStrokeStyle(2, 0x8833aa);
+          if (sprite._isSprite) {
+            // Phase 9 AI sprite: swap texture to the p2 sprite
+            const texKey = `bsprite_${p2.type}`;
+            if (this.textures.exists(texKey)) sprite.setTexture(texKey);
+          } else {
+            sprite.setFillStyle(p2.color);
+            sprite.setStrokeStyle(2, 0x8833aa);
+          }
         }
         this.updateAllDom();
         this.currentTurnIndex = 0; // new round
@@ -927,7 +947,13 @@ export default class BattleScene extends Phaser.Scene {
   flashSprite(sprite) {
     if (!sprite) return;
     // Manual flash via rAF (Phaser tweens don't run in launched scenes)
-    // Phaser 4: Rectangle uses setFillStyle(color) — setTint only exists on Sprites.
+    if (sprite._isSprite) {
+      // Phase 9 AI sprite: tint flash (setTint only exists on Sprites/Images)
+      sprite.setTint(0xff4444);
+      setTimeout(() => sprite.clearTint(), 240);
+      return;
+    }
+    // Legacy Rectangle path: setFillStyle flash
     const origColor = sprite.fillColor;
     const startTime = performance.now();
     const duration = 240; // 3 flashes × 80ms

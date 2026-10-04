@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import battleManifest from '../game/battle-sprite-manifest.json';
 
 /**
  * BootScene — generates placeholder assets, then transitions to Title.
@@ -27,6 +28,16 @@ export default class BootScene extends Phaser.Scene {
     this.load.image('player_field_sheet', 'sprites/soren_field_sheet.png');
     // Phase 9: AI-generated overworld tileset strip (10 tiles × 32px) if present
     this.load.image('ow_tiles_sheet', 'sprites/overworld_tiles.png');
+    // Phase 9: AI battle sprites (enemy + party) from the generated manifest.
+    // Missing files don't load (textures.exists() returns false) and
+    // BattleScene falls back to placeholder rectangles.
+    const partyFile = { Soren: 'soren_battle', Aria: 'aria_battle', Kael: 'kael_battle', Aldric: 'aldric_battle' };
+    battleManifest.enemies.forEach((key) => {
+      this.load.image(`bsprite_${key}`, `sprites/battle/${key}.png`);
+    });
+    Object.entries(partyFile).forEach(([name, key]) => {
+      this.load.image(`bsprite_party_${name}`, `sprites/battle/${key}.png`);
+    });
   }
 
   create() {

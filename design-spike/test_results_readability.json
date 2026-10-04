@@ -1,0 +1,37 @@
+{
+  "slime": {
+    "identified": true,
+    "readable": true,
+    "clean_shading": true,
+    "ai_artifacts": false,
+    "score_1_10": 9
+  },
+  "soren_battle": {
+    "identified": true,
+    "readable": true,
+    "clean_shading": true,
+    "ai_artifacts": false,
+    "score_1_10": 9
+  },
+  "boss_emberlord": {
+    "identified": true,
+    "readable": true,
+    "clean_shading": true,
+    "ai_artifacts": false,
+    "score_1_10": 9
+  },
+  "aria_portrait": {
+    "identified": true,
+    "readable": true,
+    "clean_shading": true,
+    "ai_artifacts": false,
+    "score_1_10": 8
+  },
+  "soren_field": {
+    "identified": true,
+    "readable": true,
+    "clean_shading": true,
+    "ai_artifacts": false,
+    "score_1_10": 8
+  }
+}

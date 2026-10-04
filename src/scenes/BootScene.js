@@ -4,22 +4,80 @@ import Phaser from 'phaser';
  * BootScene — generates placeholder assets, then transitions to Title.
  * In Phase 1, we generate simple colored tilesets and a player sprite
  * programmatically so we don't need external asset files yet.
+ *
+ * Phase 9 (design pass): if public/sprites/soren_field_sheet.png exists,
+ * load it as the player_field texture (12 frames, 16×24 each) instead of
+ * the programmatic placeholder. Same frame layout: 3 cols × 4 rows
+ * (down/up/left/right × walk-left/stand/walk-right).
  */
 export default class BootScene extends Phaser.Scene {
   constructor() {
     super('Boot');
   }
 
+  init() {
+    // Phase 9: real sprites override placeholders when present
+    if (window.fetch) {
+      // synchronous check not possible for images; use load.image in preload
+    }
+  }
+
+  preload() {
+    // Phase 9: AI-generated player spritesheet (12 frames) if present
+    this.load.image('player_field_sheet', 'sprites/soren_field_sheet.png');
+    // Phase 9: AI-generated overworld tileset strip (10 tiles × 32px) if present
+    this.load.image('ow_tiles_sheet', 'sprites/overworld_tiles.png');
+  }
+
   create() {
-    this.generateTileset('overworld_tiles', 32, [
-      '#3a5f3a', // 0: grass (dark green)
-      '#4a7f4a', // 1: grass (light green)
-      '#6b8f4a', // 2: forest
-      '#8a8a7a', // 3: mountain
-      '#4a6a8a', // 4: water
-      '#c8c8a8', // 5: path/dirt
-      '#aa8855', // 6: bridge
-    ]);
+    // If the real spritesheet loaded, slice it into 12 named frames with the
+    // same indices the game expects (row * 3 + col; rows: 0=down,1=left,2=right,3=up)
+    if (this.textures.exists('player_field_sheet') && this.textures.get('player_field_sheet').source[0].width > 8) {
+      const sheetTex = this.textures.get('player_field_sheet');
+      const frameW = 16, frameH = 24;
+      const cols = 3, rows = 4;
+      const tex = this.textures.createCanvas('player_field', cols * frameW, rows * frameH);
+      const ctx = tex.getContext();
+      // Blit the loaded sheet directly into the canvas texture
+      const sheetImage = sheetTex.source[0].image;
+      ctx.drawImage(sheetImage, 0, 0);
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const frameIndex = row * cols + col;
+          tex.add(frameIndex, 0, col * frameW, row * frameH, frameW, frameH);
+        }
+      }
+      tex.refresh();
+    } else {
+      this.generatePlayerSprite('player_field', 16, 24);
+    }
+
+    // Phase 9: AI-generated overworld tiles (10 tiles) replace the solid-color set
+    if (this.textures.exists('ow_tiles_sheet') && this.textures.get('ow_tiles_sheet').source[0].width >= 320) {
+      const sheetTex = this.textures.get('ow_tiles_sheet');
+      const TS = 32;
+      const count = 10;
+      const tex = this.textures.createCanvas('overworld_tiles', count * TS, TS);
+      const ctx = tex.getContext();
+      ctx.drawImage(sheetTex.source[0].image, 0, 0);
+      for (let i = 0; i < count; i++) {
+        tex.add(i, 0, i * TS, 0, TS, TS);
+      }
+      tex.refresh();
+    } else {
+      this.generateTileset('overworld_tiles', 32, [
+        '#3a5f3a', // 0: grass (dark green)
+        '#4a7f4a', // 1: grass (light green)
+        '#6b8f4a', // 2: forest
+        '#8a8a7a', // 3: mountain
+        '#4a6a8a', // 4: water
+        '#c8c8a8', // 5: path/dirt
+        '#aa8855', // 6: bridge
+        '#d8c8a0', // 7: desert
+        '#e8e8f0', // 8: snow
+        '#6a7a5a', // 9: swamp
+      ]);
+    }
 
     this.generateTileset('town_tiles', 32, [
       '#8a8a8a', // 0: stone floor (gray)
@@ -33,8 +91,6 @@ export default class BootScene extends Phaser.Scene {
       '#44aa44', // 8: dungeon exit
       '#5566aa', // 9: exit marker (post-boss)
     ]);
-
-    this.generatePlayerSprite('player_field', 16, 24);
 
     this.scene.start('Title');
   }

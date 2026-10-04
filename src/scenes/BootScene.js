@@ -38,6 +38,10 @@ export default class BootScene extends Phaser.Scene {
     Object.entries(partyFile).forEach(([name, key]) => {
       this.load.image(`bsprite_party_${name}`, `sprites/battle/${key}.png`);
     });
+    // Phase 9: themed tileset strips (fallback to programmatic if missing)
+    ['town_tiles', 'dgn_ember', 'dgn_tide', 'dgn_hollow', 'dgn_spire', 'dgn_ruins'].forEach((key) => {
+      this.load.image(`${key}_ai`, `sprites/tiles/${key}.png`);
+    });
   }
 
   create() {
@@ -90,7 +94,42 @@ export default class BootScene extends Phaser.Scene {
       ]);
     }
 
-    this.generateTileset('town_tiles', 32, [
+    // Phase 9: AI town/dungeon tiles replace the solid-color set when present
+    if (this.textures.exists('town_tiles_ai') && this.textures.get('town_tiles_ai').source[0].width >= 320) {
+      const sheetTex = this.textures.get('town_tiles_ai');
+      const TS = 32;
+      const count = 10;
+      const tex = this.textures.createCanvas('town_tiles', count * TS, TS);
+      const ctx = tex.getContext();
+      ctx.drawImage(sheetTex.source[0].image, 0, 0);
+      for (let i = 0; i < count; i++) {
+        tex.add(i, 0, i * TS, 0, TS, TS);
+      }
+      tex.refresh();
+      // Per-theme dungeon strips: 5 tiles each (floor, wall, hazard, door, chest)
+      // mapped onto the dungeon tile indices (floor=0, wall=1, hazard=2, door=4, chest=3)
+      ['dgn_ember', 'dgn_tide', 'dgn_hollow', 'dgn_spire', 'dgn_ruins'].forEach((theme) => {
+        const aiKey = `${theme}_ai`;
+        if (!this.textures.exists(aiKey) || this.textures.get(aiKey).source[0].width < 160) return;
+        const src = this.textures.get(aiKey).source[0].image;
+        const t = this.textures.createCanvas(theme, 10 * TS, TS);
+        const c = t.getContext();
+        // dungeon tile indices: 0=floor 1=wall 2=hazard 3=chest 4=door 5=save 6=boss 7=block 8=switch 9=exit
+        // strip order:            0=floor 1=wall 2=hazard 3=door 4=chest
+        const stripIdx = { 0: 0, 1: 1, 2: 2, 4: 3, 3: 4 };
+        for (let dungeonIdx = 0; dungeonIdx < 10; dungeonIdx++) {
+          const s = stripIdx[dungeonIdx];
+          if (s !== undefined) {
+            c.drawImage(src, s * TS, 0, TS, TS, dungeonIdx * TS, 0, TS, TS);
+          } else {
+            // tiles without AI art: leave transparent — scenes can fall back
+            c.clearRect(dungeonIdx * TS, 0, TS, TS);
+          }
+        }
+        t.refresh();
+      });
+    } else {
+      this.generateTileset('town_tiles', 32, [
       '#8a8a8a', // 0: stone floor (gray)
       '#6a6a6a', // 1: stone wall
       '#c8c8c8', // 2: path
@@ -101,7 +140,8 @@ export default class BootScene extends Phaser.Scene {
       '#aa3333', // 7: boss tile
       '#44aa44', // 8: dungeon exit
       '#5566aa', // 9: exit marker (post-boss)
-    ]);
+      ]);
+    }
 
     this.scene.start('Title');
     // Phase 9: start the persistent music manager (registered first in the

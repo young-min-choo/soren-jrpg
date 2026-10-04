@@ -42,7 +42,9 @@ export class ConduitGateScene extends Phaser.Scene {
     }
 
     const map = this.make.tilemap({ data: this.mapData, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
-    const tileset = map.addTilesetImage('town_tiles', 'town_tiles', TILE_SIZE, TILE_SIZE);
+    // Phase 9: themed dark tileset when BootScene built it
+      const useKey = this.textures.exists('dgn_hollow') ? 'dgn_hollow' : 'town_tiles';
+      const tileset = map.addTilesetImage(useKey, useKey, TILE_SIZE, TILE_SIZE);
     const ground = map.createLayer(0, tileset, 0, 0);
     ground.setCollision([1]);
 
@@ -270,7 +272,9 @@ export class ConduitScene extends Phaser.Scene {
     }
 
     const map = this.make.tilemap({ data: this.mapData, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
-    const tileset = map.addTilesetImage('town_tiles', 'town_tiles', TILE_SIZE, TILE_SIZE);
+    // Phase 9: themed dark tileset when BootScene built it
+      const useKey = this.textures.exists('dgn_hollow') ? 'dgn_hollow' : 'town_tiles';
+      const tileset = map.addTilesetImage(useKey, useKey, TILE_SIZE, TILE_SIZE);
     const ground = map.createLayer(0, tileset, 0, 0);
     ground.setCollision([1]);
 

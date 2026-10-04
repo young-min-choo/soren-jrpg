@@ -9,6 +9,7 @@ import { playRelicTideScene, playRelicHollowScene, playRelicSpireScene } from '.
 // ── Tide Temple (Water Relic) — plates puzzle, 2 plates ──
 export const TideTempleScene = makeRelicDungeon({
   sceneKey: 'TideTemple',
+  theme: 'dgn_tide',
   area: 'tide',
   bossType: 'boss_tide',
   bossName: 'the Leviathan Priest',
@@ -25,6 +26,7 @@ export const TideTempleScene = makeRelicDungeon({
 // ── Hollow Deep (Earth Relic) — blocks puzzle, 3 switches ──
 export const HollowDeepScene = makeRelicDungeon({
   sceneKey: 'HollowDeep',
+  theme: 'dgn_hollow',
   area: 'hollow',
   bossType: 'boss_hollow',
   bossName: 'the Hollow King',
@@ -41,6 +43,7 @@ export const HollowDeepScene = makeRelicDungeon({
 // ── Storm Spire (Storm Relic) — plates puzzle, 3 plates ──
 export const StormSpireScene = makeRelicDungeon({
   sceneKey: 'StormSpire',
+  theme: 'dgn_spire',
   area: 'spire',
   bossType: 'boss_storm',
   bossName: 'the Storm Sovereign',

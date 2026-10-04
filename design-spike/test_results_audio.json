@@ -1,0 +1,77 @@
+{
+  "battle_theme": {
+    "join_diff": 0.005,
+    "rms": 0.159,
+    "dur_s": 12.6
+  },
+  "betrayal_theme": {
+    "join_diff": 0.01,
+    "rms": 0.183,
+    "dur_s": 27.4
+  },
+  "boss_theme": {
+    "join_diff": 0.007,
+    "rms": 0.171,
+    "dur_s": 13.7
+  },
+  "dungeon_theme": {
+    "join_diff": 0.002,
+    "rms": 0.22,
+    "dur_s": 24.0
+  },
+  "embers_theme": {
+    "join_diff": 0.004,
+    "rms": 0.174,
+    "dur_s": 18.5
+  },
+  "ending_theme": {
+    "join_diff": 0.004,
+    "rms": 0.206,
+    "dur_s": 24.6
+  },
+  "hollow_theme": {
+    "join_diff": 0.001,
+    "rms": 0.208,
+    "dur_s": 25.3
+  },
+  "overworld_theme": {
+    "join_diff": 0.004,
+    "rms": 0.156,
+    "dur_s": 16.0
+  },
+  "port_theme": {
+    "join_diff": 0.003,
+    "rms": 0.147,
+    "dur_s": 17.1
+  },
+  "skyhold_theme": {
+    "join_diff": 0.004,
+    "rms": 0.205,
+    "dur_s": 22.9
+  },
+  "spire_theme": {
+    "join_diff": 0.007,
+    "rms": 0.165,
+    "dur_s": 15.0
+  },
+  "stonewatch_theme": {
+    "join_diff": 0.002,
+    "rms": 0.208,
+    "dur_s": 19.2
+  },
+  "tide_theme": {
+    "join_diff": 0.004,
+    "rms": 0.181,
+    "dur_s": 21.8
+  },
+  "title_theme": {
+    "join_diff": 0.003,
+    "rms": 0.195,
+    "dur_s": 26.7
+  },
+  "village_theme": {
+    "join_diff": 0.003,
+    "rms": 0.182,
+    "dur_s": 20.0
+  }
+}

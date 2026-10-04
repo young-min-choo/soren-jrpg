@@ -13,6 +13,7 @@ import BattleScene from './scenes/BattleScene.js';
 import NewGameFlowScene from './scenes/NewGameFlowScene.js';
 import EmbersScene from './scenes/EmbersScene.js';
 import GameOverScene from './scenes/GameOverScene.js';
+import MusicManager from './scenes/MusicManager.js';
 import { installTestHooks } from './test-hooks.js';
 
 // Canvas is 256×224 with zoom: 3 (Phaser handles scaling).
@@ -37,10 +38,24 @@ const config = {
   input: {
     gamepad: true
   },
-  scene: [BootScene, TitleScene, NewGameFlowScene, OverworldScene, TownScene, PortMeridianScene, StonewatchScene, SkyholdScene, AureliaScene, DungeonScene, TideTempleScene, HollowDeepScene, StormSpireScene, ConduitGateScene, ConduitScene, EmbersScene, MenuScene, DialogueScene, BattleScene, GameOverScene]
+  scene: [MusicManager, BootScene, TitleScene, NewGameFlowScene, OverworldScene, TownScene, PortMeridianScene, StonewatchScene, SkyholdScene, AureliaScene, DungeonScene, TideTempleScene, HollowDeepScene, StormSpireScene, ConduitGateScene, ConduitScene, EmbersScene, MenuScene, DialogueScene, BattleScene, GameOverScene]
 };
 
 const game = new Phaser.Game(config);
+
+// Phase 9: route scene START events into MusicManager. Each Phaser scene
+// emits START on its own emitter (not the manager), so we hook every
+// registered scene's emitter once the manager has them.
+game.events.once('ready', function () {
+  const mm = game.scene.getScene('MusicManager');
+  if (!mm) return;
+  for (const scene of game.scene.getScenes()) {
+    if (scene.scene.key === 'MusicManager') continue;
+    scene.events.on('start', (sys) => {
+      mm.onSceneStart(scene.scene.key);
+    });
+  }
+});
 
 // Expose for debugging/testing
 window.game = game;

@@ -104,6 +104,11 @@ export default class BootScene extends Phaser.Scene {
     ]);
 
     this.scene.start('Title');
+    // Phase 9: start the persistent music manager (registered first in the
+    // scene list so it can observe all scene starts, but not auto-started)
+    if (!this.scene.manager.keys['MusicManager'] || !this.scene.isActive('MusicManager')) {
+      this.scene.launch('MusicManager');
+    }
   }
 
   /**

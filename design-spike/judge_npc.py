@@ -33,4 +33,8 @@ r = subprocess.run(
      '-H', 'Content-Type: application/json', '-d', '@/tmp/vision_payload.json'],
     capture_output=True, text=True, timeout=280)
 out = json.loads(r.stdout)
+if 'choices' not in out:
+    # Log the raw error body (OOM/model-server failures return {"error": ...})
+    print('JUDGE RAW RESPONSE:', r.stdout[:400])
+    raise SystemExit(1)
 print(out['choices'][0]['message']['content'])

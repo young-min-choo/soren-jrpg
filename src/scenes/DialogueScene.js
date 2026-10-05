@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { resolvePortraitKey } from '../game/PortraitKeys.js';
 
 /**
  * DialogueScene — overlay scene using DOM elements for crisp text.
@@ -41,6 +42,10 @@ export default class DialogueScene extends Phaser.Scene {
     this.domElements.push(box);
 
     // --- Portrait (left side) ---
+    // Phase 9: real 48×48 portrait art when the speaker resolves (see
+    // PortraitKeys — hero resolved via GameState, others via story name).
+    // Fallback keeps the '?' placeholder box.
+    const portraitKey = resolvePortraitKey(this.dialogueData.speaker);
     const portrait = document.createElement('div');
     portrait.style.cssText = `
       width: 48px; height: 48px;
@@ -53,8 +58,21 @@ export default class DialogueScene extends Phaser.Scene {
       margin-right: 8px;
       font-size: 28px;
       color: #aaa;
+      image-rendering: pixelated;
     `;
-    portrait.textContent = '?';
+    if (portraitKey && this.textures.exists(`portrait_${portraitKey}`)) {
+      const tex = this.textures.get(`portrait_${portraitKey}`);
+      const src = tex.getSourceImage();
+      const c = document.createElement('canvas');
+      c.width = 48; c.height = 48;
+      c.getContext('2d').drawImage(src, 0, 0);
+      // CSS sizes the box; canvas keeps crisp pixel scaling
+      c.style.width = '100%'; c.style.height = '100%';
+      c.style.imageRendering = 'pixelated';
+      portrait.appendChild(c);
+    } else {
+      portrait.textContent = '?';
+    }
     box.appendChild(portrait);
 
     // --- Right side: name + text ---

@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import battleManifest from '../game/battle-sprite-manifest.json';
+import npcManifest from '../game/npc-sprite-manifest.json';
+import portraitManifest from '../game/portrait-sprite-manifest.json';
 
 /**
  * BootScene — generates placeholder assets, then transitions to Title.
@@ -43,6 +45,14 @@ export default class BootScene extends Phaser.Scene {
     // Phase 9: themed tileset strips (fallback to programmatic if missing)
     ['town_tiles', 'dgn_ember', 'dgn_tide', 'dgn_hollow', 'dgn_spire', 'dgn_ruins'].forEach((key) => {
       this.load.image(`${key}_ai`, `sprites/tiles/${key}.png`);
+    });
+    // Phase 9: NPC field sprites (16×24) + dialogue portraits (48×48).
+    // Keyed by stable art key (npcKey from WorldData), never display name.
+    npcManifest.npcs.forEach((key) => {
+      this.load.image(`npc_${key}`, `sprites/npc/${key}.png`);
+    });
+    portraitManifest.portraits.forEach((key) => {
+      this.load.image(`portrait_${key}`, `sprites/portraits/${key}.png`);
     });
   }
 

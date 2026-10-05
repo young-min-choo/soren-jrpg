@@ -68,12 +68,23 @@ export default class TownScene extends Phaser.Scene {
     this.npcs = [];
 
     this.npcCfgs.forEach(cfg => {
-      const npc = this.physics.add.staticSprite(
-        cfg.x * TILE_SIZE + TILE_SIZE / 2,
-        cfg.y * TILE_SIZE + TILE_SIZE / 2,
-        'player_field', 1
-      );
-      if (cfg.tint) npc.setTint(cfg.tint);
+      // Phase 9: real NPC art keyed by stable art key (npcKey || role),
+      // never display name. WorldData npcKeys are camelCase; art files are
+      // snake_case — normalize exactly like BattleScene's enemy art lookup.
+      const rawKey = cfg.npcKey || cfg.role;
+      const artKey = rawKey.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+      const texKey = `npc_${artKey}`;
+      const npc = this.textures.exists(texKey)
+        ? this.physics.add.staticSprite(
+            cfg.x * TILE_SIZE + TILE_SIZE / 2,
+            cfg.y * TILE_SIZE + TILE_SIZE / 2,
+            texKey)
+        : this.physics.add.staticSprite(
+            cfg.x * TILE_SIZE + TILE_SIZE / 2,
+            cfg.y * TILE_SIZE + TILE_SIZE / 2,
+            'player_field', 1);
+      if (!this.textures.exists(texKey) && cfg.tint) npc.setTint(cfg.tint);
+      npc.setData('artKey', artKey);
       npc.setData('name', cfg.name);
       if (cfg.npcKey) npc.setData('npcKey', cfg.npcKey);
       if (cfg.role === 'jobMaster') npc.setData('isJobMaster', true);

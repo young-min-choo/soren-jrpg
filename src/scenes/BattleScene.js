@@ -91,7 +91,12 @@ export default class BattleScene extends Phaser.Scene {
       const startX = 180;
       const x = startX + (i % 2) * spacing;
       const y = 90 + Math.floor(i / 2) * 50;
-      const texKey = `bsprite_${enemy.type}`;
+      // EnemyData keys are camelCase (caveSpider); art files are snake_case
+      // (cave_spider) — normalize so every enemy gets its real sprite.
+      const artKey = enemy.type.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+      // Two enemies share art with differently-named files:
+      const ART_ALIAS = { ruins_zombie: 'zombie', wolf_pack: 'dire_wolf' };
+      const texKey = `bsprite_${ART_ALIAS[artKey] || artKey}`;
       let sprite;
       if (this.textures.exists(texKey)) {
         sprite = this.add.image(x, y, texKey);

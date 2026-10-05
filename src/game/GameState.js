@@ -6,10 +6,20 @@ import { JOBS, getStatsForLevel } from './JobData.js';
 import { getStartingInventory } from './ItemData.js';
 import { getEquip, EQUIP_BONUS_KEYS } from './EquipmentData.js';
 
-function createCharacter(name, jobName, level = 1) {
+// Battle-sprite art keys — stable per CHARACTER (not per display name).
+// The hero can be renamed in the new-game flow; his art is always the
+// protagonist sprite. Fixed cast map to their own art.
+const SPRITE_KEYS = { Aria: 'aria_battle', Kael: 'kael_battle', Aldric: 'aldric_battle' };
+
+function createCharacter(name, jobName, level = 1, playerName = null) {
   const stats = getStatsForLevel(jobName, level);
   return {
     name,
+    // Stable art identity — battle sprite is picked by this key, NOT the
+    // display name (player can rename the hero: name "Peter" must still
+    // load the hero's sprite). Fixed cast members map to their art;
+    // the renamed hero falls back to slot 0 (the protagonist).
+    spriteKey: SPRITE_KEYS[name] || (name === playerName ? 'soren_battle' : undefined),
     job: jobName,
     level,
     jobLevel: 1,
@@ -38,10 +48,10 @@ function createCharacter(name, jobName, level = 1) {
 }
 
 function startingParty(playerName, playerJob) {
-  // Design doc §3: Soren + thief (Kael) + "white mage" (actually monk, Aria).
+  // Design doc §3: hero + thief (Kael) + "white mage" (actually monk, Aria).
   // Kael arrives as a Thief — his sister subplot (Neve, Port Meridian) opens early.
   return [
-    createCharacter(playerName, playerJob, 1),
+    createCharacter(playerName, playerJob, 1, playerName),
     createCharacter('Aria', 'Monk', 1),
     createCharacter('Kael', 'Thief', 1),
   ];
@@ -162,6 +172,8 @@ const GameState = {
     if (state.party.length >= 4) return null;          // design: party of 4 max
     if (state.party.some(p => p.name === name)) return null;
     const char = createCharacter(name, jobName, level);
+    // Fixed cast always resolve their art key (e.g. Aldric joining later).
+    if (!char.spriteKey) char.spriteKey = SPRITE_KEYS[name] || null;
     state.party.push(char);
     GameState.unlockJob(jobName);
     return char;

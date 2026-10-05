@@ -62,11 +62,14 @@ export default class BattleScene extends Phaser.Scene {
     this.add.rectangle(128, 150, 256, 48, 0x1a3a1a); // ground
 
     // Player sprites (Phase 9: AI battle sprite if texture exists, else legacy rect)
+    // Sprite resolved via char.spriteKey (stable art identity) — NOT the
+    // display name, which the player can rename at will.
     this.playerSprites = [];
     const partyColors = [0x4488ff, 0xff8844, 0x44ff88, 0xff44ff];
     this.party.forEach((char, i) => {
       const x = 40 + i * 30;
-      const texKey = `bsprite_party_${char.name}`;
+      const artKey = char.spriteKey || 'soren_battle'; // protagonist art for unnamed/legacy-party entries
+      const texKey = `bsprite_${artKey}`;
       let sprite;
       if (this.textures.exists(texKey)) {
         sprite = this.add.image(x, 120, texKey);

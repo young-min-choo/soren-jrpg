@@ -31,12 +31,14 @@ export default class BootScene extends Phaser.Scene {
     // Phase 9: AI battle sprites (enemy + party) from the generated manifest.
     // Missing files don't load (textures.exists() returns false) and
     // BattleScene falls back to placeholder rectangles.
-    const partyFile = { Soren: 'soren_battle', Aria: 'aria_battle', Kael: 'kael_battle', Aldric: 'aldric_battle' };
+    // NOTE: loaded by ART KEY (soren_battle etc.), not display name — the
+    // hero can be renamed in the new-game flow; his art key is stable.
     battleManifest.enemies.forEach((key) => {
       this.load.image(`bsprite_${key}`, `sprites/battle/${key}.png`);
     });
-    Object.entries(partyFile).forEach(([name, key]) => {
-      this.load.image(`bsprite_party_${name}`, `sprites/battle/${key}.png`);
+    // Party art files, keyed by ART KEY (manifest 'party' maps display-name → art key)
+    Object.values(battleManifest.party).forEach((key) => {
+      this.load.image(`bsprite_${key}`, `sprites/battle/${key}.png`);
     });
     // Phase 9: themed tileset strips (fallback to programmatic if missing)
     ['town_tiles', 'dgn_ember', 'dgn_tide', 'dgn_hollow', 'dgn_spire', 'dgn_ruins'].forEach((key) => {

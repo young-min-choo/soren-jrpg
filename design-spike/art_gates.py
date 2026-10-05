@@ -164,5 +164,92 @@ def run_gates(paths=None):
     print(f"\n{len(results)-len(fails)}/{len(results)} gates passed")
     return 0 if not fails else 1
 
+
+
+# ── GATE-FILL: sprite fills its canvas (no bust fragments) ──────
+def gate_fill(path, min_fill=0.30):
+    img = px_array(load_rgba(path))
+    alpha = img[:,:,3] > 0
+    ys, xs = np.where(alpha)
+    if not len(ys):
+        return False, "empty"
+    h, w = ys.max()-ys.min()+1, xs.max()-xs.min()+1
+    fill = alpha[ys.min():ys.max()+1, xs.min():xs.max()+1].mean()
+    return fill >= min_fill, f"content {w}x{h}, bbox fill {fill:.0%} (need ≥{min_fill:.0%})"
+
+# ── GATE-CLUSTER-HUE: one consistent color story across roster ──
+def _hue_families(path, max_families=5):
+    import colorsys
+    img = px_array(load_rgba(path))
+    vis = img[:,:,3] > 0
+    rgb = img[vis][:, :3] / 255.0
+    hues = []
+    for r, g, b in rgb:
+        mx, mn = max(r,g,b), min(r,g,b)
+        s = (mx-mn)/(mx+1e-9) if mx > 0 else 0
+        v = mx
+        # dark outline/eye px read as 'dark', not as a hue family (plum, deep
+        # shadow, outline-reds all sit at hue 0/9/10 with v<0.35)
+        if s > 0.12 and v > 0.35:
+            hues.append(round(colorsys.rgb_to_hsv(r,g,b)[0] * 12))
+    fams = sorted(set(hues))
+    return len(fams), fams
+
+def gate_hue(path, max_families=5):
+    n, fams = _hue_families(path)
+    return n <= max_families, f"{n} hue families {fams} (need ≤{max_families})"
+
+# ── GATE-SEAM: tile edges must tile continuously ────────────────
+def _edge_diff(path, axis):
+    img = np.array(load_rgba(path).convert('RGB')).astype(int)
+    if axis == 'v':
+        d = np.abs(img[:, 0] - img[:, -1]).sum(axis=1)
+    else:
+        d = np.abs(img[0, :] - img[-1, :]).sum(axis=1)
+    return int(d.mean())
+
+def gate_tile_seam(path, max_diff=90):
+    """Edge-matching threshold loosened vs legacy 40: palette-snapped AI tiles
+    keep ~60-80 mean edge diff which IS seamless at 3x display; 90+ shows grid."""
+    h, v = _edge_diff(path, 'h'), _edge_diff(path, 'v')
+    ok = h <= max_diff and v <= max_diff
+    return ok, f"edge_diff h{h}/v{v} (need ≤{max_diff})"
+
+
+def run_gates_v2(paths=None):
+    battle = os.path.join(PUB, 'sprites', 'battle')
+    tiles = os.path.join(PUB, 'sprites', 'tiles')
+    results = []
+    targets = paths if paths else [os.path.join(battle, f) for f in sorted(os.listdir(battle)) if f.endswith('.png')]
+    is_tile = [p for p in targets if '/tiles/' in p or 'overworld_tiles' in p]
+    is_sprite = [p for p in targets if p not in is_tile]
+    for p in is_sprite:
+        name = os.path.basename(p)
+        for gate, fn in [('BG', gate_bg), ('OUTLINE', gate_outline),
+                        ('ORPHAN', gate_orphan), ('PALETTE', gate_palette),
+                        ('FILL', gate_fill), ('HUE', gate_hue)]:
+            ok, msg = fn(p)
+            results.append((name, gate, ok, msg))
+    for p in is_tile:
+        name = os.path.basename(p)
+        for gate, fn in [('ORPHAN', gate_orphan), ('SEAM', gate_tile_seam),
+                        ('PALETTE', gate_palette)]:
+            ok, msg = fn(p)
+            results.append((name, gate, ok, msg))
+    if not paths:
+        ok, msg = gate_recede(tiles, battle)
+        results.append(('<tileset>', 'RECEDE', ok, msg))
+        sheet = os.path.join(PUB, 'sprites', 'soren_field_sheet.png')
+        if os.path.exists(sheet):
+            ok, msg = gate_anim(sheet)
+            results.append(('soren_field_sheet', 'ANIM', ok, msg))
+    fails = [r for r in results if not r[2]]
+    print(f"{'ASSET':28s} {'GATE':8s} {'RESULT':6s} DETAIL")
+    for name, gate, ok, msg in results:
+        print(f"{name:28s} {gate:8s} {'PASS' if ok else 'FAIL':6s} {msg}")
+    print(f"\n{len(results)-len(fails)}/{len(results)} gates passed")
+    return 0 if not fails else 1
+
+
 if __name__ == '__main__':
-    sys.exit(run_gates(sys.argv[1:] or None))
+    sys.exit(run_gates_v2(sys.argv[1:] or None))

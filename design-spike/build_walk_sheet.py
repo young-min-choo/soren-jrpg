@@ -31,16 +31,30 @@ PLUM = (42, 34, 51)
 FRAME_W, FRAME_H = 16, 24
 
 def load_base(path, size=(FRAME_W, FRAME_H)):
-    """Quantize a raw 512px sprite to a 16x24 true-pixel grid with chroma-key."""
-    from process_battle_sprites import chroma_key
+    """Raw 512px render -> gradient-safe chroma-key -> despill -> crop-to-content
+    -> ASPECT-FIT resize (no squeeze!) -> anchored on frame, feet at bottom.
+
+    The old pipeline force-squeezed the square raw into 16x24 (`!`), turning
+    every direction into the same half-width mush. Crop-then-fit keeps the
+    body's aspect ratio; the tiny remainder is padding, not distortion."""
+    from chroma_key_v2 import chroma_key_v2, despill
     import subprocess
-    img = chroma_key(Image.open(path))
-    tmp = '/tmp/walkbase.png'
-    img.save(tmp)
-    subprocess.run(['magick', tmp, '-filter', 'point', '-resize',
-                    f'{size[0]}x{size[1]}!', '+dither', '-colors', '20', tmp],
-                   check=True, timeout=30)
-    return np.array(Image.open(tmp).convert('RGBA'))
+    img = chroma_key_v2(Image.open(path))
+    despill(img)
+    a = np.array(img)[:, :, 3] > 0
+    ys, xs = np.where(a)
+    if len(ys):
+        img = img.crop((int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1))
+    w, h = size
+    tmp_c, tmp_f = '/tmp/walkbase_c.png', '/tmp/walkbase_f.png'
+    img.save(tmp_c)
+    # aspect-fit into (w)x(h-2); bottom 2px reserved so outline never clips
+    subprocess.run(['magick', tmp_c, '-filter', 'point', '-resize', f'{w}x{h-2}',
+                    '+dither', '-colors', '20', tmp_f], check=True, timeout=30)
+    fitted = Image.open(tmp_f).convert('RGBA')
+    canvas = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    canvas.paste(fitted, ((w - fitted.width) // 2, h - 2 - fitted.height))
+    return np.array(canvas)
 
 def snap(arr):
     pal = [tuple(v) for v in json.load(open(os.path.join(SPIKE, 'palette', 'master_palette.json'))).values()]
@@ -129,9 +143,12 @@ def mirror_x(frame):
     return frame[:, ::-1, :].copy()
 
 # ── build ──────────────────────────────────────────────────────
-front = load_base(os.path.join(RAW, 'soren_front.png')) if os.path.exists(os.path.join(RAW, 'soren_front.png')) else None
-back = load_base(os.path.join(RAW, 'soren_back.png'))
-side = load_base(os.path.join(RAW, 'soren_side.png')) if os.path.exists(os.path.join(RAW, 'soren_side.png')) else None
+# Phase 9 v2: identity-locked hero raws (hero_front/side/back, one seed —
+# same character in all directions). Legacy soren_* raws retired: they were
+# three unrelated renders (blue dress vs green hoodie bust vs teal tunic).
+front = load_base(os.path.join(RAW, 'hero_front.png'))
+back = load_base(os.path.join(RAW, 'hero_back.png'))
+side = load_base(os.path.join(RAW, 'hero_side.png'))
 
 # fall back to the deployed front sheet's stand frame if raws are missing
 if front is None:

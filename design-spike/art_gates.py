@@ -82,9 +82,15 @@ def mean_sat(img):
     return float(sat[vis].mean())
 
 def gate_recede(tile_dir, sprite_dir):
-    tiles_sat, sprites_sat = [], []
+    # The overworld strip lives OUTSIDE tiles/ (public/sprites/overworld_tiles.png);
+    # it must pass the recede check too — include it when present.
+    tiles_sat = []
+    overworld = os.path.join(PUB, 'sprites', 'overworld_tiles.png')
+    if os.path.exists(overworld):
+        tiles_sat.append(mean_sat(load_rgba(overworld)))
     for f in os.listdir(tile_dir):
         if f.endswith('.png'): tiles_sat.append(mean_sat(load_rgba(os.path.join(tile_dir, f))))
+    sprites_sat = []
     for f in os.listdir(sprite_dir):
         if f.endswith('.png'): sprites_sat.append(mean_sat(load_rgba(os.path.join(sprite_dir, f))))
     t, s = np.mean(tiles_sat), np.mean(sprites_sat)

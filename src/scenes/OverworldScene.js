@@ -463,7 +463,11 @@ export default class OverworldScene extends Phaser.Scene {
     for (let y = 0; y < OW_ROWS; y++) {
       const row = [];
       for (let x = 0; x < OW_COLS; x++) {
-        let tile = (x + y) % 2 === 0 ? T_GRASS_DARK : T_GRASS_LIGHT;
+        // Organic grass: mostly dark with large light patches (pseudo-noise),
+        // NOT a hard (x+y)%2 checkerboard — that rendered as a visible grid.
+        let tile = T_GRASS_DARK;
+        if (((x * 7 + y * 4 + ((x * x + y * 3) % 5)) % 11) < 4) tile = T_GRASS_LIGHT;
+        if (((x * 3 + y * 11) % 17) === 2) tile = T_GRASS_LIGHT;
         // Border
         if (x === 0 || x === OW_COLS - 1 || y === 0 || y === OW_ROWS - 1) tile = T_FOREST;
         // ── Original 20×16 quadrant (kept exact) ──

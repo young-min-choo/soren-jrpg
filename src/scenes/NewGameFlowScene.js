@@ -52,8 +52,34 @@ export default class NewGameFlowScene extends Phaser.Scene {
 
     this.handleKeyDown = (e) => this.onKey(e);
     window.addEventListener('keydown', this.handleKeyDown);
+
+    // Real text input for name entry. A focused editable puts Vimium C /
+    // key-grabbing extensions into insert mode, so single letters reach the
+    // game instead of triggering browser-shortcut commands (p = pin, t = new
+    // tab, r = reload …). Kept as a separate node (never inside panelDiv,
+    // whose innerHTML is rewritten on every render).
+    this.nameInput = document.createElement('input');
+    this.nameInput.maxLength = NAME_MAX;
+    this.nameInput.autocomplete = 'off';
+    this.nameInput.spellcheck = false;
+    this.nameInput.autocapitalize = 'characters';
+    this.nameInput.style.cssText = `
+      position: absolute; left: 50%; top: calc(50% - 88px); transform: translateX(-50%);
+      width: 400px; text-align: center; font-size: 36px; letter-spacing: 6px;
+      font-family: "VT323", monospace; color: #fff; background: transparent;
+      border: none; border-bottom: 2px solid rgba(255,255,255,0.4);
+      padding: 4px 0; outline: none; z-index: 102; pointer-events: auto; display: none;
+    `;
+    this.container.appendChild(this.nameInput);
+    this.domElements.push(this.nameInput);
+    this._refocusOnClick = () => {
+      if (this.stage === 'name' && this.nameInput) this.nameInput.focus();
+    };
+    this.container.addEventListener('click', this._refocusOnClick);
+
     this.events.on('shutdown', () => {
       window.removeEventListener('keydown', this.handleKeyDown);
+      this.container.removeEventListener('click', this._refocusOnClick);
       this.domElements.forEach(el => el.remove());
       this.domElements = [];
     });
@@ -66,16 +92,41 @@ export default class NewGameFlowScene extends Phaser.Scene {
   onKey(e) {
     const k = e.key;
     if (this.stage === 'name') {
-      if (/^[a-zA-Z]$/.test(k) && this.playerName.length < NAME_MAX) {
-        this.playerName += k;
-      } else if (k === 'Backspace') {
-        this.playerName = this.playerName.slice(0, -1);
-      } else if (k === 'Enter') {
+      // Text input is handled by nameInput (real <input>, focused — browser
+      // extensions like Vimium C pass keys through to focused editables).
+      const usingInput = document.activeElement === this.nameInput;
+      if (k === 'Enter') {
+        this.playerName = ((this.nameInput?.value || '') + this.playerName).trim().slice(0, NAME_MAX);
         if (this.playerName.length === 0) this.playerName = 'Soren';
+        if (this.nameInput) this.nameInput.style.display = 'none';
         this.stage = 'job';
+        e.preventDefault();
+        this.render();
+        return;
       } else if (k === 'Escape') {
         this.stage = 'job'; // skip customization entirely
+        if (this.nameInput) this.nameInput.style.display = 'none';
+        e.preventDefault();
+        this.render();
+        return;
+      } else if (k === 'Tab') {
+        e.preventDefault(); // keep keyboard focus inside the dialog
+        return;
       }
+      if (usingInput) {
+        // Let the native <input> insert the character — preventDefault here
+        // would silently swallow the keystroke (the "Soren" bug).
+        return;
+      }
+      // Input not focused (e.g. auto-focus lost): still accept typing directly
+      if (/^[a-zA-Z]$/.test(k) && this.playerName.length < NAME_MAX) {
+        this.playerName += k;
+      } else if (k === 'Backspace' && this.playerName.length > 0) {
+        this.playerName = this.playerName.slice(0, -1);
+      }
+      e.preventDefault();
+      this.render();
+      return;
     } else if (this.stage === 'job') {
       if (k === 'ArrowUp' || k === 'w' || k === 'W') {
         this.jobIndex = (this.jobIndex - 1 + STARTING_JOBS.length) % STARTING_JOBS.length;
@@ -102,12 +153,18 @@ export default class NewGameFlowScene extends Phaser.Scene {
   render() {
     if (!this.panelDiv) return;
     if (this.stage === 'name') {
-      const shown = this.playerName + (Math.floor(Date.now() / 500) % 2 === 0 ? '_' : '');
+      // The <input> shows the typed name itself (native caret — no fake cursor).
+      // Its value is the source of truth here; re-render only refreshes the label.
+      const typed = this.nameInput?.value || '';
       this.panelDiv.innerHTML = `
         <div style="font-size: 26px;color:#ffff00;margin-bottom:8px">Name your hero</div>
-        <div style="font-size: 36px;letter-spacing:6px;min-height:40px;color:#fff;border-bottom:2px solid rgba(255,255,255,0.4);padding:4px 0">${shown || '<span style="color:#555">Soren</span>'}</div>
-        <div style="font-size: 16px;color:#888;margin-top:10px">Type letters · Backspace deletes · Enter confirms${this.playerName ? '' : ' (blank = Soren)'} · Esc skips all</div>
+        <div style="height:52px"></div>
+        <div style="font-size: 16px;color:#888;margin-top:10px">Click the field if keys don't register · Enter confirms${typed ? '' : ' (blank = Soren)'} · Esc skips all</div>
       `;
+      if (this.nameInput) {
+        this.nameInput.style.display = 'block';
+        if (document.activeElement !== this.nameInput) this.nameInput.focus();
+      }
     } else {
       const jobName = STARTING_JOBS[this.jobIndex];
       const job = JOBS[jobName];

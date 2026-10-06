@@ -954,29 +954,27 @@ export default class BattleScene extends Phaser.Scene {
 
   flashSprite(sprite) {
     if (!sprite) return;
-    // Manual flash via rAF (Phaser tweens don't run in launched scenes)
-    if (sprite._isSprite) {
-      // Phase 9 AI sprite: tint flash (setTint only exists on Sprites/Images)
-      sprite.setTint(0xff4444);
-      setTimeout(() => sprite.clearTint(), 240);
-      return;
-    }
-    // Legacy Rectangle path: setFillStyle flash
-    const origColor = sprite.fillColor;
+    // Manual strobe via rAF (Phaser tweens don't run in launched scenes).
+    // Both paths: 3 strobes × 90ms alternating white/red — reads as an impact hit.
     const startTime = performance.now();
-    const duration = 240; // 3 flashes × 80ms
+    const duration = 270; // 3 flashes × 90ms
+    const isRect = !sprite._isSprite;
+    const origColor = isRect ? sprite.fillColor : null;
     const animateFlash = () => {
       const elapsed = performance.now() - startTime;
       if (elapsed < duration) {
-        const phase = Math.floor(elapsed / 80) % 2;
-        if (phase === 0) {
-          sprite.setFillStyle(0xff4444);
+        const phase = Math.floor(elapsed / 90) % 2;
+        if (isRect) {
+          sprite.setFillStyle(phase === 0 ? 0xff4444 : origColor);
+        } else if (phase === 0) {
+          sprite.setTint(0xff4444);
         } else {
-          sprite.setFillStyle(origColor);
+          sprite.setTint(0xffffff);
         }
         requestAnimationFrame(animateFlash);
       } else {
-        sprite.setFillStyle(origColor);
+        if (isRect) sprite.setFillStyle(origColor);
+        else sprite.clearTint();
       }
     };
     requestAnimationFrame(animateFlash);
@@ -986,8 +984,8 @@ export default class BattleScene extends Phaser.Scene {
     // Manual shake via rAF (Phaser camera shake doesn't work in launched scenes)
     const cam = this.cameras.main;
     const startTime = performance.now();
-    const duration = 150;
-    const intensity = 4; // pixels
+    const duration = 280;
+    const intensity = 9; // pixels — tuned to be FEELT at 3x canvas scale
     const animateShake = () => {
       const elapsed = performance.now() - startTime;
       if (elapsed < duration) {
@@ -1016,25 +1014,29 @@ export default class BattleScene extends Phaser.Scene {
       position: absolute;
       left: ${sprite.x * scaleX}px;
       top: ${sprite.y * scaleY - 10}px;
-      transform: translate(-50%, 0);
+      transform: translate(-50%, 0) scale(0.5);
       color: ${color || '#ffff44'};
-      font-size: 26px;
+      font-size: 34px;
       font-weight: bold;
       font-family: "VT323", monospace;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.9);
+      text-shadow: 2px 2px 0 rgba(0,0,0,0.95), -1px -1px 0 rgba(0,0,0,0.7);
       pointer-events: none;
       z-index: 40;
-      transition: top 1.2s ease-out, opacity 1.2s ease-out;
+      transition: top 0.9s cubic-bezier(0.2, 0.8, 0.4, 1), opacity 0.9s ease-out, transform 0.15s ease-out;
       opacity: 1;
     `;
     div.textContent = dmg;
     container.appendChild(div);
-    // Animate upward + fade (longer duration for visibility)
+    // Pop-in scale (0.5x → 1.15x overshoot reads as impact), then rise + fade
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      div.style.transform = 'translate(-50%, 0) scale(1.15)';
+    }));
     setTimeout(() => {
-      div.style.top = (sprite.y * scaleY - 60) + 'px';
+      div.style.transform = 'translate(-50%, 0) scale(1)';
+      div.style.top = (sprite.y * scaleY - 56) + 'px';
       div.style.opacity = '0';
-    }, 100);
-    setTimeout(() => div.remove(), 1500);
+    }, 260);
+    setTimeout(() => div.remove(), 1300);
   }
 
   log(text) {

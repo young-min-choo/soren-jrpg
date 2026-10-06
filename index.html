@@ -39,7 +39,9 @@
       outline: none;
       width: 768px;
       height: 672px;
-      /* Use smooth scaling — text stays readable, sprites are slightly soft */
+      /* Crisp nearest-neighbor upscaling — pixel art must stay crisp.
+         All legible text is DOM-overlay; nothing draws to the canvas. */
+      image-rendering: pixelated;
     }
   </style>
 </head>

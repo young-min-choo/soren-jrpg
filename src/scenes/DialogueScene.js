@@ -48,24 +48,23 @@ export default class DialogueScene extends Phaser.Scene {
     const portraitKey = resolvePortraitKey(this.dialogueData.speaker);
     const portrait = document.createElement('div');
     portrait.style.cssText = `
-      width: 48px; height: 48px;
-      min-width: 48px;
-      background: #4a4a8a;
+      width: 64px; height: 64px;
+      min-width: 64px;
+      background: #1a1626;
       border: 1px solid rgba(255,255,255,0.4);
       display: flex;
       align-items: center;
       justify-content: center;
       margin-right: 8px;
-      font-size: 28px;
-      color: #aaa;
       image-rendering: pixelated;
     `;
     if (portraitKey && this.textures.exists(`portrait_${portraitKey}`)) {
       const tex = this.textures.get(`portrait_${portraitKey}`);
       const src = tex.getSourceImage();
       const c = document.createElement('canvas');
-      c.width = 48; c.height = 48;
-      c.getContext('2d').drawImage(src, 0, 0);
+      c.width = 64; c.height = 64;
+      // full-resolution source, centered (64px sources fill exactly)
+      c.getContext('2d').drawImage(src, 0, 0, src.width, src.height, 0, 0, 64, 64);
       // CSS sizes the box; canvas keeps crisp pixel scaling
       c.style.width = '100%'; c.style.height = '100%';
       c.style.imageRendering = 'pixelated';

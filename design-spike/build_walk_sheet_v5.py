@@ -139,22 +139,27 @@ def torso_side(a):
 
 def legs_side(a, stride=0, bob=0):
     ly0 = 18 - bob
-    _H(a, ly0, 5, 10, PAL['deep'])     # cloak hem
+    _H(a, ly0, 3, 11, PAL['deep'])     # cloak hem (wide so legs emerge under it)
+    # TWO-leg side read: near leg = light charcoal, far leg = dark (depth cue).
+    # Character faces LEFT; near leg sits slightly lower/left, far behind.
     if stride == 0:
-        _H(a, ly0+1, 5, 9, PAL['charcoal'])
-        _H(a, ly0+2, 5, 9, PAL['charcoal'])
-        _H(a, ly0+3, 5, 9, PAL['hair'])
-        _H(a, ly0+4, 5, 9, PAL['outline'])
+        # legs together — near + far both visible side by side
+        _H(a, ly0+1, 4, 6, PAL['charcoal']); _H(a, ly0+1, 8, 10, PAL['charcoal_d'])
+        _H(a, ly0+2, 4, 6, PAL['charcoal']); _H(a, ly0+2, 8, 10, PAL['charcoal_d'])
+        _H(a, ly0+3, 3, 6, PAL['hair']);     _H(a, ly0+3, 8, 10, PAL['charcoal_d'])
+        _H(a, ly0+4, 3, 6, PAL['outline']); _P(a, ly0+4, 9, PAL['outline'])
     elif stride > 0:
-        _H(a, ly0+1, 3, 9, PAL['charcoal'])
-        _H(a, ly0+2, 2, 8, PAL['charcoal'])
-        _H(a, ly0+3, 2, 7, PAL['hair'])
-        _H(a, ly0+4, 2, 8, PAL['outline'])
+        # stride open: near leg extends FORWARD (left), far leg trails BACK
+        _H(a, ly0+1, 3, 6, PAL['charcoal']); _H(a, ly0+1, 9, 11, PAL['charcoal_d'])
+        _H(a, ly0+2, 1, 5, PAL['charcoal']); _H(a, ly0+2, 10, 12, PAL['charcoal_d'])
+        _H(a, ly0+3, 1, 4, PAL['hair']);     _H(a, ly0+3, 11, 13, PAL['charcoal_d'])
+        _H(a, ly0+4, 1, 4, PAL['outline']); _P(a, ly0+4, 12, PAL['outline'])
     else:
-        _H(a, ly0+1, 5, 11, PAL['charcoal'])
-        _H(a, ly0+2, 6, 12, PAL['charcoal'])
-        _H(a, ly0+3, 7, 12, PAL['hair'])
-        _H(a, ly0+4, 7, 13, PAL['outline'])
+        # stride crossed: near leg swings BACK, far leg forward (mostly hidden)
+        _H(a, ly0+1, 8, 11, PAL['charcoal']); _H(a, ly0+1, 2, 5, PAL['charcoal_d'])
+        _H(a, ly0+2, 9, 12, PAL['charcoal']); _H(a, ly0+2, 1, 4, PAL['charcoal_d'])
+        _H(a, ly0+3, 10, 13, PAL['hair']);    _H(a, ly0+3, 1, 3, PAL['charcoal_d'])
+        _H(a, ly0+4, 10, 13, PAL['outline']); _P(a, ly0+4, 2, PAL['outline'])
 
 # ── BACK (up-facing): hood covers everything — the battle sprite's back read ──
 def head_back(a):

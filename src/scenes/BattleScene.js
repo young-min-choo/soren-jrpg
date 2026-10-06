@@ -90,7 +90,9 @@ export default class BattleScene extends Phaser.Scene {
       const spacing = 48;
       const startX = 180;
       const x = startX + (i % 2) * spacing;
-      const y = 90 + Math.floor(i / 2) * 50;
+      // rows anchored to the ground strip (ground rect spans y=126..174):
+      // row 0 at y=110 puts sprite feet ≈120 on the grass; row 1 at 138.
+      const y = 110 + Math.floor(i / 2) * 28;
       // EnemyData keys are camelCase (caveSpider); art files are snake_case
       // (cave_spider) — normalize so every enemy gets its real sprite.
       const artKey = enemy.type.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
@@ -126,7 +128,7 @@ export default class BattleScene extends Phaser.Scene {
       const spacing = 48;
       const startX = 180;
       const worldX = startX + (i % 2) * spacing;
-      const worldY = 90 + Math.floor(i / 2) * 50;
+      const worldY = 110 + Math.floor(i / 2) * 28;
       const labelDiv = this.createDomText('', container, {
         left: (worldX * SCALE) + 'px',
         top: ((worldY + 18) * SCALE) + 'px',

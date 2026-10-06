@@ -47,10 +47,15 @@ export default class DungeonScene extends Phaser.Scene {
     const map = this.make.tilemap({ data: this.mapData, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
     // Phase 9: themed ruins tileset when BootScene built it
       const useKey = this.textures.exists('dgn_ruins') ? 'dgn_ruins' : 'town_tiles';
+      this._themeTexKey = useKey;
       const tileset = map.addTilesetImage(useKey, useKey, TILE_SIZE, TILE_SIZE);
     this.groundLayer = map.createLayer(0, tileset, 0, 0);
     this.groundLayer.setCollision([T_WALL, T_PIT, T_CHEST, T_DOOR]);
     // Note: T_BOSS is NOT in collision — player must step on it to trigger the fight
+
+    // D: floor variants (frames 10=crack, 11=moss) de-uniform the wallpaper floor.
+    // Deterministic hash pick — ~9% crack, ~6% moss, only on plain floor tiles.
+    this.sprinkleFloorVariants(groundLayer => groundLayer);
 
     // --- Boss sprite (visible on the boss tile) ---
     const bossTileX = Math.floor(MAP_COLS / 2);
@@ -372,6 +377,37 @@ export default class DungeonScene extends Phaser.Scene {
   }
 
   // --- Push block puzzle ---
+  /** D: overlay floor-variant textures (frames 10=crack, 11=moss) on plain floor tiles. */
+  sprinkleFloorVariants() {
+    const layer = this.groundLayer;
+    if (!layer || !this._themeTexKey) return;
+    const texObj = this.textures.get(this._themeTexKey);
+    if (!texObj || !texObj.has(10)) return;
+    const hash = (x, y, seed) => {
+      let n = (x * 374761393 + y * 668265263 + seed * 2654435761) >>> 0;
+      n = Math.imul(n ^ (n >>> 13), 1274126177) >>> 0;
+      return (n ^ (n >>> 16)) >>> 0;
+    };
+    for (let y = 0; y < layer.height; y++) {
+      for (let x = 0; x < layer.width; x++) {
+        const t = layer.getTileAt(x, y, true);
+        if (!t || t.index === -1 || t.index !== T_FLOOR + 1) continue;
+        const h = hash(x, y, 7) % 100;
+        if (h < 9 || (h >= 15 && h < 21)) {
+          const frame = h < 9 ? 10 : 11;
+          const img = this.add.image(
+            x * TILE_SIZE + TILE_SIZE / 2,
+            y * TILE_SIZE + TILE_SIZE / 2,
+            this._themeTexKey, frame
+          );
+          img.setDepth(0);
+        }
+      }
+    }
+  }
+
+
+
   setBlockActive(block, on) {
     // Image sprites (D0 tile art) tint; rectangles keep fillStyle
     if (block.fillStyle === undefined) {

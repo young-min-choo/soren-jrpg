@@ -60,6 +60,8 @@ export function makeRelicDungeon(config) {
       const tileset = map.addTilesetImage(useKey, useKey, TILE_SIZE, TILE_SIZE);
       this.groundLayer = map.createLayer(0, tileset, 0, 0);
       this.groundLayer.setCollision([T_WALL, T_HAZARD, T_DOOR]);
+      this._themeTexKey = useKey;
+      this.sprinkleFloorVariants();
 
       // Boss sprite — D0 sigil art when theme strip has it, fallback rectangles
       const bossTileX = 10, bossTileY = 2;
@@ -511,7 +513,38 @@ export function makeRelicDungeon(config) {
       }
     }
 
-    generateMap() {
+    /** D: overlay floor-variant textures (frames 10=crack, 11=moss) on plain floor tiles. */
+  sprinkleFloorVariants() {
+    const layer = this.groundLayer;
+    if (!layer || !this._themeTexKey) return;
+    const texObj = this.textures.get(this._themeTexKey);
+    if (!texObj || !texObj.has(10)) return;
+    const hash = (x, y, seed) => {
+      let n = (x * 374761393 + y * 668265263 + seed * 2654435761) >>> 0;
+      n = Math.imul(n ^ (n >>> 13), 1274126177) >>> 0;
+      return (n ^ (n >>> 16)) >>> 0;
+    };
+    for (let y = 0; y < layer.height; y++) {
+      for (let x = 0; x < layer.width; x++) {
+        const t = layer.getTileAt(x, y, true);
+        if (!t || t.index === -1 || t.index !== T_FLOOR + 1) continue;
+        const h = hash(x, y, 7) % 100;
+        if (h < 9 || (h >= 15 && h < 21)) {
+          const frame = h < 9 ? 10 : 11;
+          const img = this.add.image(
+            x * TILE_SIZE + TILE_SIZE / 2,
+            y * TILE_SIZE + TILE_SIZE / 2,
+            this._themeTexKey, frame
+          );
+          img.setDepth(0);
+        }
+      }
+    }
+  }
+
+
+
+  generateMap() {
       const map = [];
       for (let y = 0; y < MAP_ROWS; y++) {
         const row = [];

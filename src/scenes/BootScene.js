@@ -125,8 +125,9 @@ export default class BootScene extends Phaser.Scene {
         const stripW = this.textures.exists(aiKey) ? this.textures.get(aiKey).source[0].width : 0;
         if (!this.textures.exists(aiKey) || stripW < 160) return;
         const tenTiles = stripW >= 320; // D0: specials appended (save/boss/block/switch/exit)
+        const twelveTiles = stripW >= 384; // D: floor variants appended (10=crack, 11=moss)
         const src = this.textures.get(aiKey).source[0].image;
-        const t = this.textures.createCanvas(theme, 10 * TS, TS);
+        const t = this.textures.createCanvas(theme, twelveTiles ? 12 * TS : 10 * TS, TS);
         const c = t.getContext();
         // dungeon tile indices: 0=floor 1=wall 2=hazard 3=chest 4=door 5=save 6=boss 7=block 8=switch 9=exit
         // strip order (first 5):  0=floor 1=wall 2=hazard 3=door 4=chest
@@ -144,6 +145,13 @@ export default class BootScene extends Phaser.Scene {
           }
           // register real frames so scenes can use add.image(key, frame) for specials
           t.add(dungeonIdx, 0, dungeonIdx * TS, 0, TS, TS);
+        }
+        if (twelveTiles) {
+          // D: floor variant tiles live at strip indices 10/11 = tilemap frames 10/11
+          for (const vi of [10, 11]) {
+            c.drawImage(src, vi * TS, 0, TS, TS, vi * TS, 0, TS, TS);
+            t.add(vi, 0, vi * TS, 0, TS, TS);
+          }
         }
         t.refresh();
       });

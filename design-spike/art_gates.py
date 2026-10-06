@@ -251,5 +251,84 @@ def run_gates_v2(paths=None):
     return 0 if not fails else 1
 
 
+
+# ── GATE-GROUND: field sprite bottom row connects to the ground ──
+def gate_ground(path):
+    """16x24 field sprites: feet must touch the bottom row with opaque px
+    (grounded, not hovering) — v6.2 floating-boot defect class."""
+    img = px_array(load_rgba(path))
+    alpha = img[:, :, 3] > 0
+    if not alpha.any():
+        return False, "empty"
+    ys = np.where(alpha.any(axis=1))[0]
+    bottom = ys.max()
+    if not alpha[bottom].any():
+        return False, "no ground contact"
+    return True, f"grounded at row {bottom}"
+
+# ── GATE-FACE: portrait has readable feature set ─────────────────
+def gate_face(path):
+    """64x64 portraits must contain: enough distinct colors to be a face (>=8),
+    and a warm skin-tone mass — catches hair-over-face / empty-bust regressions."""
+    img = px_array(load_rgba(path))
+    vis = img[:, :, 3] > 0
+    rgb = img[:, :, :3].astype(int)
+    colors = {tuple(c) for c in rgb[vis]}
+    if len(colors) < 8:
+        return False, f"only {len(colors)} colors (need >=8)"
+    skin = vis & (rgb[:, :, 0] > 150) & (rgb[:, :, 0] > rgb[:, :, 1]) & (rgb[:, :, 1] > rgb[:, :, 2])
+    if skin.sum() < 40:
+        return False, f"skin px {int(skin.sum())} (need >=40)"
+    return True, f"{len(colors)} colors, skin {int(skin.sum())}px"
+
+
+def run_gates_v3(paths=None):
+    battle = os.path.join(PUB, 'sprites', 'battle')
+    tiles = os.path.join(PUB, 'sprites', 'tiles')
+    npc = os.path.join(PUB, 'sprites', 'npc')
+    portraits = os.path.join(PUB, 'sprites', 'portraits')
+    results = []
+    targets = list(paths or [])
+    if not paths:
+        targets += [os.path.join(battle, f) for f in sorted(os.listdir(battle)) if f.endswith('.png')]
+        for d in (npc, portraits):
+            if os.path.isdir(d):
+                targets += [os.path.join(d, f) for f in sorted(os.listdir(d)) if f.endswith('.png')]
+    is_tile = [p for p in targets if '/tiles/' in p or 'overworld_tiles' in p]
+    npc_set = {os.path.join(npc, f) for f in os.listdir(npc) if f.endswith('.png')} if os.path.isdir(npc) else set()
+    port_set = {os.path.join(portraits, f) for f in os.listdir(portraits) if f.endswith('.png')} if os.path.isdir(portraits) else set()
+    for p in targets:
+        name = os.path.basename(p)
+        if p in npc_set:
+            for gate, fn in [('BG', gate_bg), ('ORPHAN', gate_orphan), ('PALETTE', gate_palette), ('FILL', gate_fill), ('HUE', gate_hue), ('GROUND', gate_ground)]:
+                ok, msg = fn(p)
+                results.append((f'npc/{name}', gate, ok, msg))
+        elif p in port_set:
+            for gate, fn in [('BG', gate_bg), ('ORPHAN', gate_orphan), ('PALETTE', gate_palette), ('HUE8', lambda q: gate_hue(q, max_families=8)), ('FACE', gate_face)]:
+                ok, msg = fn(p)
+                results.append((f'port/{name}', gate, ok, msg))
+        elif p in is_tile:
+            for gate, fn in [('ORPHAN', gate_orphan), ('SEAM', gate_tile_seam), ('PALETTE', gate_palette)]:
+                ok, msg = fn(p)
+                results.append((name, gate, ok, msg))
+        else:
+            for gate, fn in [('BG', gate_bg), ('OUTLINE', gate_outline), ('ORPHAN', gate_orphan), ('PALETTE', gate_palette), ('FILL', gate_fill), ('HUE', gate_hue)]:
+                ok, msg = fn(p)
+                results.append((name, gate, ok, msg))
+    if not paths:
+        ok, msg = gate_recede(tiles, battle)
+        results.append(('<tileset>', 'RECEDE', ok, msg))
+        sheet = os.path.join(PUB, 'sprites', 'soren_field_sheet.png')
+        if os.path.exists(sheet):
+            ok, msg = gate_anim(sheet)
+            results.append(('soren_field_sheet', 'ANIM', ok, msg))
+    fails = [r for r in results if not r[2]]
+    print(f"{'ASSET':32s} {'GATE':8s} {'RESULT':6s} DETAIL")
+    for name, gate, ok, msg in results:
+        print(f"{name:32s} {gate:8s} {'PASS' if ok else 'FAIL':6s} {msg}")
+    print(f"\n{len(results)-len(fails)}/{len(results)} gates passed")
+    return 0 if not fails else 1
+
+
 if __name__ == '__main__':
-    sys.exit(run_gates_v2(sys.argv[1:] or None))
+    sys.exit(run_gates_v3(sys.argv[1:] or None))

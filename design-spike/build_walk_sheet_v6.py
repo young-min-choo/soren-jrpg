@@ -170,28 +170,31 @@ def torso_side(a):
     _P(a, 15, 3, PAL['hair'])
 
 def legs_side(a, stride=0, bob=0):
+    """GBA side-walk cycle: stand / stepA (legs scissored wide) / stepB (legs pass
+    together). Thighs stay connected — vertical legs, NO diagonal shins. Near leg
+    light charcoal, far leg dark, both booted w/ outline soles on the ground row."""
     ly0 = 18 - bob
     _H(a, ly0, 4, 11, PAL['deep'])                      # cloak hem
     _P(a, ly0, 4, PAL['deep_hi']); _P(a, ly0, 11, PAL['deep_hi'])
-    # GBA-simple side walk: thighs fixed under body, boots shift ±1 along ground.
-    # Near leg (light) vs far leg (dark) — both fully drawn every frame.
     if stride == 0:
+        # rest: legs side by side under the hem
         _H(a, ly0+1, 4, 6, PAL['charcoal_l']); _H(a, ly0+1, 8, 10, PAL['charcoal_d'])
         _H(a, ly0+2, 4, 6, PAL['charcoal']);   _H(a, ly0+2, 8, 10, PAL['charcoal_d'])
         _H(a, ly0+3, 4, 6, PAL['wood']);       _H(a, ly0+3, 8, 10, PAL['wood'])
         _H(a, ly0+4, 4, 6, PAL['outline']);    _H(a, ly0+4, 8, 10, PAL['outline'])
     elif stride > 0:
-        # near boot steps forward (left), far boot trails (right)
-        _H(a, ly0+1, 4, 6, PAL['charcoal_l']); _H(a, ly0+1, 8, 10, PAL['charcoal_d'])
+        # stepA: near leg forward (cols 3-5 vertical), far leg trails (9-11)
+        _H(a, ly0+1, 3, 5, PAL['charcoal_l']); _H(a, ly0+1, 9, 11, PAL['charcoal_d'])
         _H(a, ly0+2, 3, 5, PAL['charcoal']);   _H(a, ly0+2, 9, 11, PAL['charcoal_d'])
         _H(a, ly0+3, 3, 5, PAL['wood']);       _H(a, ly0+3, 9, 11, PAL['wood'])
         _H(a, ly0+4, 3, 5, PAL['outline']);    _H(a, ly0+4, 9, 11, PAL['outline'])
     else:
-        # opposite phase: near boot trails back, far boot strides forward
-        _H(a, ly0+1, 4, 6, PAL['charcoal_l']); _H(a, ly0+1, 8, 10, PAL['charcoal_d'])
-        _H(a, ly0+2, 6, 8, PAL['charcoal']);   _H(a, ly0+2, 2, 4, PAL['charcoal_d'])
-        _H(a, ly0+3, 7, 9, PAL['wood']);       _H(a, ly0+3, 2, 4, PAL['wood'])
-        _H(a, ly0+4, 7, 9, PAL['outline']);    _H(a, ly0+4, 2, 4, PAL['outline'])
+        # stepB: the pass — legs together under the hem (single 5-9 mass reads as crossing)
+        _H(a, ly0+1, 5, 7, PAL['charcoal_l'])
+        _H(a, ly0+2, 5, 7, PAL['charcoal'])
+        _H(a, ly0+3, 5, 7, PAL['wood'])
+        _H(a, ly0+4, 5, 7, PAL['outline'])
+
 
 
 

@@ -608,81 +608,84 @@ export default class BattleScene extends Phaser.Scene {
         requestAnimationFrame(animateLunge);
       } else {
         playerSprite.x = lungeX;
-        // Impact
-        const dmg = this.calcDamage(player.atk, target.def);
-        target.hp -= dmg;
-        this.log(`${player.name} attacks ${target.name} for ${dmg} damage!`);
-        this.flashSprite(targetSprite);
-        this.screenShake();
-        this.showDamageNumber(targetSprite, dmg);
+        // STRIKE: wind-up → whip → slash arc over target → contact effects
+        this.slashArc(targetSprite, 1);
+        this.strikeGesture(playerSprite, 1, () => {
+          const dmg = this.calcDamage(player.atk, target.def);
+          target.hp -= dmg;
+          this.log(`${player.name} attacks ${target.name} for ${dmg} damage!`);
+          this.flashSprite(targetSprite);
+          this.screenShake();
+          this.showDamageNumber(targetSprite, dmg);
 
-        if (target.hp <= 0) {
-          target.hp = 0;
-          target.alive = false;
-          this.log(`${target.name} is defeated!`);
-          // Death fade runs IN PARALLEL with lunge-back (not sequential)
-          const fadeStart = performance.now();
-          const animateFade = () => {
-            const fe = performance.now() - fadeStart;
-            if (fe < 600) {
-              targetSprite.setAlpha(1 - fe / 600);
-              requestAnimationFrame(animateFade);
-            } else {
-              targetSprite.setVisible(false);
-              targetSprite.setAlpha(1);
-            }
-          };
-          requestAnimationFrame(animateFade);
-          // Counter attack (counter archetype): retaliates even as it dies — no.
-          // Counter only triggers on non-fatal hits.
-          // Lunge back immediately (parallel with fade)
-          const backStart = performance.now();
-          const animateBack = () => {
-            const be = performance.now() - backStart;
-            if (be < LUNGE_MS) {
-              const t = be / LUNGE_MS;
-              playerSprite.x = lungeX + (origX - lungeX) * (t * t);
-              requestAnimationFrame(animateBack);
-            } else {
-              playerSprite.x = origX;
-              // Wait for fade to finish, then advance turn
-              this._lungeBackTimeout = setTimeout(() => this.afterPlayerAction(), Math.max(0, 600 - LUNGE_MS));
-            }
-          };
-          requestAnimationFrame(animateBack);
-        } else {
-          // Hold at lunge position for 300ms (visible impact pause), then lunge back
-          this._lungeBackTimeout = setTimeout(() => {
-            // Counter-attack hook: physical attackers get retaliated against
-            if (target.counterPhysical && target.alive) {
-              const counterDmg = Math.max(1, Math.floor(this.calcDamage(target.atk, player.def) * 0.6));
-              player.hp -= counterDmg;
-              this.log(`${target.name} counters! ${player.name} takes ${counterDmg} damage!`);
-              this.flashSprite(playerSprite);
-              this.showDamageNumber(playerSprite, counterDmg, '#ff8888');
-              if (player.hp <= 0) {
-                player.hp = 0;
-                player.alive = false;
-                this.log(`${player.name} has fallen!`);
-                playerSprite.setVisible(false);
-              }
-            }
-            const backStart = performance.now();
-            const backFromX = lungeX;
-            const animateBack = () => {
-              const be = performance.now() - backStart;
-              if (be < LUNGE_MS) {
-                const t = be / LUNGE_MS;
-                playerSprite.x = backFromX + (origX - backFromX) * (t * t);
-                requestAnimationFrame(animateBack);
+          if (target.hp <= 0) {
+            target.hp = 0;
+            target.alive = false;
+            this.log(`${target.name} is defeated!`);
+            // Death fade runs IN PARALLEL with lunge-back (not sequential)
+            const fadeStart = performance.now();
+            const animateFade = () => {
+              const fe = performance.now() - fadeStart;
+              if (fe < 600) {
+                targetSprite.setAlpha(1 - fe / 600);
+                requestAnimationFrame(animateFade);
               } else {
-                playerSprite.x = origX;
-                this.afterPlayerAction();
+                targetSprite.setVisible(false);
+                targetSprite.setAlpha(1);
               }
             };
-            requestAnimationFrame(animateBack);
-          }, 300);
-        }
+            requestAnimationFrame(animateFade);
+            // Lunge back immediately after the strike settles (parallel with fade)
+            setTimeout(() => {
+              const backStart = performance.now();
+              const animateBack = () => {
+                const be = performance.now() - backStart;
+                if (be < LUNGE_MS) {
+                  const t = be / LUNGE_MS;
+                  playerSprite.x = lungeX + (origX - lungeX) * (t * t);
+                  requestAnimationFrame(animateBack);
+                } else {
+                  playerSprite.x = origX;
+                  // Wait for fade to finish, then advance turn
+                  this._lungeBackTimeout = setTimeout(() => this.afterPlayerAction(), Math.max(0, 600 - LUNGE_MS));
+                }
+              };
+              requestAnimationFrame(animateBack);
+            }, 180);
+          } else {
+            // Hold at lunge position for 300ms (visible impact pause), then lunge back
+            setTimeout(() => {
+              // Counter-attack hook: physical attackers get retaliated against
+              if (target.counterPhysical && target.alive) {
+                const counterDmg = Math.max(1, Math.floor(this.calcDamage(target.atk, player.def) * 0.6));
+                player.hp -= counterDmg;
+                this.log(`${target.name} counters! ${player.name} takes ${counterDmg} damage!`);
+                this.flashSprite(playerSprite);
+                this.showDamageNumber(playerSprite, counterDmg, '#ff8888');
+                if (player.hp <= 0) {
+                  player.hp = 0;
+                  player.alive = false;
+                  this.log(`${player.name} has fallen!`);
+                  playerSprite.setVisible(false);
+                }
+              }
+              const backStart = performance.now();
+              const backFromX = lungeX;
+              const animateBack = () => {
+                const be = performance.now() - backStart;
+                if (be < LUNGE_MS) {
+                  const t = be / LUNGE_MS;
+                  playerSprite.x = backFromX + (origX - backFromX) * (t * t);
+                  requestAnimationFrame(animateBack);
+                } else {
+                  playerSprite.x = origX;
+                  this.afterPlayerAction();
+                }
+              };
+              requestAnimationFrame(animateBack);
+            }, 300);
+          }
+        });
       }
     };
     requestAnimationFrame(animateLunge);
@@ -794,60 +797,66 @@ export default class BattleScene extends Phaser.Scene {
         requestAnimationFrame(animateLunge);
       } else {
         enemySprite.x = lungeX;
-        // Impact
-        let dmg = this.calcDamage(enemy.atk, target.def);
-        if (target.defending) {
-          dmg = Math.floor(dmg / 2);
-        }
-        target.hp -= dmg;
-        this.log(`${enemy.name} attacks ${target.name} for ${dmg} damage!`);
-        this.flashSprite(playerSprite);
-        this.screenShake();
-        this.showDamageNumber(playerSprite, dmg);
-
-        if (target.hp <= 0) {
-          target.hp = 0;
-          target.alive = false;
-          this.log(`${target.name} has fallen!`);
-          // Hide fallen party member's sprite
-          playerSprite.setVisible(false);
-        } else {
-          // Status-on-hit chances (per-enemy hooks; default small poison chance)
-          const poisonChance = enemy.poisonChance !== undefined ? enemy.poisonChance : 0.2;
-          if (Math.random() < poisonChance) {
-            applyStatus(target, 'poison');
-            this.log(`${target.name} is poisoned!`);
-          } else if (enemy.silenceChance && Math.random() < enemy.silenceChance) {
-            applyStatus(target, 'silence');
-            this.log(`${target.name} is silenced!`);
-          } else if (enemy.stunChance && Math.random() < enemy.stunChance) {
-            applyStatus(target, 'stun');
-            this.log(`${target.name} is stunned!`);
+        // STRIKE: wind-up → whip → slash arc over target → contact effects
+        this.slashArc(playerSprite, -1);
+        this.strikeGesture(enemySprite, -1, () => {
+          // Impact
+          let dmg = this.calcDamage(enemy.atk, target.def);
+          if (target.defending) {
+            dmg = Math.floor(dmg / 2);
           }
-        }
+          target.hp -= dmg;
+          this.log(`${enemy.name} attacks ${target.name} for ${dmg} damage!`);
+          this.flashSprite(playerSprite);
+          this.screenShake();
+          this.showDamageNumber(playerSprite, dmg);
 
-        // Lunge back via rAF
-        const backStart = performance.now();
-        const backFromX = lungeX;
-        const animateBack = () => {
-          const be = performance.now() - backStart;
-          if (be < LUNGE_MS) {
-            const t = be / LUNGE_MS;
-            enemySprite.x = backFromX + (origX - backFromX) * (t * t);
-            requestAnimationFrame(animateBack);
+          if (target.hp <= 0) {
+            target.hp = 0;
+            target.alive = false;
+            this.log(`${target.name} has fallen!`);
+            // Hide fallen party member's sprite
+            playerSprite.setVisible(false);
           } else {
-            enemySprite.x = origX;
-            this.updateAllDom();
-            this.checkBattleEnd();
-            if (this.battleState !== 'ended') {
-              this.currentTurnIndex++;
-              this.battleState = 'turn_start';
-              this.updateActionMenu();
-              this._turnTimeout = setTimeout(() => this.processNextTurn(), 100);
+            // Status-on-hit chances (per-enemy hooks; default small poison chance)
+            const poisonChance = enemy.poisonChance !== undefined ? enemy.poisonChance : 0.2;
+            if (Math.random() < poisonChance) {
+              applyStatus(target, 'poison');
+              this.log(`${target.name} is poisoned!`);
+            } else if (enemy.silenceChance && Math.random() < enemy.silenceChance) {
+              applyStatus(target, 'silence');
+              this.log(`${target.name} is silenced!`);
+            } else if (enemy.stunChance && Math.random() < enemy.stunChance) {
+              applyStatus(target, 'stun');
+              this.log(`${target.name} is stunned!`);
             }
           }
-        };
-        requestAnimationFrame(animateBack);
+
+          // Lunge back via rAF (after strike settles)
+          setTimeout(() => {
+            const backStart = performance.now();
+            const backFromX = lungeX;
+            const animateBack = () => {
+              const be = performance.now() - backStart;
+              if (be < LUNGE_MS) {
+                const t = be / LUNGE_MS;
+                enemySprite.x = backFromX + (origX - backFromX) * (t * t);
+                requestAnimationFrame(animateBack);
+              } else {
+                enemySprite.x = origX;
+                this.updateAllDom();
+                this.checkBattleEnd();
+                if (this.battleState !== 'ended') {
+                  this.currentTurnIndex++;
+                  this.battleState = 'turn_start';
+                  this.updateActionMenu();
+                  this._turnTimeout = setTimeout(() => this.processNextTurn(), 100);
+                }
+              }
+            };
+            requestAnimationFrame(animateBack);
+          }, 180);
+        });
       }
     };
     requestAnimationFrame(animateLunge);
@@ -950,6 +959,136 @@ export default class BattleScene extends Phaser.Scene {
         }
       });
     });
+  }
+
+  // ── FF-style strike gestures (rAF-only; launched-scene safe) ──────────
+  // The attacker plays a physical motion at impact: lean back (wind-up),
+  // snap toward the target (strike), hold the pose through contact, return.
+  // dir = +1 striking rightward, -1 leftward. Weapon arc = white slash div
+  // sweeping across the target (FF1R/FF4-6 slash streak read).
+
+  strikeGesture(attackerSprite, dir, onContact) {
+    if (!attackerSprite) { onContact(); return; }
+    const origRot = 0;
+    const origX = attackerSprite.x;
+    const LEAN_MS = 110;   // wind-up
+    const SNAP_MS = 90;    // strike
+    const HOLD_MS = 70;    // hold through the flash frame
+    // wind-up: lean AWAY from target (rotate ±14° back + slight pull-back)
+    this._tweenRot(attackerSprite, origRot, -0.26 * dir, origX, origX - 6 * dir, LEAN_MS, () => {
+      // strike: whip TOWARD target (rotate ±26° forward)
+      this._tweenRot(attackerSprite, -0.26 * dir, 0.42 * dir, origX - 6 * dir, origX + 10 * dir, SNAP_MS, () => {
+        onContact();  // flash/shake/damage fire at the snap's end
+        setTimeout(() => {
+          // settle back to identity
+          this._tweenRot(attackerSprite, 0.42 * dir, origRot, origX + 10 * dir, origX, 160, null);
+        }, HOLD_MS);
+      });
+    });
+  }
+
+  _tweenRot(sprite, fromR, toR, fromX, toX, ms, done) {
+    const t0 = performance.now();
+    const step = () => {
+      const e = performance.now() - t0;
+      if (e < ms) {
+        const t = e / ms;
+        const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // easeInOutQuad
+        sprite.rotation = fromR + (toR - fromR) * ease;
+        sprite.x = fromX + (toX - fromX) * ease;
+        requestAnimationFrame(step);
+      } else {
+        sprite.rotation = toR; sprite.x = toX;
+        if (done) done();
+      }
+    };
+    requestAnimationFrame(step);
+  }
+
+  // White slash arc sweeping over the target, 180ms, then gone.
+  slashArc(targetSprite, dir = 1) {
+    if (!targetSprite) return;
+    const container = document.getElementById('game-container');
+    if (!container) return;
+    const canvas = document.querySelector('canvas');
+    const cr = canvas.getBoundingClientRect();
+    const scaleX = cr.width / 256, scaleY = cr.height / 224;
+    const div = document.createElement('div');
+    const px = targetSprite.x * scaleX, py = targetSprite.y * scaleY;
+    div.style.cssText = `
+      position: absolute; left: ${px - 30}px; top: ${py - 40}px;
+      width: 60px; height: 60px; pointer-events: none; z-index: 45;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      border-top-color: #ffffff; border-right-color: rgba(255,255,255,0.6);
+      transform: rotate(${-30 * dir}deg);
+      filter: drop-shadow(0 0 4px rgba(255,255,255,0.9));
+      opacity: 1;
+    `;
+    container.appendChild(div);
+    const t0 = performance.now();
+    const DUR = 180;
+    const step = () => {
+      const e = performance.now() - t0;
+      if (e < DUR) {
+        const t = e / DUR;
+        div.style.transform = `rotate(${(-30 + 140 * t) * dir}deg)`;
+        div.style.opacity = String(1 - t * t);
+        requestAnimationFrame(step);
+      } else {
+        div.remove();
+      }
+    };
+    requestAnimationFrame(step);
+  }
+
+  // Caster gesture for magic: rise + glow pulse on the caster, magic circle on target.
+  castGesture(casterSprite, targetSprite, onContact) {
+    if (!casterSprite) { onContact(); return; }
+    const t0 = performance.now();
+    const CHARGE_MS = 340;
+    const step = () => {
+      const e = performance.now() - t0;
+      if (e < CHARGE_MS) {
+        const t = e / CHARGE_MS;
+        casterSprite.y -= 0.15;                 // slow rise ~5px over charge
+        casterSprite.setTint(0xaaffff);          // arcane glow
+        requestAnimationFrame(step);
+      } else {
+        casterSprite.clearTint();
+        onContact();
+        if (targetSprite) this.magicCircle(targetSprite);
+      }
+    };
+    requestAnimationFrame(step);
+  }
+
+  // Expanding ring under/over the target — the spell-landing read.
+  magicCircle(targetSprite) {
+    const container = document.getElementById('game-container');
+    if (!container || !targetSprite) return;
+    const canvas = document.querySelector('canvas');
+    const cr = canvas.getBoundingClientRect();
+    const scaleX = cr.width / 256, scaleY = cr.height / 224;
+    const div = document.createElement('div');
+    const px = targetSprite.x * scaleX, py = targetSprite.y * scaleY;
+    div.style.cssText = `
+      position: absolute; left: ${px}px; top: ${py}px;
+      width: 8px; height: 8px; margin: -4px 0 0 -4px;
+      border: 2px solid rgba(170, 200, 255, 0.95); border-radius: 50%;
+      pointer-events: none; z-index: 45;
+      box-shadow: 0 0 6px rgba(170,200,255,0.9);
+      transition: width 0.35s ease-out, height 0.35s ease-out,
+                  margin 0.35s ease-out, opacity 0.35s ease-out;
+      opacity: 1;
+    `;
+    container.appendChild(div);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      div.style.width = '64px'; div.style.height = '64px';
+      div.style.margin = '-32px 0 0 -32px';
+      div.style.opacity = '0';
+    }));
+    setTimeout(() => div.remove(), 420);
   }
 
   flashSprite(sprite) {
@@ -1207,34 +1346,47 @@ export default class BattleScene extends Phaser.Scene {
     this.log(`${caster.name} casts ${ability.name}!`);
 
     if (ability.type === 'heal') {
-      const healAmt = Math.floor(caster.mag * ability.power);
-      const healed = Math.min(healAmt, target.maxHp - target.hp);
-      target.hp += healed;
-      this.log(`${target.name} recovers ${healed} HP!`);
       const sprite = target.side === 'player' ? this.playerSprites[target.partyIndex] : this.enemySprites[target.index];
-      if (sprite) this.showDamageNumber(sprite, healed, '#44ff44');
+      const casterSprite = caster.side === 'player' ? this.playerSprites[caster.partyIndex] : this.enemySprites[caster.index];
+      this.castGesture(casterSprite, sprite, () => {
+        const healAmt = Math.floor(caster.mag * ability.power);
+        const healed = Math.min(healAmt, target.maxHp - target.hp);
+        target.hp += healed;
+        this.log(`${target.name} recovers ${healed} HP!`);
+        if (sprite) this.showDamageNumber(sprite, healed, '#44ff44');
+        this.updateAllDom();
+        this._finishCast();
+      });
+      return;
     } else if (ability.type === 'magic') {
-      const dmg = Math.floor(caster.mag * ability.power * (0.85 + Math.random() * 0.3));
-      target.hp -= dmg;
-      this.log(`${target.name} takes ${dmg} damage!`);
       const sprite = this.enemySprites[target.index];
-      if (sprite) {
-        this.flashSprite(sprite);
-        this.screenShake();
-        this.showDamageNumber(sprite, dmg, '#ff8844');
-      }
-      if (target.hp <= 0) {
-        target.hp = 0;
-        target.alive = false;
-        this.log(`${target.name} is defeated!`);
-        if (sprite) sprite.setVisible(false);
-      }
+      const casterSprite = caster.side === 'player' ? this.playerSprites[caster.partyIndex] : this.enemySprites[caster.index];
+      this.castGesture(casterSprite, sprite, () => {
+        const dmg = Math.floor(caster.mag * ability.power * (0.85 + Math.random() * 0.3));
+        target.hp -= dmg;
+        this.log(`${target.name} takes ${dmg} damage!`);
+        if (sprite) {
+          this.flashSprite(sprite);
+          this.screenShake();
+          this.showDamageNumber(sprite, dmg, '#ff8844');
+        }
+        if (target.hp <= 0) {
+          target.hp = 0;
+          target.alive = false;
+          this.log(`${target.name} is defeated!`);
+          if (sprite) sprite.setVisible(false);
+        }
+        this.updateAllDom();
+        this._magicTimeout = setTimeout(() => this.afterPlayerAction(), 700);
+      });
+      return;
     } else if (ability.type === 'physical') {
       const dmg = Math.floor(caster.atk * ability.power * (0.85 + Math.random() * 0.3));
       target.hp -= dmg;
       this.log(`${target.name} takes ${dmg} damage!`);
       const sprite = this.enemySprites[target.index];
       if (sprite) {
+        this.slashArc(sprite, 1);
         this.flashSprite(sprite);
         this.screenShake();
         this.showDamageNumber(sprite, dmg, '#ffff44');
@@ -1256,6 +1408,14 @@ export default class BattleScene extends Phaser.Scene {
     this.checkBattleEnd();
     if (this.battleState !== 'ended') {
       this._magicTimeout = setTimeout(() => this.afterPlayerAction(), 1000);
+    }
+  }
+
+  // heal-cast completion path (async via castGesture callback)
+  _finishCast() {
+    this.checkBattleEnd();
+    if (this.battleState !== 'ended') {
+      this._magicTimeout = setTimeout(() => this.afterPlayerAction(), 700);
     }
   }
 

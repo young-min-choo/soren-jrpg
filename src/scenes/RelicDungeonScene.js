@@ -61,12 +61,19 @@ export function makeRelicDungeon(config) {
       this.groundLayer = map.createLayer(0, tileset, 0, 0);
       this.groundLayer.setCollision([T_WALL, T_HAZARD, T_DOOR]);
 
-      // Boss sprite
+      // Boss sprite — D0 sigil art when theme strip has it, fallback rectangles
       const bossTileX = 10, bossTileY = 2;
-      this.bossSprite = this.add.rectangle(
-        bossTileX * TILE_SIZE + 16, bossTileY * TILE_SIZE + 16, 30, 30, this.cfg.bossColor
-      );
-      this.bossSprite.setStrokeStyle(2, 0xffffff & 0xffffff);
+      const bossTex = this.cfg.theme && this.textures.exists(this.cfg.theme) ? this.textures.get(this.cfg.theme) : null;
+      if (bossTex && bossTex.has(6)) {
+        this.bossSprite = this.add.image(
+          bossTileX * TILE_SIZE + 16, bossTileY * TILE_SIZE + 16, this.cfg.theme, 6
+        ).setDisplaySize(32, 32);
+      } else {
+        this.bossSprite = this.add.rectangle(
+          bossTileX * TILE_SIZE + 16, bossTileY * TILE_SIZE + 16, 30, 30, this.cfg.bossColor
+        );
+        this.bossSprite.setStrokeStyle(2, 0xffffff & 0xffffff);
+      }
       this.bossDefeated = GameState.hasFlag(this.cfg.relicFlag);
 
       // Player entrance at bottom center
@@ -263,12 +270,27 @@ export function makeRelicDungeon(config) {
     }
 
     // ── Blocks puzzle (Dungeon-style push) ──
+    setBlockActive(block, on) {
+      // Image sprites (D0 tile art) tint; rectangles keep fillStyle
+      if (block.fillStyle === undefined) {
+        if (on) block.setTint(0x66ff88); else block.clearTint();
+      } else {
+        block.setFillStyle(on ? 0x44aa44 : 0x886644);
+      }
+    }
+
     createBlocks() {
       for (let y = 0; y < MAP_ROWS; y++) {
         for (let x = 0; x < MAP_COLS; x++) {
           if (this.mapData[y][x] === T_BLOCK) {
-            const block = this.add.rectangle(x * TILE_SIZE + 16, y * TILE_SIZE + 16, 24, 24, 0x886644);
-            block.setStrokeStyle(2, 0x443322);
+            let block;
+            const tilesetTex = this.textures.get(this.cfg.theme);
+            if (tilesetTex && tilesetTex.has(7)) {
+              block = this.add.image(x * TILE_SIZE + 16, y * TILE_SIZE + 16, this.cfg.theme, 7).setDisplaySize(32, 32);
+            } else {
+              block = this.add.rectangle(x * TILE_SIZE + 16, y * TILE_SIZE + 16, 24, 24, 0x886644);
+              block.setStrokeStyle(2, 0x443322);
+            }
             block.setData('gridX', x);
             block.setData('gridY', y);
             this.blockSprites.push(block);
@@ -341,11 +363,11 @@ export function makeRelicDungeon(config) {
       this.switchPositions.forEach((sw, i) => {
         if (sw.x === x && sw.y === y) {
           this.switchStates[i] = true;
-          block.setFillStyle(0x44aa44);
+          this.setBlockActive(block, true);
           onAny = true;
         }
       });
-      if (!onAny) block.setFillStyle(0x886644);
+      if (!onAny) this.setBlockActive(block, false);
       // Re-check every switch: a switch stays on only while a block covers it
       this.switchPositions.forEach((sw, i) => {
         const hasBlock = this.blockSprites.some(

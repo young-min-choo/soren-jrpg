@@ -118,17 +118,22 @@ export default class BootScene extends Phaser.Scene {
         tex.add(i, 0, i * TS, 0, TS, TS);
       }
       tex.refresh();
-      // Per-theme dungeon strips: 5 tiles each (floor, wall, hazard, door, chest)
+      // Per-theme dungeon strips: 10 tiles each (-floor, wall, hazard, door, chest, save, boss, block, switch, exit)
       // mapped onto the dungeon tile indices (floor=0, wall=1, hazard=2, door=4, chest=3)
       ['dgn_ember', 'dgn_tide', 'dgn_hollow', 'dgn_spire', 'dgn_ruins'].forEach((theme) => {
         const aiKey = `${theme}_ai`;
-        if (!this.textures.exists(aiKey) || this.textures.get(aiKey).source[0].width < 160) return;
+        const stripW = this.textures.exists(aiKey) ? this.textures.get(aiKey).source[0].width : 0;
+        if (!this.textures.exists(aiKey) || stripW < 160) return;
+        const tenTiles = stripW >= 320; // D0: specials appended (save/boss/block/switch/exit)
         const src = this.textures.get(aiKey).source[0].image;
         const t = this.textures.createCanvas(theme, 10 * TS, TS);
         const c = t.getContext();
         // dungeon tile indices: 0=floor 1=wall 2=hazard 3=chest 4=door 5=save 6=boss 7=block 8=switch 9=exit
-        // strip order:            0=floor 1=wall 2=hazard 3=door 4=chest
-        const stripIdx = { 0: 0, 1: 1, 2: 2, 4: 3, 3: 4 };
+        // strip order (first 5):  0=floor 1=wall 2=hazard 3=door 4=chest
+        // strip order (D0 ten):  5=save 6=boss 7=block 8=switch 9=exit map 1:1
+        const stripIdx = tenTiles
+          ? { 0: 0, 1: 1, 2: 2, 4: 3, 3: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9 }
+          : { 0: 0, 1: 1, 2: 2, 4: 3, 3: 4 };
         for (let dungeonIdx = 0; dungeonIdx < 10; dungeonIdx++) {
           const s = stripIdx[dungeonIdx];
           if (s !== undefined) {
@@ -137,6 +142,8 @@ export default class BootScene extends Phaser.Scene {
             // tiles without AI art: leave transparent — scenes can fall back
             c.clearRect(dungeonIdx * TS, 0, TS, TS);
           }
+          // register real frames so scenes can use add.image(key, frame) for specials
+          t.add(dungeonIdx, 0, dungeonIdx * TS, 0, TS, TS);
         }
         t.refresh();
       });

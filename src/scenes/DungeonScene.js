@@ -55,12 +55,22 @@ export default class DungeonScene extends Phaser.Scene {
     // --- Boss sprite (visible on the boss tile) ---
     const bossTileX = Math.floor(MAP_COLS / 2);
     const bossTileY = 2;
-    this.bossSprite = this.add.rectangle(
-      bossTileX * TILE_SIZE + TILE_SIZE / 2,
-      bossTileY * TILE_SIZE + TILE_SIZE / 2,
-      28, 28, 0xdd2222
-    );
-    this.bossSprite.setStrokeStyle(2, 0xff4444);
+    // D0: boss sigil tile art (frame 6) with fallback to red marker
+    if (this.textures.exists('dgn_ruins') && this.textures.get('dgn_ruins').has(6)) {
+      this.bossSprite = this.add.image(
+        bossTileX * TILE_SIZE + TILE_SIZE / 2,
+        bossTileY * TILE_SIZE + TILE_SIZE / 2,
+        'dgn_ruins', 6
+      ).setDisplaySize(32, 32);
+      this.bossSprite.isTileArt = true;
+    } else {
+      this.bossSprite = this.add.rectangle(
+        bossTileX * TILE_SIZE + TILE_SIZE / 2,
+        bossTileY * TILE_SIZE + TILE_SIZE / 2,
+        28, 28, 0xdd2222
+      );
+      this.bossSprite.setStrokeStyle(2, 0xff4444);
+    }
     this.bossDefeated = false;
 
     // Player start — entrance at bottom center
@@ -77,6 +87,7 @@ export default class DungeonScene extends Phaser.Scene {
     this.physics.add.collider(this.player, this.groundLayer);
 
     // Create pushable blocks
+
     this.createBlocks();
 
     // Camera
@@ -361,15 +372,30 @@ export default class DungeonScene extends Phaser.Scene {
   }
 
   // --- Push block puzzle ---
-  createBlocks() {
+  setBlockActive(block, on) {
+    // Image sprites (D0 tile art) tint; rectangles keep fillStyle
+    if (block.fillStyle === undefined) {
+      if (on) block.setTint(0x66ff88); else block.clearTint();
+    } else {
+      block.setFillStyle(on ? 0x44aa44 : 0x886644);
+    }
+  }
+
+    createBlocks() {
     // Find block tiles and create sprites
     for (let y = 0; y < MAP_ROWS; y++) {
       for (let x = 0; x < MAP_COLS; x++) {
         if (this.mapData[y][x] === T_BLOCK) {
           const bx = x * TILE_SIZE + TILE_SIZE / 2;
           const by = y * TILE_SIZE + TILE_SIZE / 2;
-          const block = this.add.rectangle(bx, by, 24, 24, 0x886644);
-          block.setStrokeStyle(2, 0x443322);
+          // D0: real stone-cube art sprite (falls back to rectangle)
+          let block;
+          if (this.textures.exists('dgn_ruins') && this.textures.get('dgn_ruins').has(7)) {
+            block = this.add.image(bx, by, 'dgn_ruins', 7).setDisplaySize(32, 32);
+          } else {
+            block = this.add.rectangle(bx, by, 24, 24, 0x886644);
+            block.setStrokeStyle(2, 0x443322);
+          }
           block.setData('gridX', x);
           block.setData('gridY', y);
           this.blockSprites.push(block);
@@ -469,12 +495,12 @@ export default class DungeonScene extends Phaser.Scene {
       const sw = this.switchPositions[i];
       if (sw.x === x && sw.y === y) {
         this.switchStates[i] = true;
-        block.setFillStyle(0x44aa44);
+        this.setBlockActive(block, true);
         return;
       }
     }
     // Block moved off a switch
-    block.setFillStyle(0x886644);
+    this.setBlockActive(block, false);
     for (let i = 0; i < this.switchPositions.length; i++) {
       const sw = this.switchPositions[i];
       if (sw.x === x && sw.y === y) continue;

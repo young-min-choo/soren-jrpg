@@ -42,20 +42,21 @@ export default class DialogueScene extends Phaser.Scene {
     this.domElements.push(box);
 
     // --- Portrait (left side) ---
-    // Phase 9: real 48×48 portrait art when the speaker resolves (see
-    // PortraitKeys — hero resolved via GameState, others via story name).
-    // Fallback keeps the '?' placeholder box.
+    // 64px art at 3x integer scale = 192px, matching the game's global zoom
+    // (crisp: every art pixel = exactly 3x3 CSS px). box-sizing stays
+    // content-box so the border doesn't eat the pixel grid (the old 0.97x
+    // minify was the source of the "blurry portrait" look).
     const portraitKey = resolvePortraitKey(this.dialogueData.speaker);
     const portrait = document.createElement('div');
     portrait.style.cssText = `
-      width: 64px; height: 64px;
-      min-width: 64px;
+      width: 192px; height: 192px;
+      min-width: 192px;
       background: #1a1626;
       border: 1px solid rgba(255,255,255,0.4);
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-right: 8px;
+      margin-right: 10px;
       image-rendering: pixelated;
     `;
     if (portraitKey && this.textures.exists(`portrait_${portraitKey}`)) {
@@ -63,10 +64,10 @@ export default class DialogueScene extends Phaser.Scene {
       const src = tex.getSourceImage();
       const c = document.createElement('canvas');
       c.width = 64; c.height = 64;
-      // full-resolution source, centered (64px sources fill exactly)
-      c.getContext('2d').drawImage(src, 0, 0, src.width, src.height, 0, 0, 64, 64);
-      // CSS sizes the box; canvas keeps crisp pixel scaling
-      c.style.width = '100%'; c.style.height = '100%';
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(src, 0, 0, src.width, src.height, 0, 0, 64, 64);
+      c.style.width = '192px'; c.style.height = '192px';
       c.style.imageRendering = 'pixelated';
       portrait.appendChild(c);
     } else {

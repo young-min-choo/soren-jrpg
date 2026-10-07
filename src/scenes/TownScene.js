@@ -637,7 +637,7 @@ export default class TownScene extends Phaser.Scene {
       this.jobMenuPortraitImg.src = `sprites/portraits/job_master.png?v=${Date.now()}`;
       this.jobMenuPortraitImg.style.cssText = `
         position: absolute; right: 12px; top: 12px;
-        width: 64px; height: 64px; image-rendering: pixelated;
+        width: 128px; height: 128px; image-rendering: pixelated;
         border: 1px solid rgba(255,255,255,0.3); border-radius: 3px;`;
       this.jobMenuDiv.appendChild(this.jobMenuPortraitImg);
     }

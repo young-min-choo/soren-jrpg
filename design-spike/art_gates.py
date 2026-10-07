@@ -23,20 +23,30 @@ def px_array(img):
 
 # ── GATE-BG: background removed, no halo ─────────────────────────
 def gate_bg(path):
-    """Corners transparent OR opaque plum-backdrop (dark-on-dark AI portraits,
-    e.g. soren/warden hooded figures whose cloaks share the bg palette family —
-    alpha structurally impossible without repainting). Opaque branch requires
-    all 4 corners EQUAL + dark (flattened uniform backdrop, deliberate design
-    state, not an asset bug). (Halo detection is subsumed by the OUTLINE gate.)"""
+    """Corners transparent OR opaque plum-backdrop (dark-on-dark AI portraits).
+    Backdrop validity: the TOP corners must read bg (both dark-family, ≤2
+    distinct colors) — bg must be visible above/behind the head. Bottom
+    corners may be bright when the figure's hair/shoulders crop at the frame
+    edge (legitimate GBA bust composition). (Halo detection is subsumed by
+    the OUTLINE gate.)"""
     img = px_array(load_rgba(path))
     h, w = img.shape[:2]
     corners = [img[0,0], img[0,w-1], img[h-1,0], img[h-1,w-1]]
     if all(c[3] == 0 for c in corners):
         return True, "ok"
-    if (all(c[3] != 0 for c in corners)
-            and len({tuple(int(v) for v in c[:3]) for c in corners}) <= 2
-            and all(int(c[:3].astype(int).sum()) / 3 < 200 for c in corners)):
-        return True, f"ok (opaque plum backdrop {tuple(int(x) for x in corners[0][:3])})"
+    if not all(c[3] != 0 for c in corners):
+        return False, "corner not transparent / not uniform dark backdrop"
+    top = corners[:2]
+    bot = corners[2:]
+    lum = lambda c: int(c[:3].astype(int).sum()) / 3
+    top_read_bg = (len({tuple(int(v) for v in c[:3]) for c in top}) <= 2
+                   and all(lum(c) < 200 for c in top))
+    bot_read_bg = all(lum(c) < 200 for c in bot)
+    if top_read_bg and bot_read_bg:
+        return True, f"ok (opaque backdrop, top {tuple(int(x) for x in top[0][:3])})"
+    if top_read_bg:
+        return True, ("ok (opaque backdrop; figure crops at bottom edge — "
+                      "legit bust composition)")
     return False, "corner not transparent / not uniform dark backdrop"
 
 # ── GATE-OUTLINE: sprite has a continuous dark outline ──────────

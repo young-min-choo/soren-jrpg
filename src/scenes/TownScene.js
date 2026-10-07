@@ -629,8 +629,26 @@ export default class TownScene extends Phaser.Scene {
       z-index: 50; pointer-events: none;
       border-radius: 4px; overflow: hidden;
     `;
+    // Job Master portrait: a DOM <img> in the menu's top-right (the DOM menu
+    // spans nearly the whole 256px game width — no room beside it).
+    if (this.textures.exists('portrait_job_master')) {
+      const src = this.textures.get('portrait_job_master').source[0].image;
+      this.jobMenuPortraitImg = document.createElement('img');
+      this.jobMenuPortraitImg.src = `sprites/portraits/job_master.png?v=${Date.now()}`;
+      this.jobMenuPortraitImg.style.cssText = `
+        position: absolute; right: 12px; top: 12px;
+        width: 64px; height: 64px; image-rendering: pixelated;
+        border: 1px solid rgba(255,255,255,0.3); border-radius: 3px;`;
+      this.jobMenuDiv.appendChild(this.jobMenuPortraitImg);
+    }
     container.appendChild(this.jobMenuDiv);
     this._updateJobMenu();
+  }
+
+  _setJobMenuHtml(html) {
+    this.jobMenuDiv.innerHTML = html;
+    // innerHTML wipes children — re-attach the portrait img after each render
+    if (this.jobMenuPortraitImg) this.jobMenuDiv.appendChild(this.jobMenuPortraitImg);
   }
 
   _updateJobMenu() {
@@ -648,7 +666,7 @@ export default class TownScene extends Phaser.Scene {
         html += `<div style="color:${color};font-size: 18px;margin:6px 0"><span style="display:inline-block;width:16px">${prefix}</span>${opt}</div>`;
       });
       html += '<div style="color:#888;font-size: 16px;margin-top:8px">Z: Select | X: Leave</div>';
-      this.jobMenuDiv.innerHTML = html;
+      this._setJobMenuHtml(html);
       return;
     }
 
@@ -662,7 +680,7 @@ export default class TownScene extends Phaser.Scene {
         html += `<div style="color:${color};font-size: 18px;margin:4px 0"><span style="display:inline-block;width:16px">${prefix}</span>${char.name} — ${char.job} (Lv.${char.level}, ${jp}JP)</div>`;
       });
       html += '<div style="color:#888;font-size: 16px;margin-top:8px">Z: Select | X: Back</div>';
-      this.jobMenuDiv.innerHTML = html;
+      this._setJobMenuHtml(html);
       return;
     }
 
@@ -682,7 +700,7 @@ export default class TownScene extends Phaser.Scene {
         html += `<div style="color:${color};font-size: 18px;margin:4px 0"><span style="display:inline-block;width:16px">${prefix}</span>${jobName}${currentTag} — <span style="font-size: 14px;color:#888">${desc}</span></div>`;
       });
       html += '<div style="color:#888;font-size: 16px;margin-top:8px">Z: Confirm | X: Back</div>';
-      this.jobMenuDiv.innerHTML = html;
+      this._setJobMenuHtml(html);
       return;
     }
 
@@ -708,7 +726,7 @@ export default class TownScene extends Phaser.Scene {
         });
       }
       html += '<div style="color:#888;font-size: 16px;margin-top:8px">Z: Learn | X: Back</div>';
-      this.jobMenuDiv.innerHTML = html;
+      this._setJobMenuHtml(html);
       return;
     }
 
@@ -720,7 +738,7 @@ export default class TownScene extends Phaser.Scene {
       html += `<div style="font-size: 18px;margin:4px 0">${char.name}: ${char.job} → ${newJob}</div>`;
       html += '<div style="font-size: 16px;color:#aaa;margin-top:8px">HP/MP will be adjusted. Learned abilities are kept.</div>';
       html += '<div style="font-size: 17px;color:#888;margin-top:8px">Z: Confirm | X: Cancel</div>';
-      this.jobMenuDiv.innerHTML = html;
+      this._setJobMenuHtml(html);
       return;
     }
 
@@ -733,7 +751,7 @@ export default class TownScene extends Phaser.Scene {
       html += `<div style="font-size: 18px;margin:4px 0">Cost: ${ab.jpCost} JP (You have ${char.jp[char.job] || 0} JP)</div>`;
       html += `<div style="font-size: 16px;color:#aaa;margin-top:4px">${ab.description}</div>`;
       html += '<div style="font-size: 17px;color:#888;margin-top:8px">Z: Confirm | X: Cancel</div>';
-      this.jobMenuDiv.innerHTML = html;
+      this._setJobMenuHtml(html);
       return;
     }
   }
@@ -857,6 +875,7 @@ export default class TownScene extends Phaser.Scene {
       this.jobMenuDiv.remove();
       this.jobMenuDiv = null;
     }
+    if (this.jobMenuPortraitImg) { this.jobMenuPortraitImg.remove(); this.jobMenuPortraitImg = null; }
     this.jobMenuState = null;
   }
 
@@ -881,6 +900,7 @@ export default class TownScene extends Phaser.Scene {
     this.domElements = [];
     this.interactDiv = null;
     if (this.jobMenuDiv) { this.jobMenuDiv.remove(); this.jobMenuDiv = null; }
+    if (this.jobMenuPortraitImg) { this.jobMenuPortraitImg.remove(); this.jobMenuPortraitImg = null; }
     if (this.shopDiv) { this.shopDiv.remove(); this.shopDiv = null; }
     if (this.innDiv) { this.innDiv.remove(); this.innDiv = null; }
   }

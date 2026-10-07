@@ -121,10 +121,20 @@ export class ConduitGateScene extends Phaser.Scene {
     document.getElementById('game-container').appendChild(this.statusDiv);
     this.domElements.push(this.statusDiv);
 
-    // Gareth sprite mid-map (before betrayal only)
+    // Gareth mid-map (before betrayal only). He has a full walk sheet —
+    // stand pose (down, frame 1) like other sheet NPCs; falls back to the
+    // tinted rectangle if the sheet is ever missing.
     if (!GameState.hasFlag('garethMet')) {
-      this.garethSprite = this.add.rectangle(6 * TILE_SIZE + 16, 4 * TILE_SIZE + 16, 30, 30, 0x8b0000);
-      this.garethSprite.setStrokeStyle(2, 0xff4444);
+      if (this.textures.exists('npc_sheet_gareth')) {
+        this.garethSprite = this.add.sprite(6 * TILE_SIZE + 16, 4 * TILE_SIZE + 16, 'npc_sheet_gareth', 1);
+        this.garethSprite.setScale(1.25); // 16x24 art near the 30x30 footprint
+      } else if (this.textures.exists('npc_gareth')) {
+        this.garethSprite = this.add.image(6 * TILE_SIZE + 16, 4 * TILE_SIZE + 16, 'npc_gareth');
+        this.garethSprite.setScale(1.55);
+      } else {
+        this.garethSprite = this.add.rectangle(6 * TILE_SIZE + 16, 4 * TILE_SIZE + 16, 30, 30, 0x8b0000);
+        this.garethSprite.setStrokeStyle(2, 0xff4444);
+      }
     }
 
     this.facing = 'down';

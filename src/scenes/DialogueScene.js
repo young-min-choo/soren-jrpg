@@ -42,15 +42,14 @@ export default class DialogueScene extends Phaser.Scene {
     this.domElements.push(box);
 
     // --- Portrait (left side) ---
-    // 64px art at 3x integer scale = 192px, matching the game's global zoom
-    // (crisp: every art pixel = exactly 3x3 CSS px). box-sizing stays
-    // content-box so the border doesn't eat the pixel grid (the old 0.97x
-    // minify was the source of the "blurry portrait" look).
+    // 64px art at 2x integer scale = 128px. Playtest feedback (2026-10-08):
+    // 3x/192px read as too big and squeezed the text column choices into the
+    // portrait. 2x is still integer (crisp), leaves the box breathing room.
     const portraitKey = resolvePortraitKey(this.dialogueData.speaker);
     const portrait = document.createElement('div');
     portrait.style.cssText = `
-      width: 192px; height: 192px;
-      min-width: 192px;
+      width: 128px; height: 128px;
+      min-width: 128px;
       background: #1a1626;
       border: 1px solid rgba(255,255,255,0.4);
       display: flex;
@@ -67,7 +66,7 @@ export default class DialogueScene extends Phaser.Scene {
       const ctx = c.getContext('2d');
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(src, 0, 0, src.width, src.height, 0, 0, 64, 64);
-      c.style.width = '192px'; c.style.height = '192px';
+      c.style.width = '128px'; c.style.height = '128px';
       c.style.imageRendering = 'pixelated';
       portrait.appendChild(c);
     } else {
@@ -127,10 +126,12 @@ export default class DialogueScene extends Phaser.Scene {
     }, 300);
 
     // --- Choice container ---
+    // Right-aligned under the text column, NOT overlapping the portrait
+    // (left:60px put choices straight into the 128px portrait — playtest bug).
     this.choiceContainer = document.createElement('div');
     this.choiceContainer.style.cssText = `
       position: absolute;
-      left: 60px; bottom: 4px;
+      left: 152px; bottom: 6px;
       display: none;
       flex-direction: column;
       gap: 2px;

@@ -85,6 +85,31 @@ Desktop (omarchy) keeps a dev server running for tailnet play:
    and anims are already in place for it. Decide deployment (tailscale serve
    `dist/`, or GitHub Pages once playtested).
 
+### First manual playtest bug sweep (2026-10-09)
+Choo ran the first hands-on session and reported 5 bugs; all fixed:
+1. **Choices overlapped the portrait** — choices positioned at box
+   `left:60px` (inside the portrait zone) and the 192px portrait left the
+   text column ~40px. Portrait now 2x/128px (still integer-crisp), choices
+   start at `left:152px`. Dialogue box min-height accommodates 4 choices.
+2. **"Soren's head is see-through"** — hood-opening skin (232,184,144) was
+   near-identical to ruins masonry (216,192,152) with no dark rim → face read
+   as a hole in the wall. v7 walk sheet: pale bounded face (248,224,192) +
+   dark brim band + eyes (NPC-template parity). Gates 6/6.
+3. **"NPCs look better than mine"** — accepted: NPC template has 3-tone
+   hair ramps + 2px eyes + muted outfits. Hero face now matches that grammar;
+   full v7 body detail pass deferred (player's call).
+4. + 5. **"Walked into/behind pillar and can't get out" + mystery grass
+   patch** — same root: ruins WALL tile art was a tan ARCH/MOUND with a
+   hollow-looking light center (reads walkable; also matches the "grass
+   patch" read). Plus real bug: push-block walk-into bounce math snapped the
+   player into the block tile (softlock). Blocks now have STATIC physics
+   bodies (real collision, contact-triggered pushes, validated both origin
+   tiles), door-line softlock guard (block can't rest on y=10 tiles 4/5/7/8),
+   legacy bounce math deleted. Wall tile redrawn as staggered masonry
+   (fix_ruins_wall_tile.py, palette-snapped); backup was dgn_ruins.png.bak.
+   Lockout sim: 18028 states, 1182 reachable softlock positions → now
+   hard-blocked at the single trap line; E2E 37/37; live block tests 5/5.
+
 ### Portrait display scaling fix (2026-10-07, 31f0dbd)
 - Root cause of "blurry portraits": 64px art in a 62px box (border ate the
   box-sizing → 0.97 minify) AND 1x DOM scale next to the 3x world. Fix:

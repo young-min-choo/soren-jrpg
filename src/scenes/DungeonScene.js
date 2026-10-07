@@ -22,6 +22,12 @@ const T_BOSS = 6;
 const T_BLOCK = 7;    // pushable block
 const T_SWITCH = 8;   // pressure plate
 const T_EXIT = 9;
+// Pushable blocks get REAL physics bodies (playtest 2026-10-08, bug 5):
+// the old sprite + walk-into tile dance had an off-by-half-tile bounce math
+// that could snap the player a full tile into/onto things and could stand
+// the player INSIDE the block's old tile — "walked behind a pillar and
+// couldn't get out". Blocks are immovable bodies that block the player with
+// physics, pushes are explicit and validated, no position-snapping at all.
 
 export default class DungeonScene extends Phaser.Scene {
   constructor() {
@@ -40,6 +46,8 @@ export default class DungeonScene extends Phaser.Scene {
     this.puzzleSolved = false;
     this.blockSprites = [];
     this.switchStates = [false, false];
+    this.pushCooldown = 0;
+    this.puzzleTransition = false;
 
     const container = document.getElementById('game-container');
 
@@ -184,29 +192,6 @@ export default class DungeonScene extends Phaser.Scene {
 
     this.player.setVelocity(vx, vy);
 
-    // Check if player would enter a block tile — blocks are solid walls
-    if (moving) {
-      // Check current tile — if player is ON a block tile, they've walked through it
-      const curTileX = Math.floor(this.player.x / TILE_SIZE);
-      const curTileY = Math.floor(this.player.y / TILE_SIZE);
-      const onBlock = this.blockSprites.find(b => b.getData('gridX') === curTileX && b.getData('gridY') === curTileY);
-      if (onBlock) {
-        // Player walked into block tile without pushing — push them back
-        const dx2 = { right: 1, left: -1, up: 0, down: 0 }[this.facing] || 0;
-        const dy2 = { up: -1, down: 1, left: 0, right: 0 }[this.facing] || 0;
-        // Only allow if block is directly in front (tryPushBlock will handle the push)
-        const playerTileX = Math.floor((this.player.x - dx2 * TILE_SIZE * 0.5) / TILE_SIZE);
-        const playerTileY = Math.floor((this.player.y - dy2 * TILE_SIZE * 0.5) / TILE_SIZE);
-        const blockInFront = (playerTileX + dx2 === curTileX && playerTileY + dy2 === curTileY);
-        if (!blockInFront || !moving) {
-          // Not approaching from correct side — bounce back
-          this.player.x = playerTileX * TILE_SIZE + TILE_SIZE / 2;
-          this.player.y = playerTileY * TILE_SIZE + TILE_SIZE / 2;
-          this.player.setVelocity(0, 0);
-        }
-      }
-    }
-
     if (moving) {
       const animKey = `walk-${this.facing}`;
       if (this.player.anims.currentAnim?.key !== animKey) {
@@ -252,10 +237,6 @@ export default class DungeonScene extends Phaser.Scene {
       this.exitDungeon();
     }
 
-    // Push block interaction — auto-push when walking into a block
-    if (moving) {
-      this.tryPushBlock();
-    }
 
     // Update interaction prompt
     this.updateInteractPrompt(tile);
@@ -424,17 +405,22 @@ export default class DungeonScene extends Phaser.Scene {
         if (this.mapData[y][x] === T_BLOCK) {
           const bx = x * TILE_SIZE + TILE_SIZE / 2;
           const by = y * TILE_SIZE + TILE_SIZE / 2;
-          // D0: real stone-cube art sprite (falls back to rectangle)
+          // D0: real stone-cube art sprite (falls back to rectangle).
+          // STATIC physics body: the player walks into it and stops with
+          // real collision (no tile-bounce math), which is what killed the
+          // "walked into/behind a block and got stuck" report.
           let block;
           if (this.textures.exists('dgn_ruins') && this.textures.get('dgn_ruins').has(7)) {
-            block = this.add.image(bx, by, 'dgn_ruins', 7).setDisplaySize(32, 32);
+            block = this.physics.add.existing(this.add.image(bx, by, 'dgn_ruins', 7).setDisplaySize(32, 32), true);
           } else {
-            block = this.add.rectangle(bx, by, 24, 24, 0x886644);
-            block.setStrokeStyle(2, 0x443322);
+            block = this.physics.add.existing(this.add.rectangle(bx, by, 24, 24, 0x886644).setStrokeStyle(2, 0x443322), true);
           }
           block.setData('gridX', x);
           block.setData('gridY', y);
           this.blockSprites.push(block);
+          if (this.physics.add && block.body) {
+            this.physics.add.collider(this.player, block, () => this.tryPushNearestBlock());
+          }
           // Remove from tilemap (it's a sprite now)
           this.mapData[y][x] = T_FLOOR;
           this.groundLayer.putTileAt(T_FLOOR, x, y);
@@ -447,83 +433,105 @@ export default class DungeonScene extends Phaser.Scene {
     });
   }
 
-  tryPushBlock() {
-    // Auto-push: when player walks into a block, push it in the facing direction
-    // Only push when player is close to the block tile (within half a tile)
-    const playerTileX = Math.floor(this.player.x / TILE_SIZE);
-    const playerTileY = Math.floor(this.player.y / TILE_SIZE);
-    const dx = { right: 1, left: -1, up: 0, down: 0 }[this.facing] || 0;
-    const dy = { up: -1, down: 1, left: 0, right: 0 }[this.facing] || 0;
-    const targetX = playerTileX + dx;
-    const targetY = playerTileY + dy;
+  // Push validator — every mutation path funnels through this so a push can
+  // never strand the puzzle (block on a switch is always re-pushable off it:
+  // its opposite side is the tile the pusher is standing on, i.e. always free).
+  playerTile() {
+    return { x: Math.floor(this.player.x / TILE_SIZE), y: Math.floor(this.player.y / TILE_SIZE) };
+  }
 
-    // Check if player is close enough to the block tile (center of their tile)
-    const playerCenterX = playerTileX * TILE_SIZE + TILE_SIZE / 2;
-    const playerCenterY = playerTileY * TILE_SIZE + TILE_SIZE / 2;
-    const distToCenter = Phaser.Math.Distance.Between(this.player.x, this.player.y, playerCenterX, playerCenterY);
-    if (distToCenter > TILE_SIZE * 0.4) return; // Not close enough to push
+  canPushFrom(px, py, dx, dy) {
+    const bx = px + dx, by = py + dy;      // block tile (must hold a block)
+    const tx = bx + dx, ty = by + dy;      // destination
+    if (bx < 0 || by < 0 || bx >= MAP_COLS || by >= MAP_ROWS) return { ok: false };
+    const block = this.blockSprites.find(b => b.getData('gridX') === bx && b.getData('gridY') === by);
+    if (!block) return { ok: false };
+    if (tx < 1 || ty < 1 || tx >= MAP_COLS - 1 || ty >= MAP_ROWS - 1) return { ok: false, block };
+    const t = this.mapData[ty] && this.mapData[ty][tx];
+    if (t !== T_FLOOR && t !== T_SWITCH) return { ok: false, block };
+    if (this.blockSprites.some(b => b.getData('gridX') === tx && b.getData('gridY') === ty)) return { ok: false, block };
+    return { ok: true, block, tx, ty };
+  }
 
-    for (const block of this.blockSprites) {
-      const bx = block.getData('gridX');
-      const by = block.getData('gridY');
-      if (bx === targetX && by === targetY) {
-        // Try to push block in facing direction
-        const newX = bx + dx;
-        const newY = by + dy;
-        if (newX < 0 || newX >= MAP_COLS || newY < 0 || newY >= MAP_ROWS) {
-          // Can't push — stop player at their tile center
-          this.player.x = playerCenterX;
-          this.player.y = playerCenterY;
-          this.player.setVelocity(0, 0);
-          return;
-        }
-        const targetTile = this.mapData[newY][newX];
-        if (targetTile !== T_FLOOR && targetTile !== T_SWITCH) {
-          // Wall/obstacle behind block — stop player
-          this.player.x = playerCenterX;
-          this.player.y = playerCenterY;
-          this.player.setVelocity(0, 0);
-          return;
-        }
-        const blocked = this.blockSprites.some(b => b.getData('gridX') === newX && b.getData('gridY') === newY);
-        if (blocked) {
-          // Another block behind — stop player
-          this.player.x = playerCenterX;
-          this.player.y = playerCenterY;
-          this.player.setVelocity(0, 0);
-          return;
-        }
+  // Called on player-block collider contact: push if grounded on a valid side.
+  // Contact may register while the player's CENTER still belongs to the
+  // neighboring tile (wall-ride), so we test TWO candidate origin tiles:
+  // the player's tile-math tile AND the tile derived from sprite positions.
+  // For (dx,dy) direction, a block at B is pushed when origin O = B-(dx,dy)
+  // holds the player (origin must be walkable — it's where the pusher stands;
+  // the block's previous tile is always walkable floor/switch after a push).
+  tryPushNearestBlock() {
+    if (this.puzzleTransition || this.pushCooldown > 0) return;
+    const dirs = [[1, 0], [-1, 0], [0, -1], [0, 1]];
+    const fdx = { right: 1, left: -1, up: 0, down: 0 }[this.facing] || 0;
+    const fdy = { up: -1, down: 1, left: 0, right: 0 }[this.facing] || 0;
+    const dx = fdx, dy = fdy;
+    if (!dx && !dy) return;
 
-        // Move block — smooth slide via requestAnimationFrame (Zelda-style)
-        const fromX = block.x;
-        const toX = newX * TILE_SIZE + TILE_SIZE / 2;
-        const fromY = block.y;
-        const toY = newY * TILE_SIZE + TILE_SIZE / 2;
-        const slideStart = performance.now();
-        const SLIDE_MS = 200;
-        const animateSlide = () => {
-          const elapsed = performance.now() - slideStart;
-          if (elapsed < SLIDE_MS) {
-            const t = elapsed / SLIDE_MS;
-            block.x = fromX + (toX - fromX) * t;
-            block.y = fromY + (toY - fromY) * t;
-            requestAnimationFrame(animateSlide);
-          } else {
-            block.setPosition(toX, toY);
-          }
-        };
-        requestAnimationFrame(animateSlide);
-        block.setData('gridX', newX);
-        block.setData('gridY', newY);
-        // Stop player at their tile center (don't walk into block's old position)
-        this.player.x = playerCenterX;
-        this.player.y = playerCenterY;
-        this.player.setVelocity(0, 0);
-        // Check if block is on a switch
-        this.checkBlockOnSwitch(block, newX, newY);
-        return; // Only push one block per frame
-      }
+    const pt = this.playerTile();
+    // candidate origins: player's math tile, and sprite-derived tile
+    // (sprite pos may differ from math tile by contact overlap rounding)
+    const origins = [
+      pt,
+      { x: Math.floor((this.player.x - dx * TILE_SIZE * 0.5) / TILE_SIZE), y: Math.floor((this.player.y - dy * TILE_SIZE * 0.5) / TILE_SIZE) },
+    ];
+    let push = null;
+    for (const o of origins) {
+      if (!o) continue;
+      const c = this.canPushFrom(o.x, o.y, dx, dy);
+      if (c.ok) { push = c; push.fromX_p = o.x; push.fromY_p = o.y; break; }
     }
+    if (!push) return;
+    const { block, tx, ty } = push;
+    const fromX = block.x, fromY = block.y;
+    const bx0 = block.getData('gridX');
+    const toX = tx * TILE_SIZE + TILE_SIZE / 2;
+    const toY = ty * TILE_SIZE + TILE_SIZE / 2;
+    block.setData('gridX', tx);
+    block.setData('gridY', ty);
+    // Freeze body during slide so contact-trigger doesn't chain-fire
+    if (block.body) { block.body.enable = false; }
+    this.pushCooldown = 260;
+    this.time.delayedCall(this.pushCooldown, () => { this.pushCooldown = 0; });
+    const slideStart = performance.now();
+    const SLIDE_MS = 200;
+    const animateSlide = () => {
+      const elapsed = performance.now() - slideStart;
+      if (elapsed < SLIDE_MS) {
+        const t = elapsed / SLIDE_MS;
+        block.x = fromX + (toX - fromX) * t;
+        block.y = fromY + (toY - fromY) * t;
+        requestAnimationFrame(animateSlide);
+      } else {
+        block.setPosition(toX, toY);
+        // Re-enable the static body at the new tile
+        if (block.body) { block.body.reset(toX, toY); block.body.enable = true; }
+        // SOFTLOCK GUARD: a block may never rest on the door line — it would
+        // block the only path to the boss room and become un-pushable back
+        // (destination wall). Slide it back one tile (pusher is that way).
+        if (this.mapData[ty][tx] === T_FLOOR && this.wouldTrapOnDoorLine(tx, ty)) {
+          block.setData('gridX', bx0);
+          block.setData('gridY', ty);
+          if (block.body) block.body.enable = false;
+          this.time.delayedCall(SLIDE_MS, () => {
+            block.setPosition(fromX, fromY);
+            if (block.body) { block.body.reset(fromX, fromY); block.body.enable = true; }
+            this.statusDiv.textContent = "Can't push it there — it would plug the doorway.";
+          });
+          return;
+        }
+      }
+    };
+    requestAnimationFrame(animateSlide);
+    // Check if block is on a switch
+    this.checkBlockOnSwitch(block, tx, ty);
+  }
+
+  wouldTrapOnDoorLine(tx, ty) {
+    // Door line at y=10: tiles (4..8,10); door tile itself is (6,10).
+    // A block resting on x∈{4,5,7,8} y=10 leaves the door reachable only via
+    // a push that requires standing INSIDE the door gap — impossible.
+    return ty === 10 && tx >= 4 && tx <= 8 && tx !== 6;
   }
 
   checkBlockOnSwitch(block, x, y) {

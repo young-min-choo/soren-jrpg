@@ -1,0 +1,37 @@
+{
+ "raw": "/home/min/dev/soren-jrpg/design-spike/npc_sheets/villager/raw_512.png",
+ "sheet": "/home/min/dev/soren-jrpg/design-spike/npc_sheets/villager/sheet_48x96.png",
+ "sheet_size": [
+  48,
+  96
+ ],
+ "grid_48x96": true,
+ "frames_nonempty": "12/12",
+ "grounded": "12/12",
+ "unique_colors_total": 25,
+ "uniq_per_frame": [
+  17,
+  19,
+  18,
+  17,
+  17,
+  16,
+  17,
+  20,
+  16,
+  13,
+  12,
+  13
+ ],
+ "adjacent_frame_diff": [
+  0.346,
+  0.352,
+  0.286,
+  0.26,
+  0.305,
+  0.253,
+  0.266,
+  0.414
+ ],
+ "min_diff": 0.253
+}

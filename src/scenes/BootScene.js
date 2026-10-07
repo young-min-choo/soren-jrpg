@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import battleManifest from '../game/battle-sprite-manifest.json';
 import npcManifest from '../game/npc-sprite-manifest.json';
+import npcSheetManifest from '../game/npc-sheet-manifest.json';
 import portraitManifest from '../game/portrait-sprite-manifest.json';
 
 /**
@@ -50,6 +51,13 @@ export default class BootScene extends Phaser.Scene {
     // Keyed by stable art key (npcKey from WorldData), never display name.
     npcManifest.npcs.forEach((key) => {
       this.load.image(`npc_${key}`, `sprites/npc/${key}.png`);
+    });
+    // Phase 10: NPC walk sheets (48×96, 12 frames of 16×24 — same layout as
+    // player_field). Loaded from an explicit manifest so a sheet missing on
+    // disk never 404s; keys without a sheet keep the static npc_<key> image.
+    npcSheetManifest.npc_sheets.forEach((key) => {
+      this.load.spritesheet(`npc_sheet_${key}`, `sprites/npc_sheets/${key}.png`,
+        { frameWidth: 16, frameHeight: 24, endFrame: 12 });
     });
     portraitManifest.portraits.forEach((key) => {
       this.load.image(`portrait_${key}`, `sprites/portraits/${key}.png`);

@@ -74,15 +74,29 @@ export default class TownScene extends Phaser.Scene {
       const rawKey = cfg.npcKey || cfg.role;
       const artKey = rawKey.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
       const texKey = `npc_${artKey}`;
-      const npc = this.textures.exists(texKey)
+      // Phase 10: prefer the 12-frame walk sheet when the identity has one;
+      // same 16×24 frames, so position/depth/body are identical. Sprite stays
+      // STATIC (config-gated) until movement is tuned; anims give the pose
+      // language (talk-facing) and stand frames — see createNpcAnimations().
+      const sheetKey = `npc_sheet_${artKey}`;
+      const hasSheet = this.textures.exists(sheetKey);
+      const spawnKey = hasSheet ? sheetKey : texKey;
+      const npc = this.textures.exists(spawnKey)
         ? this.physics.add.staticSprite(
             cfg.x * TILE_SIZE + TILE_SIZE / 2,
             cfg.y * TILE_SIZE + TILE_SIZE / 2,
-            texKey)
+            spawnKey, 1)
         : this.physics.add.staticSprite(
             cfg.x * TILE_SIZE + TILE_SIZE / 2,
             cfg.y * TILE_SIZE + TILE_SIZE / 2,
             'player_field', 1);
+      if (hasSheet) {
+        this.createNpcAnimations(artKey);
+        npc.setData('hasSheet', true);
+        npc.setData('artKey', artKey);
+        npc.anims.pause();
+        npc.setFrame(1); // stand frame, facing down (sheet row contract)
+      }
       if (!this.textures.exists(texKey) && cfg.tint) npc.setTint(cfg.tint);
       npc.setData('artKey', artKey);
       npc.setData('name', cfg.name);
@@ -318,6 +332,18 @@ export default class TownScene extends Phaser.Scene {
     this.player.anims.pause();
     const frameMap = { down: 1, left: 4, right: 7, up: 10 };
     this.player.setFrame(frameMap[this.facing] ?? 1);
+
+    // Phase 10: NPC turns to face the player (sprite pose language). Row
+    // contract down/left/right/up → frame 1/4/7/10 is each row's stand frame.
+    if (npc.getData('hasSheet')) {
+      const dx = this.player.x - npc.x;
+      const dy = this.player.y - npc.y;
+      const facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+      const npcFrameMap = { down: 1, left: 4, right: 7, up: 10 };
+      npc.anims.pause();
+      npc.setFrame(npcFrameMap[facing] ?? 1);
+      npc.setData('talkFacing', facing);
+    }
 
     // Job Master opens job change menu instead of dialogue
     if (npc.getData('isJobMaster')) {
@@ -868,6 +894,20 @@ export default class TownScene extends Phaser.Scene {
       this.anims.create({ key: 'walk-right', frames: this.anims.generateFrameNumbers('player_field', { start: 6, end: 8 }), frameRate: 8, repeat: -1 });
       this.anims.create({ key: 'walk-up', frames: this.anims.generateFrameNumbers('player_field', { start: 9, end: 11 }), frameRate: 8, repeat: -1 });
     }
+  }
+
+  /**
+   * Phase 10: per-identity NPC walk anims from npc_sheet_<artKey> spritesheets
+   * (same 12-frame layout as player_field). No-op for keys without a sheet.
+   */
+  createNpcAnimations(artKey) {
+    const texKey = `npc_sheet_${artKey}`;
+    if (!this.textures.exists(texKey) || this.anims.exists(`npc-walk-${artKey}-down`)) return;
+    const base = `npc-walk-${artKey}`;
+    this.anims.create({ key: `${base}-down`, frames: this.anims.generateFrameNumbers(texKey, { start: 0, end: 2 }), frameRate: 8, repeat: -1 });
+    this.anims.create({ key: `${base}-left`, frames: this.anims.generateFrameNumbers(texKey, { start: 3, end: 5 }), frameRate: 8, repeat: -1 });
+    this.anims.create({ key: `${base}-right`, frames: this.anims.generateFrameNumbers(texKey, { start: 6, end: 8 }), frameRate: 8, repeat: -1 });
+    this.anims.create({ key: `${base}-up`, frames: this.anims.generateFrameNumbers(texKey, { start: 9, end: 11 }), frameRate: 8, repeat: -1 });
   }
 
   generateMapData() {

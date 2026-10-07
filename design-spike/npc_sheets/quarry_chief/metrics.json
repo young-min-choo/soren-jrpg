@@ -1,0 +1,37 @@
+{
+ "raw": "/home/min/dev/soren-jrpg/design-spike/npc_sheets/quarry_chief/raw_512.png",
+ "sheet": "/home/min/dev/soren-jrpg/design-spike/npc_sheets/quarry_chief/sheet_48x96.png",
+ "sheet_size": [
+  48,
+  96
+ ],
+ "grid_48x96": true,
+ "frames_nonempty": "12/12",
+ "grounded": "12/12",
+ "unique_colors_total": 24,
+ "uniq_per_frame": [
+  20,
+  18,
+  16,
+  15,
+  17,
+  12,
+  18,
+  17,
+  18,
+  10,
+  12,
+  11
+ ],
+ "adjacent_frame_diff": [
+  0.253,
+  0.247,
+  0.206,
+  0.185,
+  0.203,
+  0.201,
+  0.234,
+  0.43
+ ],
+ "min_diff": 0.185
+}

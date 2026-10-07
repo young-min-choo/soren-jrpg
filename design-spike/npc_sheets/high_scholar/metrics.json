@@ -1,0 +1,37 @@
+{
+ "raw": "/home/min/dev/soren-jrpg/design-spike/npc_sheets/high_scholar/raw_512.png",
+ "sheet": "/home/min/dev/soren-jrpg/design-spike/npc_sheets/high_scholar/sheet_48x96.png",
+ "sheet_size": [
+  48,
+  96
+ ],
+ "grid_48x96": true,
+ "frames_nonempty": "12/12",
+ "grounded": "12/12",
+ "unique_colors_total": 24,
+ "uniq_per_frame": [
+  19,
+  20,
+  20,
+  16,
+  15,
+  16,
+  16,
+  18,
+  18,
+  13,
+  12,
+  13
+ ],
+ "adjacent_frame_diff": [
+  0.258,
+  0.242,
+  0.219,
+  0.214,
+  0.294,
+  0.237,
+  0.195,
+  0.198
+ ],
+ "min_diff": 0.195
+}

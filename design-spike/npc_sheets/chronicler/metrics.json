@@ -1,0 +1,37 @@
+{
+ "raw": "/home/min/dev/soren-jrpg/design-spike/npc_sheets/chronicler/raw_512.png",
+ "sheet": "/home/min/dev/soren-jrpg/design-spike/npc_sheets/chronicler/sheet_48x96.png",
+ "sheet_size": [
+  48,
+  96
+ ],
+ "grid_48x96": true,
+ "frames_nonempty": "12/12",
+ "grounded": "12/12",
+ "unique_colors_total": 25,
+ "uniq_per_frame": [
+  21,
+  22,
+  19,
+  20,
+  24,
+  20,
+  19,
+  23,
+  21,
+  18,
+  16,
+  19
+ ],
+ "adjacent_frame_diff": [
+  0.255,
+  0.26,
+  0.268,
+  0.242,
+  0.307,
+  0.25,
+  0.208,
+  0.398
+ ],
+ "min_diff": 0.208
+}

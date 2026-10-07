@@ -1,0 +1,37 @@
+{
+ "raw": "/home/min/dev/soren-jrpg/design-spike/npc_sheets/gareth/raw_512.png",
+ "sheet": "/home/min/dev/soren-jrpg/design-spike/npc_sheets/gareth/sheet_48x96.png",
+ "sheet_size": [
+  48,
+  96
+ ],
+ "grid_48x96": true,
+ "frames_nonempty": "12/12",
+ "grounded": "12/12",
+ "unique_colors_total": 28,
+ "uniq_per_frame": [
+  21,
+  22,
+  20,
+  22,
+  21,
+  20,
+  22,
+  22,
+  20,
+  20,
+  18,
+  20
+ ],
+ "adjacent_frame_diff": [
+  0.273,
+  0.255,
+  0.284,
+  0.234,
+  0.302,
+  0.258,
+  0.188,
+  0.19
+ ],
+ "min_diff": 0.188
+}

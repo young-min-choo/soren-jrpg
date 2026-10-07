@@ -1,0 +1,37 @@
+{
+ "raw": "/home/min/dev/soren-jrpg/design-spike/npc_sheets/elder/raw_512.png",
+ "sheet": "/home/min/dev/soren-jrpg/design-spike/npc_sheets/elder/sheet_48x96.png",
+ "sheet_size": [
+  48,
+  96
+ ],
+ "grid_48x96": true,
+ "frames_nonempty": "12/12",
+ "grounded": "12/12",
+ "unique_colors_total": 23,
+ "uniq_per_frame": [
+  20,
+  18,
+  18,
+  19,
+  18,
+  19,
+  20,
+  18,
+  19,
+  15,
+  15,
+  15
+ ],
+ "adjacent_frame_diff": [
+  0.286,
+  0.302,
+  0.307,
+  0.268,
+  0.352,
+  0.284,
+  0.294,
+  0.451
+ ],
+ "min_diff": 0.268
+}

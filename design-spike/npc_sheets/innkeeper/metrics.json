@@ -1,0 +1,37 @@
+{
+ "raw": "design-spike/npc_sheets/innkeeper/raw_512.png",
+ "sheet": "design-spike/npc_sheets/innkeeper/sheet_48x96.png",
+ "sheet_size": [
+  48,
+  96
+ ],
+ "grid_48x96": true,
+ "frames_nonempty": "12/12",
+ "grounded": "12/12",
+ "unique_colors_total": 27,
+ "uniq_per_frame": [
+  20,
+  21,
+  22,
+  19,
+  19,
+  20,
+  19,
+  21,
+  20,
+  18,
+  18,
+  18
+ ],
+ "adjacent_frame_diff": [
+  0.299,
+  0.302,
+  0.229,
+  0.229,
+  0.219,
+  0.206,
+  0.211,
+  0.195
+ ],
+ "min_diff": 0.195
+}

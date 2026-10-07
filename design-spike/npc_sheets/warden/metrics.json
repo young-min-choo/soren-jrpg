@@ -1,0 +1,37 @@
+{
+ "raw": "/home/min/dev/soren-jrpg/design-spike/npc_sheets/warden/raw_512.png",
+ "sheet": "/home/min/dev/soren-jrpg/design-spike/npc_sheets/warden/sheet_48x96.png",
+ "sheet_size": [
+  48,
+  96
+ ],
+ "grid_48x96": true,
+ "frames_nonempty": "12/12",
+ "grounded": "12/12",
+ "unique_colors_total": 23,
+ "uniq_per_frame": [
+  13,
+  16,
+  14,
+  14,
+  16,
+  15,
+  15,
+  16,
+  14,
+  8,
+  8,
+  9
+ ],
+ "adjacent_frame_diff": [
+  0.227,
+  0.221,
+  0.195,
+  0.182,
+  0.203,
+  0.182,
+  0.125,
+  0.122
+ ],
+ "min_diff": 0.122
+}

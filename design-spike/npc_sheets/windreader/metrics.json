@@ -1,0 +1,37 @@
+{
+ "raw": "/home/min/dev/soren-jrpg/design-spike/npc_sheets/windreader/raw_512.png",
+ "sheet": "/home/min/dev/soren-jrpg/design-spike/npc_sheets/windreader/sheet_48x96.png",
+ "sheet_size": [
+  48,
+  96
+ ],
+ "grid_48x96": true,
+ "frames_nonempty": "12/12",
+ "grounded": "12/12",
+ "unique_colors_total": 30,
+ "uniq_per_frame": [
+  25,
+  25,
+  24,
+  20,
+  22,
+  21,
+  20,
+  21,
+  19,
+  14,
+  19,
+  13
+ ],
+ "adjacent_frame_diff": [
+  0.404,
+  0.419,
+  0.26,
+  0.219,
+  0.292,
+  0.237,
+  0.258,
+  0.404
+ ],
+ "min_diff": 0.219
+}

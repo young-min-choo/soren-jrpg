@@ -1,0 +1,37 @@
+{
+ "raw": "/home/min/dev/soren-jrpg/design-spike/npc_sheets/shopkeeper/raw_512.png",
+ "sheet": "/home/min/dev/soren-jrpg/design-spike/npc_sheets/shopkeeper/sheet_48x96.png",
+ "sheet_size": [
+  48,
+  96
+ ],
+ "grid_48x96": true,
+ "frames_nonempty": "12/12",
+ "grounded": "12/12",
+ "unique_colors_total": 20,
+ "uniq_per_frame": [
+  15,
+  16,
+  17,
+  17,
+  16,
+  15,
+  17,
+  16,
+  14,
+  8,
+  9,
+  11
+ ],
+ "adjacent_frame_diff": [
+  0.232,
+  0.25,
+  0.25,
+  0.214,
+  0.273,
+  0.221,
+  0.219,
+  0.385
+ ],
+ "min_diff": 0.214
+}

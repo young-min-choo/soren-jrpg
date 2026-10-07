@@ -8,7 +8,7 @@ Read this before starting new work.
 
 ---
 
-## Status: Phase 9 (Polish) — slices 1-9 complete. Next: manual playtest.
+## Status: Phase 10 (NPC walk sheets) slice A complete. Next: manual playtest.
 
 | Phase | Status | Deliverable |
 |---|---|---|
@@ -21,6 +21,16 @@ Read this before starting new work.
 | 7. Story & Events | ✅ 2026-09-08 | New game flow, cutscenes, story flags, NPC dialogue reacts to flags |
 | 8. Content Expansion | ✅ 2026-10-03 | Full world: towns, dungeons, finale, equipment, economy, Game Over |
 | 9. Polish (art/audio) | ✅ 2026-10-04 | Slices 1-9 below |
+| 10. AI art batch (Phase A) | ✅ 2026-10-07 | NPC walk sheets ×16 + talk-facing; slices below |
+
+### Phase 10 slices
+1. **Slice A (2026-10-07): NPC walk sheets ×16** — klein-base-4B + pixel_4walk LoRA
+   batch (pipeline: `design-spike/bin/soren_batch.py` → `soren_post.py` →
+   `soren_batch_verify.py` → `soren_wire_export.py`). All 16 identities:
+   12/12 frames grounded, ANIM ≥12%, 0% off-palette, HUE ≤5 (auto rare-family
+   merge). Game-facing: `public/sprites/npc_sheets/` + `npc-sheet-manifest.json`
+   (manifest-driven load — no 404s possible), sheet-backed static NPCs,
+   per-key walk anims, talk-facing pose on dialogue. E2E 37/37.
 
 ### Phase 9 slices (all committed 2026-10-04)
 1. AI art pipeline: master palette, overworld tiles, player sprite
@@ -62,8 +72,10 @@ Desktop (omarchy) keeps a dev server running for tailnet play:
    one-line format it specifies (zone + quest + what-happened).
 2. **Fix whatever the playtest surfaces**, then balance tuning (Lv curve,
    encounter rate feel, economy: Potion 50G / inn 30G vs. earn rate).
-3. **Then** remaining Phase 9 scope: full playthrough polish pass, and decide
-   deployment (serve `dist/` over tailscale, or GitHub Pages once playtested).
+3. **Then** remaining Phase 10 scope: Phase B (enemy variants), Phase C (prop
+   decals, one theme first), NPC *movement* (config-gated wandering) — sheets
+   and anims are already in place for it. Decide deployment (tailscale serve
+   `dist/`, or GitHub Pages once playtested).
 
 ---
 

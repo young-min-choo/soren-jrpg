@@ -61,6 +61,7 @@ NPC_IDENTS = {
     "high_scholar": "a high scholar wearing a steel flat cap, grey beard, long steel robe with gold trim",
     "villager":     "a simple villager with short brown hair wearing a leaf-green tunic",
     "gareth":       "an older knight named Gareth with short red hair, full red beard, wearing steel armour",
+    "soren_hero":   "a young swordsman hero in a dark plum hooded cloak, deep purple hood over his head with a small pale face peeking out from inside the hood, charcoal tunic under the cloak, bright blue sash across his chest, steel sword scabbard on his hip, brown boots",
 }
 
 # Seed stickied from the pilot (seed 42 proved grid geometry). Batch spread:

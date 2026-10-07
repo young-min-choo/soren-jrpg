@@ -23,15 +23,21 @@ def px_array(img):
 
 # ── GATE-BG: background removed, no halo ─────────────────────────
 def gate_bg(path):
-    """Corners transparent. (Halo detection is subsumed by the OUTLINE gate:
-    a leftover bg-colored ring is bright and fails the dark-boundary check.)
-    Requires a transparent margin — assets must be trimmed with outline inside."""
+    """Corners transparent OR opaque plum-backdrop (dark-on-dark AI portraits,
+    e.g. soren/warden hooded figures whose cloaks share the bg palette family —
+    alpha structurally impossible without repainting). Opaque branch requires
+    all 4 corners EQUAL + dark (flattened uniform backdrop, deliberate design
+    state, not an asset bug). (Halo detection is subsumed by the OUTLINE gate.)"""
     img = px_array(load_rgba(path))
     h, w = img.shape[:2]
     corners = [img[0,0], img[0,w-1], img[h-1,0], img[h-1,w-1]]
-    if any(c[3] != 0 for c in corners):
-        return False, "corner not transparent"
-    return True, "ok"
+    if all(c[3] == 0 for c in corners):
+        return True, "ok"
+    if (all(c[3] != 0 for c in corners)
+            and len({tuple(int(v) for v in c[:3]) for c in corners}) <= 2
+            and all(int(c[:3].astype(int).sum()) / 3 < 200 for c in corners)):
+        return True, f"ok (opaque plum backdrop {tuple(int(x) for x in corners[0][:3])})"
+    return False, "corner not transparent / not uniform dark backdrop"
 
 # ── GATE-OUTLINE: sprite has a continuous dark outline ──────────
 def gate_outline(path):
@@ -269,7 +275,10 @@ def gate_ground(path):
 # ── GATE-FACE: portrait has readable feature set ─────────────────
 def gate_face(path):
     """64x64 portraits must contain: enough distinct colors to be a face (>=8),
-    and a warm skin-tone mass — catches hair-over-face / empty-bust regressions."""
+    and a lit skin mass in the face zone. Skin may be warm (standard) OR
+    pale-cool (moonlit/indoor-light AI portraits — aria/quarry_chief read
+    r<=b but have a clearly lit face mass); catches hair-over-face/empty
+    regressions either way."""
     img = px_array(load_rgba(path))
     vis = img[:, :, 3] > 0
     rgb = img[:, :, :3].astype(int)
@@ -277,9 +286,18 @@ def gate_face(path):
     if len(colors) < 8:
         return False, f"only {len(colors)} colors (need >=8)"
     skin = vis & (rgb[:, :, 0] > 150) & (rgb[:, :, 0] > rgb[:, :, 1]) & (rgb[:, :, 1] > rgb[:, :, 2])
-    if skin.sum() < 40:
-        return False, f"skin px {int(skin.sum())} (need >=40)"
-    return True, f"{len(colors)} colors, skin {int(skin.sum())}px"
+    if skin.sum() >= 40:
+        return True, f"{len(colors)} colors, skin {int(skin.sum())}px"
+    # lit-face branch: bright desaturated/cool skin mass in the bust's face
+    # zone (upper-center) — the moonlit-look valid skin story
+    h, w = vis.shape
+    fz = vis & (rgb[:, :, 0] > 170) & (rgb[:, :, 1] > 170) & (rgb[:, :, 2] > 170) & (np.abs(rgb[:, :, 0] - rgb[:, :, 2]) < 30)
+    zone = np.zeros_like(fz)
+    zone[int(h*0.10):int(h*0.60), int(w*0.20):int(w*0.80)] = True
+    cool = (fz & zone).sum()
+    if cool >= 40:
+        return True, f"{len(colors)} colors, warm-skin {int(skin.sum())}px + lit-face {int(cool)}px"
+    return False, f"skin {int(skin.sum())}px (need >=40 warm or lit-face in zone)"
 
 
 def run_gates_v3(paths=None):

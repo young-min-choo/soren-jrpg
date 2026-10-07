@@ -85,6 +85,12 @@ Desktop (omarchy) keeps a dev server running for tailnet play:
    and anims are already in place for it. Decide deployment (tailscale serve
    `dist/`, or GitHub Pages once playtested).
 
+### Phase 10 polish (2026-10-07, d5a7130)
+- Portrait review pass → 9/10 verdict: lighting-coherence fixes (soren/warden
+  shadow-rolloff lift; job_master trial reverted — lift destroyed identity),
+  `gate_face` lit-face branch (moonlit pale-cool skin), `gate_bg` opaque
+  plum-backdrop branch. Gates 420/420 again; E2E 37/37.
+
 ---
 
 ## Change Log

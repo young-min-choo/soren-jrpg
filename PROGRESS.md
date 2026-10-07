@@ -90,7 +90,7 @@ Choo ran the first hands-on session and reported 5 bugs; all fixed:
 1. **Choices overlapped the portrait** — choices positioned at box
    `left:60px` (inside the portrait zone) and the 192px portrait left the
    text column ~40px. Portrait now 2x/128px (still integer-crisp), choices
-   start at `left:152px`. Dialogue box min-height accommodates 4 choices.
+   start at `left:152px` (box height already fits 4 choices — verified live).
 2. **"Soren's head is see-through"** — hood-opening skin (232,184,144) was
    near-identical to ruins masonry (216,192,152) with no dark rim → face read
    as a hole in the wall. v7 walk sheet: pale bounded face (248,224,192) +

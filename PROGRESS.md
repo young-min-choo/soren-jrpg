@@ -85,6 +85,13 @@ Desktop (omarchy) keeps a dev server running for tailnet play:
    and anims are already in place for it. Decide deployment (tailscale serve
    `dist/`, or GitHub Pages once playtested).
 
+### Phase 10 vibe/consistency final (2026-10-07, 45e85b6)
+- Choo set the bar: vibe ≥9/10 AND consistency ≥9/10. Iteration 3 fixed the
+  three weak cells: aria (crop bug — refold of original raw), quarry_chief
+  (grey-haired bearded boss replacing the white-helm softboy), shopkeeper
+  (painterly regen replacing flat-cel). Final self-grade: vibe 9/10,
+  consistency 9/10. Gates 420/420, E2E 37/37.
+
 ### Phase 10 consistency pass (2026-10-07, feb5168)
 - Style-audit of the 20 portraits: roster had split into 3 sub-families.
   Regen'd soren (profile ghost → frontal bust), innkeeper (washed → crisp);

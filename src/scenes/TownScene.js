@@ -48,6 +48,7 @@ export default class TownScene extends Phaser.Scene {
     this.npcCfgs = town.npcs;
 
     const mapData = this.generateMapData();
+    this.mapData = mapData; // wanderer walkability reads this grid
     const map = this.make.tilemap({ data: mapData, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
     const tileset = map.addTilesetImage('town_tiles', 'town_tiles', TILE_SIZE, TILE_SIZE);
     const groundLayer = map.createLayer(0, tileset, 0, 0);
@@ -96,6 +97,18 @@ export default class TownScene extends Phaser.Scene {
         npc.setData('artKey', artKey);
         npc.anims.pause();
         npc.setFrame(1); // stand frame, facing down (sheet row contract)
+      }
+      // Phase 10 movement: config-gated wandering. Sheet NPCs pick random
+      // walkable tiles near home (radius 2), grid-stepped, idle between hops.
+      // Static-body collision keeps them solid to the player throughout.
+      if (cfg.wander && hasSheet) {
+        npc.setData('wander', true);
+        npc.setData('homeX', cfg.x);
+        npc.setData('homeY', cfg.y);
+        npc.setData('gridX', cfg.x);
+        npc.setData('gridY', cfg.y);
+        npc.setData('walkPhase', null);       // {from:{x,y}, to:{x,y}, t0}
+        npc.setData('idleUntil', Date.now() + 800 + Math.random() * 2400);
       }
       if (!this.textures.exists(texKey) && cfg.tint) npc.setTint(cfg.tint);
       npc.setData('artKey', artKey);
@@ -320,7 +333,76 @@ export default class TownScene extends Phaser.Scene {
       this.talkToNpc(this.nearbyNpc);
     }
 
+    // ── Phase 10: NPC wandering (config-gated) ──
+    if (!this.dialogueActive) this.updateWanderers(delta);
+
     this.confirmPressed = false;
+  }
+
+  // Grid-stepped wander: idle 0.8-3.2s, then hop one tile (~260ms eased)
+  // to a random walkable neighbor within radius 2 of home. Grid positions
+  // (gridX/gridY) are committed BEFORE the sprite eases; mid-step contact
+  // keeps both from/to reserved in occupied(). Frozen during dialogue
+  // (update() bails above); talk-facing pose survives via idleUntil bump.
+  updateWanderers(delta) {
+  const WALK_MS = 260, RADIUS = 2;
+  const walkable = (x, y) => {
+    const t = this.mapData[y] && this.mapData[y][x];
+    return t === T_FLOOR || t === T_PATH;
+  };
+  const playerTileX = this.player ? Math.floor(this.player.x / TILE_SIZE) : -99;
+  const playerTileY = this.player ? Math.floor(this.player.y / TILE_SIZE) : -99;
+  const occupied = (x, y) =>
+    (x === playerTileX && y === playerTileY) ||
+    this.npcs.some(n => {
+      const p = n.getData('walkPhase');
+      if (p) return (p.to.x === x && p.to.y === y) || (p.from.x === x && p.from.y === y);
+      return n.getData('gridX') === x && n.getData('gridY') === y;
+    });
+    const npcStandFrame = (facing) => ({ down: 1, left: 4, right: 7, up: 10 })[facing] ?? 1;
+
+    for (const npc of this.npcs) {
+      if (!npc.getData('wander')) continue;
+      const phase = npc.getData('walkPhase');
+
+      if (phase) {
+        // mid-step: ease toward target tile center
+        const t = Math.min(1, (Date.now() - phase.t0) / WALK_MS);
+        const ease = t * (2 - t); // easeOutQuad
+        npc.x = (phase.from.x * TILE_SIZE + TILE_SIZE / 2) + (phase.to.x - phase.from.x) * TILE_SIZE * ease;
+        npc.y = (phase.from.y * TILE_SIZE + TILE_SIZE / 2) + (phase.to.y - phase.from.y) * TILE_SIZE * ease;
+        npc.body.reset(npc.x, npc.y);
+        if (t >= 1) {
+          npc.setData('gridX', phase.to.x);
+          npc.setData('gridY', phase.to.y);
+          npc.setData('walkPhase', null);
+          npc.anims.pause();
+          npc.setFrame(npcStandFrame(phase.facing));
+          npc.setData('idleUntil', Date.now() + 800 + Math.random() * 2400);
+        }
+        continue;
+      }
+
+      if (Date.now() < npc.getData('idleUntil')) continue;
+
+      // pick a neighbor: walkable, in-radius, unoccupied, not the player's tile
+      const gx = npc.getData('gridX'), gy = npc.getData('gridY');
+      const homeX = npc.getData('homeX'), homeY = npc.getData('homeY');
+      const options = [
+        [1, 0, 'right'], [-1, 0, 'left'], [0, 1, 'down'], [0, -1, 'up'],
+      ].filter(([dx, dy]) =>
+        Math.abs(gx + dx - homeX) <= RADIUS && Math.abs(gy + dy - homeY) <= RADIUS &&
+        walkable(gx + dx, gy + dy) && !occupied(gx + dx, gy + dy)
+      );
+      // bias: 15% chance to step back toward home when near the radius edge
+      if (!options.length) { npc.setData('idleUntil', Date.now() + 1200); continue; }
+      const [dx, dy, facing] = options[Math.floor(Math.random() * options.length)];
+      npc.anims.play(`npc-walk-${npc.getData('artKey')}-${facing}`, true);
+      // walk anims are 8fps / 3 frames = 375ms per loop; the 260ms hop lands
+      // on a step frame — pause at the stand frame (row frame 1) after arrival.
+      npc.setData('walkPhase', { from: { x: gx, y: gy }, to: { x: gx + dx, y: gy + dy }, t0: Date.now(), facing });
+      npc.setData('lastFacing', facing);
+    }
   }
 
   talkToNpc(npc) {
@@ -335,11 +417,27 @@ export default class TownScene extends Phaser.Scene {
 
     // Phase 10: NPC turns to face the player (sprite pose language). Row
     // contract down/left/right/up → frame 1/4/7/10 is each row's stand frame.
+    // Wanderers: cancel any mid-step and snap to the facing tile center —
+    // their walk anims resume only after dialogue closes (idleUntil is reset).
     if (npc.getData('hasSheet')) {
       const dx = this.player.x - npc.x;
       const dy = this.player.y - npc.y;
       const facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
       const npcFrameMap = { down: 1, left: 4, right: 7, up: 10 };
+      if (npc.getData('wander')) {
+        const phase = npc.getData('walkPhase');
+        if (phase) {
+          // land the sprite at the committed destination (already mostly there
+          // or still near origin; mid-hop contact with the player is possible
+          // since the player can brush a moving NPC) — snap to the target tile.
+          npc.setPosition(phase.to.x * TILE_SIZE + TILE_SIZE / 2, phase.to.y * TILE_SIZE + TILE_SIZE / 2);
+          npc.body.reset(npc.x, npc.y);
+          npc.setData('gridX', phase.to.x);
+          npc.setData('gridY', phase.to.y);
+          npc.setData('walkPhase', null);
+        }
+        npc.setData('idleUntil', Date.now() + 2200 + Math.random() * 1800);
+      }
       npc.anims.pause();
       npc.setFrame(npcFrameMap[facing] ?? 1);
       npc.setData('talkFacing', facing);

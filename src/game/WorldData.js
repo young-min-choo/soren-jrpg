@@ -69,7 +69,7 @@ export const TOWNS = {
     ],
     woods: [[5, 2], [9, 2], [5, 3], [9, 3]],
     npcs: [
-      { x: 6,  y: 5,  tint: null,     role: 'townsfolk', name: 'Townsfolk', npcKey: 'townsfolk' },
+      { x: 6,  y: 5,  tint: null,     role: 'townsfolk', name: 'Townsfolk', npcKey: 'townsfolk', wander: true },
       { x: 11, y: 5,  tint: 0x888888, role: 'elder',     name: 'Elder',     npcKey: 'elder' },
       { x: 8,  y: 8,  tint: 0x44ff44, role: 'jobMaster',  name: 'Job Master' },
       { x: 3,  y: 10, tint: 0xffdd44, role: 'shopkeeper', name: 'Shopkeeper' },
@@ -96,7 +96,7 @@ export const TOWNS = {
     ],
     woods: [[6, 2], [9, 2], [6, 3], [9, 3], [6, 9], [9, 9]],
     npcs: [
-      { x: 4,  y: 5,  tint: null,     role: 'townsfolk', name: 'Dockhand',   npcKey: 'dockhand' },
+      { x: 4,  y: 5,  tint: null,     role: 'townsfolk', name: 'Dockhand',   npcKey: 'dockhand', wander: true },
       { x: 12, y: 5,  tint: 0x888888, role: 'elder',     name: 'Harbormaster', npcKey: 'harbormaster' },
       { x: 7,  y: 9,  tint: 0x44ff44, role: 'jobMaster', name: 'Job Master' },
       { x: 3,  y: 10, tint: 0xffdd44, role: 'shopkeeper', name: 'Shopkeeper' },
@@ -128,6 +128,7 @@ export const TOWNS = {
       { x: 8,  y: 8,  tint: 0x44ff44, role: 'jobMaster', name: 'Job Master' },
       { x: 3,  y: 10, tint: 0xffdd44, role: 'shopkeeper', name: 'Shopkeeper' },
       { x: 12, y: 10, tint: 0x66aaff, role: 'innkeeper', name: 'Innkeeper' },
+      { x: 6,  y: 10, tint: null,     role: 'villager',  name: 'Villager',     npcKey: 'villager', wander: true },
     ],
   },
 
@@ -155,6 +156,7 @@ export const TOWNS = {
       { x: 8,  y: 8,  tint: 0x44ff44, role: 'jobMaster', name: 'Job Master' },
       { x: 3,  y: 10, tint: 0xffdd44, role: 'shopkeeper', name: 'Shopkeeper' },
       { x: 12, y: 10, tint: 0x66aaff, role: 'innkeeper', name: 'Innkeeper' },
+      { x: 9,  y: 10, tint: null,     role: 'villager',  name: 'Monk',        npcKey: 'villager', wander: true },
     ],
   },
 
@@ -183,6 +185,7 @@ export const TOWNS = {
       { x: 7,  y: 8,  tint: 0x44ff44, role: 'jobMaster', name: 'Job Master' },
       { x: 3,  y: 10, tint: 0xffdd44, role: 'shopkeeper', name: 'Shopkeeper' },
       { x: 12, y: 10, tint: 0x66aaff, role: 'innkeeper', name: 'Innkeeper' },
+      { x: 10, y: 10, tint: null,     role: 'villager',  name: 'Courtier',    npcKey: 'villager', wander: true },
     ],
   },
 };

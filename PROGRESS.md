@@ -31,6 +31,14 @@ Read this before starting new work.
    merge). Game-facing: `public/sprites/npc_sheets/` + `npc-sheet-manifest.json`
    (manifest-driven load — no 404s possible), sheet-backed static NPCs,
    per-key walk anims, talk-facing pose on dialogue. E2E 37/37.
+2. **Slice C (2026-10-07): FE-style painted portraits ×20** — Z-Image Turbo
+   (clean 8-step) painterly busts with a LOCKED style clause → face-anchored
+   crop → 2×2 pixel fold → master palette → bg-flatten → corner key
+   (`soren_portrait_batch2.py` + `soren_portrait_fold.py`). Programmatic
+   screen (std/nonbg/plum-corners/face) + deterministic seed retries; visual
+   regen loop killed style drift (warden×2, windreader, innkeeper, neve).
+   In-place overwrite of `public/sprites/portraits/*.png` (old set in git for
+   rollback). E2E 37/37; in-game dialogue render verified.
 
 ### Phase 9 slices (all committed 2026-10-04)
 1. AI art pipeline: master palette, overworld tiles, player sprite

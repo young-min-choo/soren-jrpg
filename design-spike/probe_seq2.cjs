@@ -12,13 +12,17 @@ const { chromium } = require('playwright');
   for (let i = 0; i < 12; i++) { await page.waitForTimeout(1000); if (await page.evaluate(() => window.__soren.activeSceneKey() === 'Overworld')) break; }
   await page.evaluate(() => window.__soren.startBattle('Overworld', ['slime']));
   await page.waitForTimeout(1200);
-  await page.evaluate(async () => {
+  const samples = await page.evaluate(async () => {
     const b = window.__soren.scene('Battle');
     const s = b.playerSprites[0];
-    s.x = 180;  // as if the lunge already carried him to blade-point of slime#0
+    const out = [];
     b.strikeGesture(s, 1, () => {});
-    await new Promise(r2 => setTimeout(r2, 660)); // stance+dash → swing held
+    for (let i = 0; i < 11; i++) {
+      out.push([s.frame.name, Math.round(s.x)]);
+      await new Promise(r2 => setTimeout(r2, 55));
+    }
+    return out;
   });
-  await page.screenshot({ path: '/tmp/fe_dash_contact.png' });
+  console.log('SAMPLES [frame,x]:', JSON.stringify(samples));
   await browser.close();
 })();

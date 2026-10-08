@@ -1,3 +1,4 @@
+// 6-frame attack sequence: capture frames at each phase + verify sequence playback
 const { chromium } = require('playwright');
 (async () => {
   const browser = await chromium.launch();
@@ -12,13 +13,26 @@ const { chromium } = require('playwright');
   for (let i = 0; i < 12; i++) { await page.waitForTimeout(1000); if (await page.evaluate(() => window.__soren.activeSceneKey() === 'Overworld')) break; }
   await page.evaluate(() => window.__soren.startBattle('Overworld', ['slime']));
   await page.waitForTimeout(1200);
-  await page.evaluate(async () => {
+  const r = await page.evaluate(async () => {
     const b = window.__soren.scene('Battle');
     const s = b.playerSprites[0];
-    s.x = 180;  // as if the lunge already carried him to blade-point of slime#0
+    const out = { startFrame: s.frame.name, homeY: s._homeY };
     b.strikeGesture(s, 1, () => {});
-    await new Promise(r2 => setTimeout(r2, 660)); // stance+dash → swing held
+    await new Promise(r2 => setTimeout(r2, 60));
+    out.stance = [s.frame.name, Math.round(s.x)];
+    await new Promise(r2 => setTimeout(r2, 100));
+    out.dash = [s.frame.name, Math.round(s.x)];
+    await new Promise(r2 => setTimeout(r2, 100));
+    out.contact = [s.frame.name, Math.round(s.x)];
+    await new Promise(r2 => setTimeout(r2, 130));
+    out.follow = [s.frame.name, Math.round(s.x)];
+    await new Promise(r2 => setTimeout(r2, 250));
+    out.ret = [s.frame.name, Math.round(s.x)];
+    await new Promise(r2 => setTimeout(r2, 200));
+    out.final = [s.frame.name, Math.round(s.x), s.y];
+    return out;
   });
-  await page.screenshot({ path: '/tmp/fe_dash_contact.png' });
+  console.log('SEQ:', JSON.stringify(r));
+  await page.screenshot({ path: '/tmp/seq_final.png' });
   await browser.close();
 })();

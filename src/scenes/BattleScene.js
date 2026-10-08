@@ -82,10 +82,10 @@ export default class BattleScene extends Phaser.Scene {
         sprite._isSprite = true;
         sprite._sheet = feKey;
         sprite._fePair = true;     // gestures use frames 0/1 (not 4/7)
-        sprite._baseScale = 0.56;  // breathing + suspend restore THIS, not 1
-        sprite.setScale(0.56);     // 67x72 cell → display figure ≈40px (chibi height, slimmer/taller read)
+        sprite._baseScale = 0.66;  // breathing + suspend restore THIS, not 1
+        sprite.setScale(0.66);     // 85x72 cell → display figure ≈48px (chibi height, slimmer FE proportions read taller)
         sprite.setOrigin(0.5, 1.0);
-        sprite.y = 122;            // feet anchored to the ground strip
+        sprite.y = 128;            // ground line (shared with chibi party)
         sprite._homeY = sprite.y;
       } else if (this.textures.exists(sheetKey)) {
         sprite = this.add.sprite(x, 120, sheetKey, 1); // frame 1 = row0 stand
@@ -655,7 +655,7 @@ export default class BattleScene extends Phaser.Scene {
     const playerSprite = this.playerSprites[player.partyIndex];
     const targetSprite = this.enemySprites[target.index];
     const origX = playerSprite.x;
-    const lungeX = targetSprite.x - 50;
+    const lungeX = targetSprite.x - 30; // blade-point stand-off (FE tight)
     this.suspendIdle(playerSprite); // breath must not fight the gesture
 
     // Manual lunge via requestAnimationFrame (Phaser tweens don't run in launched scenes)
@@ -846,7 +846,7 @@ export default class BattleScene extends Phaser.Scene {
     // Physical attack with lunge (existing pattern)
     const playerSprite = this.playerSprites[target.partyIndex];
     const origX = enemySprite.x;
-    const lungeX = playerSprite.x + 50;
+    const lungeX = playerSprite.x + 30; // blade-point stand-off (FE tight)
     const LUNGE_MS = 400;
     this.suspendIdle(enemySprite); // breath must not fight the gesture
 
@@ -1047,29 +1047,41 @@ export default class BattleScene extends Phaser.Scene {
     //  quick settle back. Distances in game-px; ~0.55s total, matches FE pacing.
     const STANCE_MS = 130;   // step-back anticipation
     const DASH_MS = 90;      // dash to contact — the fast part
-    const HOLD_MS = 260;     // held at contact while hit lands (FE holds hard)
+    const SWING_MS = 160;    // swing frame held on contact (the money frame)
+    const HOLD_MS = 260;     // follow-through while the HP drains (FE holds hard)
     const SETTLE_MS = 170;
     const isSheet = !!(attackerSprite._sheet && attackerSprite.setTexture);
     const fePair = !!attackerSprite._fePair;
     if (isSheet || fePair) this.suspendIdle(attackerSprite);
     const backX = origX - 7 * dir;
     const contactX = origX + 14 * dir;
-    // frame: wind-up (FE pair frame 0 held; sheet = walk-step frame 4)
-    if (fePair) attackerSprite.setFrame(0);
-    else if (isSheet) attackerSprite.setFrame(4);
+    // frames: 0 stand / 1 windup / 2 dash / 3 swing / 4 follow / 5 return
+    const F = fePair
+      ? { windup: 1, dash: 2, swing: 3, follow: 4, ret: 5 }
+      : { windup: 4, dash: 7, swing: 7, follow: 1, ret: 1 }; // sheet fallbacks
+    if (fePair) attackerSprite.setFrame(F.windup);   // coiled anticipation
+    else if (isSheet) attackerSprite.setFrame(F.windup);
     this._tweenX(attackerSprite, origX, backX, STANCE_MS, () => {
-      // contact frame
-      if (fePair) attackerSprite.setFrame(1);   // FE swing frame
-      else if (isSheet) attackerSprite.setFrame(7); // sheet strike pose
+      // dash frame: blade-driven lunge
+      if (fePair) attackerSprite.setFrame(F.dash);
+      else if (isSheet) attackerSprite.setFrame(F.dash);
       this._tweenX(attackerSprite, backX, contactX, DASH_MS, () => {
+        // swing lands — the money frame holds SWING_MS while the hit lands
+        if (fePair) attackerSprite.setFrame(F.swing);
         onContact();  // flash/shake/damage fire as the dash lands
         setTimeout(() => {
-          if (fePair) attackerSprite.setFrame(0);
-          else if (isSheet) attackerSprite.setFrame(1);
-          this._tweenX(attackerSprite, contactX, origX, SETTLE_MS, () => {
-            this.resumeIdle(attackerSprite);
-          });
-        }, HOLD_MS - DASH_MS > 0 ? HOLD_MS - DASH_MS : 0);
+          // follow-through while HP drains
+          if (fePair) attackerSprite.setFrame(F.follow);
+          else if (isSheet) attackerSprite.setFrame(F.follow);
+          setTimeout(() => {
+            if (fePair) attackerSprite.setFrame(F.ret);
+            else if (isSheet) attackerSprite.setFrame(F.ret);
+            this._tweenX(attackerSprite, contactX, origX, SETTLE_MS, () => {
+              if (fePair) attackerSprite.setFrame(0); // clean stand
+              this.resumeIdle(attackerSprite);
+            });
+          }, HOLD_MS - DASH_MS > 0 ? HOLD_MS - DASH_MS : 0);
+        }, SWING_MS);
       });
     });
   }

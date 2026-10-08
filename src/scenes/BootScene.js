@@ -51,11 +51,10 @@ export default class BootScene extends Phaser.Scene {
       this.load.spritesheet(`battlesheet_${key}`, `sprites/battle/sheets/${key}.png`,
         { frameWidth: 16, frameHeight: 24, endFrame: 12 });
     });
-    // Phase 10b: FE-proportioned i2i frames (Choo's art call). 2-frame pair
-    // pair sheet (cells 67x72: 0 = stand, 1 = swing-right) — hero slot uses
-    // it if present (FE-proportioned i2i figure, displayed at _baseScale 0.56).
-    this.load.spritesheet('fesheet_soren_battle', 'sprites/battle/fe_soren_pair.png',
-      { frameWidth: 67, frameHeight: 72, endFrame: 2 });
+    // Phase 10c: FE-proportioned i2i FRAMES — 6-cell attack sequence
+    // (cells 85x72: 0 stand / 1 windup / 2 dash / 3 swing / 4 follow / 5 return)
+    this.load.spritesheet('fesheet_soren_battle', 'sprites/battle/fe_soren_seq.png',
+      { frameWidth: 85, frameHeight: 72, endFrame: 6 });
     // Phase 9: themed tileset strips (fallback to programmatic if missing)
     ['town_tiles', 'dgn_ember', 'dgn_tide', 'dgn_hollow', 'dgn_spire', 'dgn_ruins'].forEach((key) => {
       this.load.image(`${key}_ai`, `sprites/tiles/${key}.png`);

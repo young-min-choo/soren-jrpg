@@ -82,7 +82,8 @@ export default class BattleScene extends Phaser.Scene {
         sprite._isSprite = true;
         sprite._sheet = feKey;
         sprite._fePair = true;     // gestures use frames 0/1 (not 4/7)
-        sprite.setScale(0.72);     // 52x72 cell → ~37x52: figure ≈1.1x chibi height
+        sprite._baseScale = 0.56;  // breathing + suspend restore THIS, not 1
+        sprite.setScale(0.56);     // 67x72 cell → display figure ≈40px (chibi height, slimmer/taller read)
         sprite.setOrigin(0.5, 1.0);
         sprite.y = 122;            // feet anchored to the ground strip
         sprite._homeY = sprite.y;
@@ -1040,34 +1041,54 @@ export default class BattleScene extends Phaser.Scene {
 
   strikeGesture(attackerSprite, dir, onContact) {
     if (!attackerSprite) { onContact(); return; }
-    const origRot = 0;
     const origX = attackerSprite.x;
-    const LEAN_MS = 110;   // wind-up
-    const SNAP_MS = 90;    // strike
-    const HOLD_MS = 70;    // hold through the flash frame
-    // Sheet attackers: slash pose = jump frame (row1 col3 for left-slide,
-    // row2 col3 for right-slide read best) — swap frames through the phases.
+    // FE-style footwork (no rotation wiggles — FE units don't tilt):
+    //  step back (wind-up) → DASH to the target (fast) → swing lands →
+    //  quick settle back. Distances in game-px; ~0.55s total, matches FE pacing.
+    const STANCE_MS = 130;   // step-back anticipation
+    const DASH_MS = 90;      // dash to contact — the fast part
+    const HOLD_MS = 260;     // held at contact while hit lands (FE holds hard)
+    const SETTLE_MS = 170;
     const isSheet = !!(attackerSprite._sheet && attackerSprite.setTexture);
-    if (isSheet) this.suspendIdle(attackerSprite);
-    // FE-pair heroes: frame 0 = stand, 1 = swing (2-frame gesture); else sheet frames
-    if (attackerSprite._fePair) attackerSprite.setFrame(0);
-    else if (isSheet) attackerSprite.setFrame(4); // row1 col0 — step wind-up
-    // wind-up: lean AWAY from target (rotate ±14° back + slight pull-back)
-    this._tweenRot(attackerSprite, origRot, -0.26 * dir, origX, origX - 6 * dir, LEAN_MS, () => {
-    if (attackerSprite._fePair) attackerSprite.setFrame(1); // FE swing frame
-    else if (isSheet) attackerSprite.setFrame(7); // row2 col3 = jump/strike (sword extended)
-      // strike: whip TOWARD target (rotate ±26° forward)
-      this._tweenRot(attackerSprite, -0.26 * dir, 0.42 * dir, origX - 6 * dir, origX + 10 * dir, SNAP_MS, () => {
-        onContact();  // flash/shake/damage fire at the snap's end
+    const fePair = !!attackerSprite._fePair;
+    if (isSheet || fePair) this.suspendIdle(attackerSprite);
+    const backX = origX - 7 * dir;
+    const contactX = origX + 14 * dir;
+    // frame: wind-up (FE pair frame 0 held; sheet = walk-step frame 4)
+    if (fePair) attackerSprite.setFrame(0);
+    else if (isSheet) attackerSprite.setFrame(4);
+    this._tweenX(attackerSprite, origX, backX, STANCE_MS, () => {
+      // contact frame
+      if (fePair) attackerSprite.setFrame(1);   // FE swing frame
+      else if (isSheet) attackerSprite.setFrame(7); // sheet strike pose
+      this._tweenX(attackerSprite, backX, contactX, DASH_MS, () => {
+        onContact();  // flash/shake/damage fire as the dash lands
         setTimeout(() => {
-          if (attackerSprite._fePair) attackerSprite.setFrame(0); // FE stand
-          else if (isSheet) attackerSprite.setFrame(1); // stand
-          this.resumeIdle(attackerSprite);
-          // settle back to identity
-          this._tweenRot(attackerSprite, 0.42 * dir, origRot, origX + 10 * dir, origX, 160, null);
-        }, HOLD_MS);
+          if (fePair) attackerSprite.setFrame(0);
+          else if (isSheet) attackerSprite.setFrame(1);
+          this._tweenX(attackerSprite, contactX, origX, SETTLE_MS, () => {
+            this.resumeIdle(attackerSprite);
+          });
+        }, HOLD_MS - DASH_MS > 0 ? HOLD_MS - DASH_MS : 0);
       });
     });
+  }
+
+  _tweenX(sprite, fromX, toX, ms, done) {
+    const t0 = performance.now();
+    const step = () => {
+      const e = performance.now() - t0;
+      if (e < ms) {
+        const t = e / ms;
+        const ease = t * t; // easeIn — accel into the dash, reads as commitment
+        sprite.x = fromX + (toX - fromX) * ease;
+        requestAnimationFrame(step);
+      } else {
+        sprite.x = toX;
+        if (done) done();
+      }
+    };
+    requestAnimationFrame(step);
   }
 
   _tweenRot(sprite, fromR, toR, fromX, toX, ms, done) {
@@ -1209,9 +1230,11 @@ export default class BattleScene extends Phaser.Scene {
       const phase = ((s.x * 7 + s.y * 13) % PERIOD) / PERIOD; // stable per-sprite offset
       const w = Math.sin((now - t0) / PERIOD * Math.PI * 2 + phase * Math.PI * 2);
       // squash-stretch: breath in = up + thin, breath out = down + wide
+      // (relative to the sprite's base scale — custom-scale sprites keep it)
+      const bs = (s._baseScale ?? 1);
       s.y = s._homeY !== undefined ? s._homeY : (s._homeY = s.y);
-      s.scaleY = 1 + 0.03 * w;
-      s.scaleX = 1 - 0.02 * w;
+      s.scaleY = bs * (1 + 0.03 * w);
+      s.scaleX = bs * (1 - 0.02 * w);
       s.y = s._homeY - Math.max(0, w) * 1.5; // rise 1.5px on inhale only
     }
     this._idleRaf = requestAnimationFrame(this._idleStep);
@@ -1220,7 +1243,10 @@ export default class BattleScene extends Phaser.Scene {
   suspendIdle(sprite) {
     if (!sprite) return;
     this._idleSuspended.add(sprite);
-    sprite.scaleX = 1; sprite.scaleY = 1;
+    // restore the sprite's BASE scale (breathing writes absolute 1±w — sprites
+    // with a custom base scale, e.g. FE-pair 0.56, must not get reset to 1)
+    sprite.scaleX = (sprite._baseScale ?? 1);
+    sprite.scaleY = (sprite._baseScale ?? 1);
     if (sprite._homeY !== undefined) sprite.y = sprite._homeY;
   }
 

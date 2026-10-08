@@ -52,10 +52,10 @@ export default class BootScene extends Phaser.Scene {
         { frameWidth: 16, frameHeight: 24, endFrame: 12 });
     });
     // Phase 10b: FE-proportioned i2i frames (Choo's art call). 2-frame pair
-    // sheet (104x72, frames 104x72: stand + swing) — if present, the hero
-    // battle sprite becomes an FE-style FE-scale figure (52x72 at 2x display).
+    // pair sheet (cells 67x72: 0 = stand, 1 = swing-right) — hero slot uses
+    // it if present (FE-proportioned i2i figure, displayed at _baseScale 0.56).
     this.load.spritesheet('fesheet_soren_battle', 'sprites/battle/fe_soren_pair.png',
-      { frameWidth: 52, frameHeight: 72, endFrame: 2 });
+      { frameWidth: 67, frameHeight: 72, endFrame: 2 });
     // Phase 9: themed tileset strips (fallback to programmatic if missing)
     ['town_tiles', 'dgn_ember', 'dgn_tide', 'dgn_hollow', 'dgn_spire', 'dgn_ruins'].forEach((key) => {
       this.load.image(`${key}_ai`, `sprites/tiles/${key}.png`);

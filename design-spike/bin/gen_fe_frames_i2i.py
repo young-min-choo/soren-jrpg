@@ -25,7 +25,7 @@ NEG = ("blurry, lowres, 3d render, realistic, photo, watermark, text, grid, shee
 # pose → (reference file, denoise). Reference copies must exist in INP.
 POSES = {
     "stand":       ("fe_ref_eirika.png",      0.55),
-    "swing":       ("fe_ref_swing.png",       0.60),
+    "swing":       ("fe_ref_swing.png",       0.58),
 }
 
 def post_json(path, payload, timeout=300):
@@ -34,7 +34,10 @@ def post_json(path, payload, timeout=300):
     return json.load(urllib.request.urlopen(req, timeout=timeout))
 
 def gen(char, pose, ref, dn, seed):
-    POS = (f"pixel art of a single small sprite: {IDENT[char]} for pose '{pose}'. "
+    COOL = ("intense battle stance, dynamic action pose, dramatic cape and hood blown "
+            "back by motion, gripping the sword two-handed mid-slash, sharp fierce glare, "
+            "battle-worn, GBA fire emblem battle animation frame")
+    POS = (f"pixel art of a single small sprite: {IDENT[char]}. {COOL if pose=='swing' else 'calm ready stance'}. "
            "GBA fire emblem battle sprite. THE SPRITE IS TINY: about 36 pixels tall on "
            "a large empty canvas, centered, realistic proportions, dark #282828 single "
            "pixel outline, limited 16 color palette, solid green background, side view "

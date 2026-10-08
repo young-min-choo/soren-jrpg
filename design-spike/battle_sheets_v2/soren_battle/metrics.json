@@ -1,0 +1,37 @@
+{
+ "raw": "../battle_sheets_v2/soren_battle/raw_512.png",
+ "sheet": "../battle_sheets_v2/soren_battle/sheet_48x96.png",
+ "sheet_size": [
+  48,
+  96
+ ],
+ "grid_48x96": true,
+ "frames_nonempty": "12/12",
+ "grounded": "12/12",
+ "unique_colors_total": 27,
+ "uniq_per_frame": [
+  16,
+  18,
+  19,
+  20,
+  20,
+  19,
+  22,
+  17,
+  18,
+  12,
+  15,
+  12
+ ],
+ "adjacent_frame_diff": [
+  0.242,
+  0.25,
+  0.297,
+  0.253,
+  0.477,
+  0.214,
+  0.266,
+  0.43
+ ],
+ "min_diff": 0.214
+}

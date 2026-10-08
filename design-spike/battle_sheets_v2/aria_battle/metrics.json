@@ -1,0 +1,37 @@
+{
+ "raw": "../battle_sheets_v2/aria_battle/raw_512.png",
+ "sheet": "../battle_sheets_v2/aria_battle/sheet_48x96.png",
+ "sheet_size": [
+  48,
+  96
+ ],
+ "grid_48x96": true,
+ "frames_nonempty": "12/12",
+ "grounded": "12/12",
+ "unique_colors_total": 25,
+ "uniq_per_frame": [
+  20,
+  22,
+  22,
+  20,
+  18,
+  20,
+  20,
+  20,
+  18,
+  18,
+  16,
+  16
+ ],
+ "adjacent_frame_diff": [
+  0.266,
+  0.26,
+  0.227,
+  0.219,
+  0.232,
+  0.221,
+  0.195,
+  0.193
+ ],
+ "min_diff": 0.193
+}

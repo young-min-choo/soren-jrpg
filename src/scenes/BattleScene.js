@@ -74,7 +74,19 @@ export default class BattleScene extends Phaser.Scene {
       // animated sprite; base position scaled up 2x (16x24 → 32x48 display).
       let sprite;
       const sheetKey = `battlesheet_${artKey}`;
-      if (this.textures.exists(sheetKey)) {
+      // Phase 10b trial: hero (slot 0) prefers the FE-style pair sheet
+      // (104x72 frames: 0 = stand, 1 = swing) — FE proportions, i2i art.
+      const feKey = `fesheet_${artKey}`;
+      if (i === 0 && this.textures.exists(feKey)) {
+        sprite = this.add.sprite(x, 120, feKey, 0);
+        sprite._isSprite = true;
+        sprite._sheet = feKey;
+        sprite._fePair = true;     // gestures use frames 0/1 (not 4/7)
+        sprite.setScale(0.72);     // 52x72 cell → ~37x52: figure ≈1.1x chibi height
+        sprite.setOrigin(0.5, 1.0);
+        sprite.y = 122;            // feet anchored to the ground strip
+        sprite._homeY = sprite.y;
+      } else if (this.textures.exists(sheetKey)) {
         sprite = this.add.sprite(x, 120, sheetKey, 1); // frame 1 = row0 stand
         sprite._isSprite = true;
         sprite._sheet = sheetKey;
@@ -1037,15 +1049,19 @@ export default class BattleScene extends Phaser.Scene {
     // row2 col3 for right-slide read best) — swap frames through the phases.
     const isSheet = !!(attackerSprite._sheet && attackerSprite.setTexture);
     if (isSheet) this.suspendIdle(attackerSprite);
-    if (isSheet) attackerSprite.setFrame(4); // row1 col0 — step wind-up
+    // FE-pair heroes: frame 0 = stand, 1 = swing (2-frame gesture); else sheet frames
+    if (attackerSprite._fePair) attackerSprite.setFrame(0);
+    else if (isSheet) attackerSprite.setFrame(4); // row1 col0 — step wind-up
     // wind-up: lean AWAY from target (rotate ±14° back + slight pull-back)
     this._tweenRot(attackerSprite, origRot, -0.26 * dir, origX, origX - 6 * dir, LEAN_MS, () => {
-      if (isSheet) attackerSprite.setFrame(7); // row2 col3 = jump/strike (sword extended)
+    if (attackerSprite._fePair) attackerSprite.setFrame(1); // FE swing frame
+    else if (isSheet) attackerSprite.setFrame(7); // row2 col3 = jump/strike (sword extended)
       // strike: whip TOWARD target (rotate ±26° forward)
       this._tweenRot(attackerSprite, -0.26 * dir, 0.42 * dir, origX - 6 * dir, origX + 10 * dir, SNAP_MS, () => {
         onContact();  // flash/shake/damage fire at the snap's end
         setTimeout(() => {
-          if (isSheet) attackerSprite.setFrame(1); // stand
+          if (attackerSprite._fePair) attackerSprite.setFrame(0); // FE stand
+          else if (isSheet) attackerSprite.setFrame(1); // stand
           this.resumeIdle(attackerSprite);
           // settle back to identity
           this._tweenRot(attackerSprite, 0.42 * dir, origRot, origX + 10 * dir, origX, 160, null);

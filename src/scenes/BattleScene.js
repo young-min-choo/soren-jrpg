@@ -99,6 +99,10 @@ export default class BattleScene extends Phaser.Scene {
       }
       this.playerSprites.push(sprite);
     });
+    // Players always render ABOVE enemy rows: a lunge at a back-row target
+    // walks the attacker THROUGH/past front-row enemies (FE convention —
+    // attacks on back rows show the unit in front of the front line).
+    this.playerSprites.forEach(s => s.setDepth(30));
     this.playerSprite = this.playerSprites[0]; // primary for backwards-compat
 
     // Enemy sprites (Phase 9: AI battle sprite if texture exists, else legacy rect)

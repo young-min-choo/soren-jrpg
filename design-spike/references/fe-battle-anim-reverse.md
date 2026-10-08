@@ -94,7 +94,31 @@ motion" — does not reach "actual movement."
    frame indices (current castGesture/slashGesture become script runners).
 5. FX unchanged (hit flash, magic circle) — FE also overlays separate FX.
 
-## 6. Production notes from the source material
+## 6b. REPRODUCED EXPERIMENT (2026-10-09, options probed + committed 23179ea)
+
+Option A's AI path FAILED with the current model stack:
+1. `pixel_4walk` LoRA (the NPC-pipeline model) is **contract-locked** to its
+   4x4 walk+specials grid — a completely rewritten action-row contract is
+   IGNORED (same walk grid returned verbatim), and "32px realistic
+   proportions" never takes through it.
+2. Plain flux2-klein without the LoRA: identity + sword + smear read well in
+   a SINGLE frame, but proportions are 3-head chunky + heavy cel shading —
+   NOT GBA FE.
+Probes: `design-spike/fe_frames/*/raw_512.png` (grid, ignored contract),
+`design-spike/bin/probe_fe_single.py` + /tmp/fe_probe_single.png (no-LoRA).
+
+REMAINING PATHS to real FE-style battle art (in order of cost):
+- (i) **Find/install an FE-style LoRA or checkerboard-downscale img2img** —
+  search CivitAI/HF for GBA-FE pixel LoRAs; img2img from a real FE frame
+  (identity transfer) keeps engine-usable geometry.
+- (ii) **Hand-sprite the 3 party sets** on the old-32 art's ground: 6-10
+  frames per action, FE proportions, drawn in-repo (slow but exact).
+- (iii) **Keep chibi v2 sheets + FX layer** (B) — ships tomorrow; the look
+  stays chibi.
+RECOMMENDATION to Choo: for the playtest loop, ship (iii) now (it animates),
+pursue (i) as a research spike in a background session.
+
+## 7. Original production notes from the source material (unchanged)
 
 - "Start with the standing frame; all animations begin and end on it."
 - Crit > attack effort (spin/twirl/jump); ranged cheap; staff trivial.

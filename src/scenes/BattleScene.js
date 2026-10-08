@@ -128,7 +128,7 @@ export default class BattleScene extends Phaser.Scene {
       const x = startX + (i % 2) * spacing;
       // rows anchored to the ground strip (ground rect spans y=126..174):
       // row 0 at y=110 puts sprite feet ≈120 on the grass; row 1 at 138.
-      const y = 110 + Math.floor(i / 2) * 28;
+      const y = 128 + Math.floor(i / 2) * 14;
       // depth = row-based: BACK rows must render BEHIND front rows (Phase 10
       // fix — creation order made row 1 draw over row 0 whenever sprites
       // got big/sheet-driven). Depth descending by row: back = 10, front = 20.
@@ -143,6 +143,9 @@ export default class BattleScene extends Phaser.Scene {
       if (this.textures.exists(texKey)) {
         sprite = this.add.image(x, y, texKey);
         sprite._isSprite = true;
+        // feet-anchor like the party (center-origin left enemies hovering
+        // above the grass once the party moved to a shared feet line)
+        sprite.setOrigin(0.5, 0.94); // 32px art: ~2px bottom margin = feet
         sprite.setDepth(depth);
       } else {
         sprite = this.add.rectangle(x, y, 24, 24, enemy.color);
@@ -654,103 +657,65 @@ export default class BattleScene extends Phaser.Scene {
     this.battleState = 'animating';
     const playerSprite = this.playerSprites[player.partyIndex];
     const targetSprite = this.enemySprites[target.index];
+    // FULL FE-STYLE ATTACK TRIP (Phase 10d — smooth version):
+    //   windup AT HOME → run to the target (dash frame) → swing lands →
+    //   follow-through → return frame while walking back → stand + idle.
+    // One gesture owns the whole trip (no frozen-pose slides between them);
+    // contact (damage/flash) fires while the swing frame is held.
     const origX = playerSprite.x;
     const lungeX = targetSprite.x - 30; // blade-point stand-off (FE tight)
-    this.suspendIdle(playerSprite); // breath must not fight the gesture
+    this.suspendIdle(playerSprite);
+    this.strikeGesture(playerSprite, 1, () => {
+      // ── CONTACT: the swing frame is held at the target from here ──
+      this.slashArc(targetSprite, 1);
+      const dmg = this.calcDamage(player.atk, target.def);
+      target.hp -= dmg;
+      this.log(`${player.name} attacks ${target.name} for ${dmg} damage!`);
+      this.flashSprite(targetSprite);
+      this.screenShake();
+      this.showDamageNumber(targetSprite, dmg);
 
-    // Manual lunge via requestAnimationFrame (Phaser tweens don't run in launched scenes)
-    const startTime = performance.now();
-    const LUNGE_MS = 400; // lunge duration
-    const animateLunge = () => {
-      const elapsed = performance.now() - startTime;
-      if (elapsed < LUNGE_MS) {
-        const t = elapsed / LUNGE_MS;
-        playerSprite.x = origX + (lungeX - origX) * (1 - (1 - t) * (1 - t)); // easeOut
-        requestAnimationFrame(animateLunge);
-      } else {
-        playerSprite.x = lungeX;
-        // STRIKE: wind-up → whip → slash arc over target → contact effects
-        this.slashArc(targetSprite, 1);
-        this.strikeGesture(playerSprite, 1, () => {
-          const dmg = this.calcDamage(player.atk, target.def);
-          target.hp -= dmg;
-          this.log(`${player.name} attacks ${target.name} for ${dmg} damage!`);
-          this.flashSprite(targetSprite);
-          this.screenShake();
-          this.showDamageNumber(targetSprite, dmg);
-
-          if (target.hp <= 0) {
-            target.hp = 0;
-            target.alive = false;
-            this.log(`${target.name} is defeated!`);
-            // Death fade runs IN PARALLEL with lunge-back (not sequential)
-            const fadeStart = performance.now();
-            const animateFade = () => {
-              const fe = performance.now() - fadeStart;
-              if (fe < 600) {
-                targetSprite.setAlpha(1 - fe / 600);
-                requestAnimationFrame(animateFade);
-              } else {
-                targetSprite.setVisible(false);
-                targetSprite.setAlpha(1);
-              }
-            };
+      if (target.hp <= 0) {
+        target.hp = 0;
+        target.alive = false;
+        this.log(`${target.name} is defeated!`);
+        // Death fade runs IN PARALLEL with lunge-back (not sequential)
+        const fadeStart = performance.now();
+        const animateFade = () => {
+          const fe = performance.now() - fadeStart;
+          if (fe < 600) {
+            targetSprite.setAlpha(1 - fe / 600);
             requestAnimationFrame(animateFade);
-            // Lunge back immediately after the strike settles (parallel with fade)
-            setTimeout(() => {
-              const backStart = performance.now();
-              const animateBack = () => {
-                const be = performance.now() - backStart;
-                if (be < LUNGE_MS) {
-                  const t = be / LUNGE_MS;
-                  playerSprite.x = lungeX + (origX - lungeX) * (t * t);
-                  requestAnimationFrame(animateBack);
-                } else {
-                  playerSprite.x = origX;
-                  this.resumeIdle(playerSprite);
-                  // Wait for fade to finish, then advance turn
-                  this._lungeBackTimeout = setTimeout(() => this.afterPlayerAction(), Math.max(0, 600 - LUNGE_MS));
-                }
-              };
-              requestAnimationFrame(animateBack);
-            }, 180);
           } else {
-            // Hold at lunge position for 300ms (visible impact pause), then lunge back
-            setTimeout(() => {
-              // Counter-attack hook: physical attackers get retaliated against
-              if (target.counterPhysical && target.alive) {
-                const counterDmg = Math.max(1, Math.floor(this.calcDamage(target.atk, player.def) * 0.6));
-                player.hp -= counterDmg;
-                this.log(`${target.name} counters! ${player.name} takes ${counterDmg} damage!`);
-                this.flashSprite(playerSprite);
-                this.showDamageNumber(playerSprite, counterDmg, '#ff8888');
-                if (player.hp <= 0) {
-                  player.hp = 0;
-                  player.alive = false;
-                  this.log(`${player.name} has fallen!`);
-                  playerSprite.setVisible(false);
-                }
-              }
-              const backStart = performance.now();
-              const backFromX = lungeX;
-              const animateBack = () => {
-                const be = performance.now() - backStart;
-                if (be < LUNGE_MS) {
-                  const t = be / LUNGE_MS;
-                  playerSprite.x = backFromX + (origX - backFromX) * (t * t);
-                  requestAnimationFrame(animateBack);
-                } else {
-                  playerSprite.x = origX;
-                  this.afterPlayerAction();
-                }
-              };
-              requestAnimationFrame(animateBack);
-            }, 300);
+            targetSprite.setVisible(false);
+            targetSprite.setAlpha(1);
           }
-        });
+        };
+        requestAnimationFrame(animateFade);
+        // Walk back immediately after the strike settles (parallel with fade)
+        setTimeout(() => {
+          this._lungeBackTimeout = setTimeout(() => this.afterPlayerAction(), Math.max(0, 600 - 300));
+        }, 300);
+      } else {
+        // Return-phase runs inside strikeGesture; counter + turn advance after
+        setTimeout(() => {
+          if (target.counterPhysical && target.alive) {
+            const counterDmg = Math.max(1, Math.floor(this.calcDamage(target.atk, player.def) * 0.6));
+            player.hp -= counterDmg;
+            this.log(`${target.name} counters! ${player.name} takes ${counterDmg} damage!`);
+            this.flashSprite(playerSprite);
+            this.showDamageNumber(playerSprite, counterDmg, '#ff8888');
+            if (player.hp <= 0) {
+              player.hp = 0;
+              player.alive = false;
+              this.log(`${player.name} has fallen!`);
+              playerSprite.setVisible(false);
+            }
+          }
+          setTimeout(() => this.afterPlayerAction(), 320);
+        }, 260);
       }
-    };
-    requestAnimationFrame(animateLunge);
+    }, { targetX: lungeX });
   }
 
   // Called from update() when battleState === 'animating'
@@ -843,87 +808,58 @@ export default class BattleScene extends Phaser.Scene {
       return;
     }
 
-    // Physical attack with lunge (existing pattern)
+    // Physical attack — full FE trip (mirrors executeFight Phase 10d):
+    // windup at home → run (dash frame) → swing lands → follow → return home.
     const playerSprite = this.playerSprites[target.partyIndex];
     const origX = enemySprite.x;
     const lungeX = playerSprite.x + 30; // blade-point stand-off (FE tight)
-    const LUNGE_MS = 400;
-    this.suspendIdle(enemySprite); // breath must not fight the gesture
-
-    // Manual lunge via requestAnimationFrame
-    const startTime = performance.now();
-    const animateLunge = () => {
-      const elapsed = performance.now() - startTime;
-      if (elapsed < LUNGE_MS) {
-        const t = elapsed / LUNGE_MS;
-        enemySprite.x = origX + (lungeX - origX) * (1 - (1 - t) * (1 - t));
-        requestAnimationFrame(animateLunge);
-      } else {
-        enemySprite.x = lungeX;
-        // STRIKE: wind-up → whip → slash arc over target → contact effects
-        this.slashArc(playerSprite, -1);
-        this.strikeGesture(enemySprite, -1, () => {
-          // Impact
-          let dmg = this.calcDamage(enemy.atk, target.def);
-          if (target.defending) {
-            dmg = Math.floor(dmg / 2);
-          }
-          target.hp -= dmg;
-          this.log(`${enemy.name} attacks ${target.name} for ${dmg} damage!`);
-          this.flashSprite(playerSprite);
-          this.screenShake();
-          this.showDamageNumber(playerSprite, dmg);
-
-          if (target.hp <= 0) {
-            target.hp = 0;
-            target.alive = false;
-            this.log(`${target.name} has fallen!`);
-            // Hide fallen party member's sprite
-            playerSprite.setVisible(false);
-          } else {
-            // Status-on-hit chances (per-enemy hooks; default small poison chance)
-            const poisonChance = enemy.poisonChance !== undefined ? enemy.poisonChance : 0.2;
-            if (Math.random() < poisonChance) {
-              applyStatus(target, 'poison');
-              this.log(`${target.name} is poisoned!`);
-            } else if (enemy.silenceChance && Math.random() < enemy.silenceChance) {
-              applyStatus(target, 'silence');
-              this.log(`${target.name} is silenced!`);
-            } else if (enemy.stunChance && Math.random() < enemy.stunChance) {
-              applyStatus(target, 'stun');
-              this.log(`${target.name} is stunned!`);
-            }
-          }
-
-          // Lunge back via rAF (after strike settles)
-          setTimeout(() => {
-            const backStart = performance.now();
-            const backFromX = lungeX;
-            const animateBack = () => {
-              const be = performance.now() - backStart;
-              if (be < LUNGE_MS) {
-                const t = be / LUNGE_MS;
-                enemySprite.x = backFromX + (origX - backFromX) * (t * t);
-                requestAnimationFrame(animateBack);
-              } else {
-                enemySprite.x = origX;
-                this.resumeIdle(enemySprite);
-                this.updateAllDom();
-                this.checkBattleEnd();
-                if (this.battleState !== 'ended') {
-                  this.currentTurnIndex++;
-                  this.battleState = 'turn_start';
-                  this.updateActionMenu();
-                  this._turnTimeout = setTimeout(() => this.processNextTurn(), 100);
-                }
-              }
-            };
-            requestAnimationFrame(animateBack);
-          }, 180);
-        });
+    this.suspendIdle(enemySprite);
+    this.strikeGesture(enemySprite, -1, () => {
+      // ── CONTACT: swing frame held at the party member ──
+      this.slashArc(playerSprite, -1);
+      let dmg = this.calcDamage(enemy.atk, target.def);
+      if (target.defending) {
+        dmg = Math.floor(dmg / 2);
       }
-    };
-    requestAnimationFrame(animateLunge);
+      target.hp -= dmg;
+      this.log(`${enemy.name} attacks ${target.name} for ${dmg} damage!`);
+      this.flashSprite(playerSprite);
+      this.screenShake();
+      this.showDamageNumber(playerSprite, dmg);
+
+      if (target.hp <= 0) {
+        target.hp = 0;
+        target.alive = false;
+        this.log(`${target.name} has fallen!`);
+        // Hide fallen party member's sprite
+        playerSprite.setVisible(false);
+      } else {
+        // Status-on-hit chances (per-enemy hooks; default small poison chance)
+        const poisonChance = enemy.poisonChance !== undefined ? enemy.poisonChance : 0.2;
+        if (Math.random() < poisonChance) {
+          applyStatus(target, 'poison');
+          this.log(`${target.name} is poisoned!`);
+        } else if (enemy.silenceChance && Math.random() < enemy.silenceChance) {
+          applyStatus(target, 'silence');
+          this.log(`${target.name} is silenced!`);
+        } else if (enemy.stunChance && Math.random() < enemy.stunChance) {
+          applyStatus(target, 'stun');
+          this.log(`${target.name} is stunned!`);
+        }
+      }
+
+      // Turn advance after the return walk completes inside the gesture
+      setTimeout(() => {
+        this.updateAllDom();
+        this.checkBattleEnd();
+        if (this.battleState !== 'ended') {
+          this.currentTurnIndex++;
+          this.battleState = 'turn_start';
+          this.updateActionMenu();
+          this._turnTimeout = setTimeout(() => this.processNextTurn(), 100);
+        }
+      }, 420);
+    }, { targetX: lungeX });
   }
 
   // Called from updateAnimation when animPhase starts with 'enemy_'
@@ -1039,48 +975,45 @@ export default class BattleScene extends Phaser.Scene {
   // dir = +1 striking rightward, -1 leftward. Weapon arc = white slash div
   // sweeping across the target (FF1R/FF4-6 slash streak read).
 
-  strikeGesture(attackerSprite, dir, onContact) {
+  strikeGesture(attackerSprite, dir, onContact, opts = {}) {
     if (!attackerSprite) { onContact(); return; }
+    // FULL FE TRIP (Phase 10d): windup AT START → smooth run to targetX
+    // (dash frame carried THROUGH the travel) → swing + onContact →
+    // follow → return frame while walking home → stand. No frozen slides.
     const origX = attackerSprite.x;
-    // FE-style footwork (no rotation wiggles — FE units don't tilt):
-    //  step back (wind-up) → DASH to the target (fast) → swing lands →
-    //  quick settle back. Distances in game-px; ~0.55s total, matches FE pacing.
-    const STANCE_MS = 130;   // step-back anticipation
-    const DASH_MS = 90;      // dash to contact — the fast part
-    const SWING_MS = 160;    // swing frame held on contact (the money frame)
-    const HOLD_MS = 260;     // follow-through while the HP drains (FE holds hard)
-    const SETTLE_MS = 170;
+    const STANCE_MS = 200;   // windup hold at home (coil)
+    const RUN_MS = 300;      // the run to the target (dash frame)
+    const SWING_MS = 170;    // swing held on contact (money frame)
+    const FOLLOW_MS = 110;   // follow-through while HP drains
+    const RET_MS = 330;      // return frame during walk home
     const isSheet = !!(attackerSprite._sheet && attackerSprite.setTexture);
     const fePair = !!attackerSprite._fePair;
-    if (isSheet || fePair) this.suspendIdle(attackerSprite);
-    const backX = origX - 7 * dir;
-    const contactX = origX + 14 * dir;
-    // frames: 0 stand / 1 windup / 2 dash / 3 swing / 4 follow / 5 return
+    if (isSheet || fePair || attackerSprite._isSprite) this.suspendIdle(attackerSprite);
+    const targetX = opts.targetX !== undefined ? opts.targetX : origX + 14 * dir;
+    // frames: FE pair = 0 stand / 1 windup / 2 dash / 3 swing / 4 follow / 5 return
     const F = fePair
-      ? { windup: 1, dash: 2, swing: 3, follow: 4, ret: 5 }
-      : { windup: 4, dash: 7, swing: 7, follow: 1, ret: 1 }; // sheet fallbacks
-    if (fePair) attackerSprite.setFrame(F.windup);   // coiled anticipation
-    else if (isSheet) attackerSprite.setFrame(F.windup);
-    this._tweenX(attackerSprite, origX, backX, STANCE_MS, () => {
-      // dash frame: blade-driven lunge
-      if (fePair) attackerSprite.setFrame(F.dash);
-      else if (isSheet) attackerSprite.setFrame(F.dash);
-      this._tweenX(attackerSprite, backX, contactX, DASH_MS, () => {
-        // swing lands — the money frame holds SWING_MS while the hit lands
-        if (fePair) attackerSprite.setFrame(F.swing);
-        onContact();  // flash/shake/damage fire as the dash lands
+      ? { windup: 1, dash: 2, swing: 3, follow: 4, ret: 5, stand: 0 }
+      : { windup: 4, dash: 7, swing: 7, follow: 1, ret: 4, stand: 1 };
+    // ── 1. windup at home ──
+    attackerSprite.setFrame(F.windup);
+    this._tweenX(attackerSprite, origX, origX - 6 * dir, STANCE_MS, () => {
+      // ── 2. the run: dash frame, easeIn — commits ──
+      attackerSprite.setFrame(F.dash);
+      this._tweenX(attackerSprite, origX - 6 * dir, targetX, RUN_MS, () => {
+        // ── 3. swing lands — money frame + contact ──
+        attackerSprite.setFrame(F.swing);
+        onContact();  // flash/shake/damage fire with the blade still held
         setTimeout(() => {
-          // follow-through while HP drains
-          if (fePair) attackerSprite.setFrame(F.follow);
-          else if (isSheet) attackerSprite.setFrame(F.follow);
+          // ── 4. follow-through ──
+          attackerSprite.setFrame(F.follow);
           setTimeout(() => {
-            if (fePair) attackerSprite.setFrame(F.ret);
-            else if (isSheet) attackerSprite.setFrame(F.ret);
-            this._tweenX(attackerSprite, contactX, origX, SETTLE_MS, () => {
-              if (fePair) attackerSprite.setFrame(0); // clean stand
+            // ── 5. return frame while walking home ──
+            attackerSprite.setFrame(F.ret);
+            this._tweenX(attackerSprite, targetX, origX, RET_MS, () => {
+              attackerSprite.setFrame(F.stand);
               this.resumeIdle(attackerSprite);
             });
-          }, HOLD_MS - DASH_MS > 0 ? HOLD_MS - DASH_MS : 0);
+          }, FOLLOW_MS);
         }, SWING_MS);
       });
     });

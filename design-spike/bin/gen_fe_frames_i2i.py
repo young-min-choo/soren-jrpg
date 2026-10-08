@@ -25,7 +25,32 @@ NEG = ("blurry, lowres, 3d render, realistic, photo, watermark, text, grid, shee
 # pose → (reference file, denoise). Reference copies must exist in INP.
 POSES = {
     "stand":       ("fe_ref_eirika.png",      0.55),
-    "swing":       ("fe_ref_swing.png",       0.58),
+    "windup":      ("fe_ref_windup.png",      0.55),
+    "dash":        ("fe_ref_dash.png",        0.55),
+    "swing":       ("fe_ref_contact.png",     0.55),
+    "follow":      ("fe_ref_follow.png",      0.55),
+    "return":      ("fe_ref_return.png",      0.50),
+    "cast":        ("fe_ref_eirika.png",      0.58),   # placeholder ref until cast ref exists
+}
+
+# Frame layout per pose passed on CLI; prompt varies per pose type
+POSE_PROMPT = {
+    "stand":  ("calm ready stance, sword held low at his side",),
+    "windup": ("coiled wind-up: body twisted back, blade drawn behind him, weight on back foot, glare fixed forward",),
+    "dash":   ("full sprint dash forward, blade leading, cape whipping behind, extreme forward lean",),
+    "swing":  ("the swing lands: blade sweeping in a level arc, intense motion smear on the blade tip, cape blown wide",),
+    "follow": ("follow-through: body rotated past the swing, blade carried across, cape settling",),
+    "return": ("relaxed return to stance, blade lowering to his side",),
+    "cast":   ("spellcast: both arms raised mid-charge, arcane glow between hands, face lit from below",),
+}
+POSE_COOL = {
+    "stand":  "",
+    "windup": "tense, dramatic",
+    "dash":   "intense, high speed, extreme motion",
+    "swing":  "intense battle stance, dramatic cape and hood blown back by motion, sharp fierce glare, battle-worn",
+    "follow": "intense, dynamic",
+    "return": "",
+    "cast":   "intense, dramatic wind, glowing",
 }
 
 def post_json(path, payload, timeout=300):
@@ -34,10 +59,9 @@ def post_json(path, payload, timeout=300):
     return json.load(urllib.request.urlopen(req, timeout=timeout))
 
 def gen(char, pose, ref, dn, seed):
-    COOL = ("intense battle stance, dynamic action pose, dramatic cape and hood blown "
-            "back by motion, gripping the sword two-handed mid-slash, sharp fierce glare, "
-            "battle-worn, GBA fire emblem battle animation frame")
-    POS = (f"pixel art of a single small sprite: {IDENT[char]}. {COOL if pose=='swing' else 'calm ready stance'}. "
+    cool = POSE_COOL.get(pose, "")
+    body = POSE_PROMPT.get(pose, [pose])
+    POS = (f"pixel art of a single small sprite: {IDENT[char]}. {body[0]}. {cool}. "
            "GBA fire emblem battle sprite. THE SPRITE IS TINY: about 36 pixels tall on "
            "a large empty canvas, centered, realistic proportions, dark #282828 single "
            "pixel outline, limited 16 color palette, solid green background, side view "

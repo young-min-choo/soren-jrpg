@@ -81,9 +81,10 @@ export default class BattleScene extends Phaser.Scene {
         sprite = this.add.sprite(x, 120, feKey, 0);
         sprite._isSprite = true;
         sprite._sheet = feKey;
-        sprite._fePair = true;     // gestures use frames 0/1 (not 4/7)
+        sprite._fe19 = this.textures.get(feKey).frameTotal > 10; // 19-frame strip
+        sprite._fePair = !sprite._fe19;     // gestures: script runner vs pair frames
         sprite._baseScale = 0.66;  // breathing + suspend restore THIS, not 1
-        sprite.setScale(0.66);     // 85x72 cell → display figure ≈48px (chibi height, slimmer FE proportions read taller)
+        sprite.setScale(0.66);     // 95x72 cell → display figure ≈48px
         sprite.setOrigin(0.5, 1.0);
         sprite.y = 128;            // ground line (shared with chibi party)
         sprite._homeY = sprite.y;
@@ -977,39 +978,78 @@ export default class BattleScene extends Phaser.Scene {
 
   strikeGesture(attackerSprite, dir, onContact, opts = {}) {
     if (!attackerSprite) { onContact(); return; }
-    // FULL FE TRIP (Phase 10d): windup AT START → smooth run to targetX
-    // (dash frame carried THROUGH the travel) → swing + onContact →
-    // follow → return frame while walking home → stand. No frozen slides.
+    // FE SCRIPT RUNNER (Phase 10e). When the attacker carries the 19-frame
+    // FE strip (_fe19), playback follows EIRIKA'S REAL SCRIPT TIMING
+    // (verbatim 60fps ticks from the actual game's mode-1 script):
+    //   stand 1 → settle 4 → coil 2 → windup 2 → HOLD 10 → uncoil 4 →
+    //   sweep 4 → drive 5 → CONTACT smear (hit fires mid-swing) →
+    //   carry 3 → follow 3 → recover 3 (hold) → 2×5 back-step → stand.
+    // Everything runs with continuous movement between frames (no freezes).
     const origX = attackerSprite.x;
-    const STANCE_MS = 200;   // windup hold at home (coil)
-    const RUN_MS = 300;      // the run to the target (dash frame)
-    const SWING_MS = 170;    // swing held on contact (money frame)
-    const FOLLOW_MS = 110;   // follow-through while HP drains
-    const RET_MS = 330;      // return frame during walk home
     const isSheet = !!(attackerSprite._sheet && attackerSprite.setTexture);
+    const fe19 = !!attackerSprite._fe19;
     const fePair = !!attackerSprite._fePair;
-    if (isSheet || fePair || attackerSprite._isSprite) this.suspendIdle(attackerSprite);
+    if (isSheet || fe19 || fePair || attackerSprite._isSprite) this.suspendIdle(attackerSprite);
     const targetX = opts.targetX !== undefined ? opts.targetX : origX + 14 * dir;
-    // frames: FE pair = 0 stand / 1 windup / 2 dash / 3 swing / 4 follow / 5 return
+
+    if (fe19) {
+      // tick = 60fps game-frame; ms tick = 1000/60
+      const T = 1000 / 60;
+      // [frame, ticks, xProgress] — x moves ONLY during motion frames:
+      // home→ target across frames 5-9 (the commit), target→ home on 13-18.
+      // NOTE: sheet frames 2-4 are the deep-crouch family (read tiny). The
+      // hold beat maps to frame 5 (full-size coil) — FE holds read on the
+      // coil, not the crouch.
+      const SCRIPT = [
+        [0, 1, 0.0], [1, 4, 0.0], [5, 2, 0.06], [5, 2, 0.10], [5, 10, 0.10],
+        [6, 4, 0.28], [6, 4, 0.52], [7, 5, 0.80], [8, 2, 1.0],
+        [9, 3, 1.0], [10, 3, 1.0], [11, 3, 1.0],                 // contact+follow+recover
+        [12, 2, 0.9], [13, 2, 0.72], [14, 2, 0.5], [15, 2, 0.3], // walk back
+        [16, 2, 0.16], [17, 2, 0.06], [18, 2, 0.0], [0, 1, 0.0],
+      ];
+      const swingIdx = 9; // hit fires when frame 9 (smear carry-through) SHOWS
+      let acc = 0;
+      const run = (stepIdx) => {
+        if (stepIdx >= SCRIPT.length) {
+          attackerSprite.setFrame(0);
+          this.resumeIdle(attackerSprite);
+          return;
+        }
+        const [frame, ticks, prog] = SCRIPT[stepIdx];
+        attackerSprite.setFrame(frame);
+        const fromX = stepIdx === 0 ? origX : attackerSprite.x;
+        const toX = origX + (targetX - origX) * prog;
+        // frames 8-10 (contact chain) fire the hit callback exactly once
+        if (frame === swingIdx && stepIdx === 9) onContact();
+        this._tweenX(attackerSprite, fromX, toX, ticks * T, () => {
+          run(stepIdx + 1);
+        });
+      };
+      run(0);
+      return;
+    }
+
+    // ── fallback trip (chibi sheets / 6-cell FE pair / plain images) ──
+    const STANCE_MS = 200;
+    const RUN_MS = 300;
+    const SWING_MS = 170;
+    const FOLLOW_MS = 110;
+    const RET_MS = 330;
+    const targetX2 = targetX;
     const F = fePair
       ? { windup: 1, dash: 2, swing: 3, follow: 4, ret: 5, stand: 0 }
       : { windup: 4, dash: 7, swing: 7, follow: 1, ret: 4, stand: 1 };
-    // ── 1. windup at home ──
     attackerSprite.setFrame(F.windup);
     this._tweenX(attackerSprite, origX, origX - 6 * dir, STANCE_MS, () => {
-      // ── 2. the run: dash frame, easeIn — commits ──
       attackerSprite.setFrame(F.dash);
-      this._tweenX(attackerSprite, origX - 6 * dir, targetX, RUN_MS, () => {
-        // ── 3. swing lands — money frame + contact ──
+      this._tweenX(attackerSprite, origX - 6 * dir, targetX2, RUN_MS, () => {
         attackerSprite.setFrame(F.swing);
-        onContact();  // flash/shake/damage fire with the blade still held
+        onContact();
         setTimeout(() => {
-          // ── 4. follow-through ──
           attackerSprite.setFrame(F.follow);
           setTimeout(() => {
-            // ── 5. return frame while walking home ──
             attackerSprite.setFrame(F.ret);
-            this._tweenX(attackerSprite, targetX, origX, RET_MS, () => {
+            this._tweenX(attackerSprite, targetX2, origX, RET_MS, () => {
               attackerSprite.setFrame(F.stand);
               this.resumeIdle(attackerSprite);
             });

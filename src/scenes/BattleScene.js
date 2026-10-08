@@ -61,7 +61,7 @@ export default class BattleScene extends Phaser.Scene {
     this.add.rectangle(128, 80, 256, 160, 0x2a2a4e);
     this.add.rectangle(128, 150, 256, 48, 0x1a3a1a); // ground
 
-    // Player sprites (Phase 9: AI battle sprite if texture exists, else legacy rect)
+    // Party sprites (Phase 9: AI battle sprite if texture exists, else legacy rect)
     // Sprite resolved via char.spriteKey (stable art identity) — NOT the
     // display name, which the player can rename at will.
     this.playerSprites = [];
@@ -109,6 +109,22 @@ export default class BattleScene extends Phaser.Scene {
       }
       this.enemySprites.push(sprite);
     });
+
+    // --- Idle "breathing" loop (Phase 10 polish) ---
+    // Battle sprites are single-pose images; a shared rAF loop applies an
+    // ease-in-out squash-and-stretch bob (y ±1px, scaleY 1.0→0.94, scaleX
+    // mirrored) with a per-sprite phase offset so the row doesn't move in
+    // lockstep. update() isn't reliable in launched scenes, so this runs its
+    // own rAF; killIdle kills it (shutdown). Gestures (lunge/cast) mutate
+    // sprite.y/scale too — each gesture function calls suspendIdle(sprite)
+    // and resumeIdle(sprite) so breath doesn't fight the gesture.
+    this._idleSprites = [...this.playerSprites, ...this.enemySprites];
+    this._idleSuspended = new Set();
+    this._idleT0 = performance.now();
+    this._idleRaf = requestAnimationFrame(this._idleStep = (now) => {
+      this._idleTick(now);
+    });
+    this.events.once('shutdown', () => this._killIdle());
 
     // --- DOM text overlays (FF1-3 style layout) ---
     const container = document.getElementById('game-container');
@@ -598,6 +614,7 @@ export default class BattleScene extends Phaser.Scene {
     const targetSprite = this.enemySprites[target.index];
     const origX = playerSprite.x;
     const lungeX = targetSprite.x - 50;
+    this.suspendIdle(playerSprite); // breath must not fight the gesture
 
     // Manual lunge via requestAnimationFrame (Phaser tweens don't run in launched scenes)
     const startTime = performance.now();
@@ -648,6 +665,7 @@ export default class BattleScene extends Phaser.Scene {
                   requestAnimationFrame(animateBack);
                 } else {
                   playerSprite.x = origX;
+                  this.resumeIdle(playerSprite);
                   // Wait for fade to finish, then advance turn
                   this._lungeBackTimeout = setTimeout(() => this.afterPlayerAction(), Math.max(0, 600 - LUNGE_MS));
                 }
@@ -788,6 +806,7 @@ export default class BattleScene extends Phaser.Scene {
     const origX = enemySprite.x;
     const lungeX = playerSprite.x + 50;
     const LUNGE_MS = 400;
+    this.suspendIdle(enemySprite); // breath must not fight the gesture
 
     // Manual lunge via requestAnimationFrame
     const startTime = performance.now();
@@ -846,6 +865,7 @@ export default class BattleScene extends Phaser.Scene {
                 requestAnimationFrame(animateBack);
               } else {
                 enemySprite.x = origX;
+                this.resumeIdle(enemySprite);
                 this.updateAllDom();
                 this.checkBattleEnd();
                 if (this.battleState !== 'ended') {
@@ -1052,23 +1072,41 @@ export default class BattleScene extends Phaser.Scene {
     requestAnimationFrame(step);
   }
 
-  // Caster gesture for magic: rise + glow pulse on the caster, magic circle on target.
+  // Caster gesture for magic: rise + glow pulse on the caster, magic circle on
+  // target, then DESCENT back to the caster's start Y (bug fix: the old
+  // version only used rAF during the 340ms rise and never restored y, so the
+  // caster stayed floating ~5px higher after every spell).
   castGesture(casterSprite, targetSprite, onContact) {
     if (!casterSprite) { onContact(); return; }
+    this.suspendIdle(casterSprite); // breath must not fight the gesture
     const t0 = performance.now();
-    const CHARGE_MS = 340;
-    const step = () => {
-      const e = performance.now() - t0;
+    const startY = casterSprite.y;
+    const CHARGE_MS = 340, SETTLE_MS = 220;
+    let contactFired = false;
+    const step = (now) => {
+      const e = now - t0;
       if (e < CHARGE_MS) {
         const t = e / CHARGE_MS;
-        casterSprite.y -= 0.15;                 // slow rise ~5px over charge
+        // rise ~5px over charge, easeInOut — reproducible, no per-frame drift
+        casterSprite.y = startY - 5 * Math.sin(t * Math.PI / 2);
         casterSprite.setTint(0xaaffff);          // arcane glow
-        requestAnimationFrame(step);
       } else {
-        casterSprite.clearTint();
-        onContact();
-        if (targetSprite) this.magicCircle(targetSprite);
+        if (!contactFired) {
+          contactFired = true;
+          casterSprite.clearTint();
+          onContact();
+          if (targetSprite) this.magicCircle(targetSprite);
+        }
+        // settle: descend back to startY, easeOut — always ends exactly home
+        const t = Math.min(1, (e - CHARGE_MS) / SETTLE_MS);
+        casterSprite.y = startY - 5 * (1 - t) * (1 - t);
+        if (t >= 1) {
+          casterSprite.y = startY;
+          this.resumeIdle(casterSprite);
+          return;
+        }
       }
+      requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
   }
@@ -1099,6 +1137,43 @@ export default class BattleScene extends Phaser.Scene {
       div.style.opacity = '0';
     }));
     setTimeout(() => div.remove(), 420);
+  }
+
+  // ── Idle breathing driver ──────────────────────────────────────────
+  _idleTick(now) {
+    if (!this.scene || !this.scene.isActive()) return; // scene gone — stop
+    const t0 = this._idleT0;
+    const PERIOD = 900;
+    for (const s of this._idleSprites) {
+      if (!s || this._idleSuspended.has(s)) continue;
+      if (s._isSprite !== true) continue; // legacy rects stay still
+      if (s.visible === false) continue;  // dead enemy — stop breathing
+      const phase = ((s.x * 7 + s.y * 13) % PERIOD) / PERIOD; // stable per-sprite offset
+      const w = Math.sin((now - t0) / PERIOD * Math.PI * 2 + phase * Math.PI * 2);
+      // squash-stretch: breath in = up + thin, breath out = down + wide
+      s.y = s._homeY !== undefined ? s._homeY : (s._homeY = s.y);
+      s.scaleY = 1 + 0.03 * w;
+      s.scaleX = 1 - 0.02 * w;
+      s.y = s._homeY - Math.max(0, w) * 1.5; // rise 1.5px on inhale only
+    }
+    this._idleRaf = requestAnimationFrame(this._idleStep);
+  }
+
+  suspendIdle(sprite) {
+    if (!sprite) return;
+    this._idleSuspended.add(sprite);
+    sprite.scaleX = 1; sprite.scaleY = 1;
+    if (sprite._homeY !== undefined) sprite.y = sprite._homeY;
+  }
+
+  resumeIdle(sprite) {
+    if (!sprite) return;
+    this._idleSuspended.delete(sprite);
+  }
+
+  _killIdle() {
+    if (this._idleRaf) cancelAnimationFrame(this._idleRaf);
+    this._idleRaf = null;
   }
 
   flashSprite(sprite) {

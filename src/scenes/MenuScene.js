@@ -279,19 +279,46 @@ export default class MenuScene extends Phaser.Scene {
 
     const partyColors = ['#4488ff', '#ff8844', '#44ff88', '#ff44ff'];
     const partyInitials = ['S', 'A', 'K', '?'];
+    // display name → portrait art key (menu avatar); mirrors PortraitKeys.SPEAKER_MAP
+    // but readable synchronously here ( PortraitKeys imports GameState — fine too,
+    // kept local to avoid a circular-ish import through the render path).
+    const SPEAKER_NAME_TO_KEY = {
+      'Aria': 'aria', 'Kael': 'kael', 'Aldric': 'aldric',
+    };
 
     if (this.menuState === 'main') {
       const items = this._mainItems();
       const party = GameState.getParty();
       let html = '<div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">';
-      // Party portraits
+      // Party portraits — real 48x48 portrait art (Phase 10 fix: the colored
+      // initial boxes predated the portrait pipeline; portraits have been
+      // loading as portrait_* textures since Phase 9). Fallback = initial box.
       party.forEach((char, i) => {
         const color = partyColors[i % partyColors.length];
         const initial = char.name[0] || '?';
         const hpPct = Math.max(0, (char.hp / char.maxHp) * 100);
         const hpColor = hpPct > 50 ? '#44dd44' : hpPct > 25 ? '#ddaa44' : '#dd4444';
+        const isHero = i === 0;
+        const pKey = isHero ? 'soren' : (SPEAKER_NAME_TO_KEY[char.name] || null);
+        const tex = pKey && this.textures.exists(`portrait_${pKey}`) ? this.textures.get(`portrait_${pKey}`) : null;
+        let avatar;
+        if (tex) {
+          // draw to an offscreen canvas → dataURL (innerHTML-inserted canvases
+          // come back blank — drawImage content isn't serialized by outerHTML)
+          // Face-anchored crop (64x64 busts): 8-92% × 20-88% — face centered,
+          // cuts the empty halo above the hair.
+          const c = document.createElement('canvas');
+          c.width = 32; c.height = 32;
+          const g = c.getContext('2d');
+          g.imageSmoothingEnabled = false;
+          const src = tex.getSourceImage();
+          g.drawImage(src, src.width * 0.08, src.height * 0.20, src.width * 0.84, src.height * 0.68, 0, 0, 32, 32);
+          avatar = `<img src="${c.toDataURL()}" style="width:32px;height:32px;border-radius:4px;border:1px solid rgba(255,255,255,0.3);image-rendering:pixelated;flex-shrink:0" alt="">`;
+        } else {
+          avatar = `<div style="width:32px;height:32px;border-radius:4px;background:${color};display:flex;align-items:center;justify-content:center;font-size: 26px;font-weight:bold;color:#fff;text-shadow:1px 1px 2px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.3)">${initial}</div>`;
+        }
         html += `<div style="display:flex;align-items:center;gap:6px;flex:1">
-          <div style="width:32px;height:32px;border-radius:4px;background:${color};display:flex;align-items:center;justify-content:center;font-size: 26px;font-weight:bold;color:#fff;text-shadow:1px 1px 2px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.3)">${initial}</div>
+          ${avatar}
           <div style="flex:1;font-size: 14px">
             <div style="color:#fff;font-weight:bold">${char.name}</div>
             <div style="color:#aaa">${char.job} Lv.${char.level}</div>
@@ -430,12 +457,23 @@ export default class MenuScene extends Phaser.Scene {
       const party = GameState.getParty();
       const partyColors = ['#4488ff', '#ff8844', '#44ff88', '#ff44ff'];
       let html = `<div style="font-size: 22px;color:#ffff00;margin-bottom:12px">${isSave ? 'Save' : 'Load'} Game</div>`;
-      // Show party portraits row
+      // Show party portraits row — real art (same face-crop as main menu)
       html += '<div style="display:flex;gap:6px;margin-bottom:12px;justify-content:center">';
       party.forEach((char, i) => {
         const color = partyColors[i % partyColors.length];
         const initial = char.name[0] || '?';
-        html += `<div style="width:28px;height:28px;border-radius:4px;background:${color};display:flex;align-items:center;justify-content:center;font-size: 20px;font-weight:bold;color:#fff;border:1px solid rgba(255,255,255,0.3)">${initial}</div>`;
+        const pKey = i === 0 ? 'soren' : (SPEAKER_NAME_TO_KEY[char.name] || null);
+        const tex = pKey && this.textures.exists(`portrait_${pKey}`) ? this.textures.get(`portrait_${pKey}`) : null;
+        if (tex) {
+          const c = document.createElement('canvas');
+          c.width = 28; c.height = 28;
+          const g = c.getContext('2d');
+          g.imageSmoothingEnabled = false;
+          g.drawImage(tex.getSourceImage(), 64 * 0.08, 64 * 0.20, 64 * 0.84, 64 * 0.68, 0, 0, 28, 28);
+          html += `<img src="${c.toDataURL()}" style="width:28px;height:28px;border-radius:4px;border:1px solid rgba(255,255,255,0.3);image-rendering:pixelated" alt="">`;
+        } else {
+          html += `<div style="width:28px;height:28px;border-radius:4px;background:${color};display:flex;align-items:center;justify-content:center;font-size: 20px;font-weight:bold;color:#fff;border:1px solid rgba(255,255,255,0.3)">${initial}</div>`;
+        }
       });
       html += '</div>';
       slots.forEach((slot, i) => {

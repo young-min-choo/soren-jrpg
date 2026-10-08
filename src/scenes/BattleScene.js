@@ -870,8 +870,16 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   calcDamage(atk, def) {
-    const variance = 0.85 + Math.random() * 0.3; // 0.85–1.15
-    const base = atk * (atk / Math.max(1, def));
+    // Linear FF-style: atk − def/2 (balance pass 2026-10-09). The original
+    // atk²/def is quadratic in atk — with growth curves to atk 51+ vs zone
+    // def 12-17, endgame hits exploded (216-588 dmg vs 55-90 HP pools) and
+    // every random fight died in round 1. Linear keeps the same def-matters
+    // shape; variance ±10% (was ±15%). Sim verified vs the retuned enemy
+    // table (EnemyData this commit): random fights 1-3 rounds / ≤8% pool
+    // lost, bosses 4-5 rounds / ≤20% pool, under-leveled (−3) = 5-6 rounds
+    // and survivable. 
+    const variance = 0.9 + Math.random() * 0.2; // 0.90–1.10
+    const base = atk - def / 2;
     return Math.max(1, Math.floor(base * variance));
   }
 

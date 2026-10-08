@@ -108,15 +108,21 @@ Probes: `design-spike/fe_frames/*/raw_512.png` (grid, ignored contract),
 `design-spike/bin/probe_fe_single.py` + /tmp/fe_probe_single.png (no-LoRA).
 
 REMAINING PATHS to real FE-style battle art (in order of cost):
-- (i) **Find/install an FE-style LoRA or checkerboard-downscale img2img** —
-  search CivitAI/HF for GBA-FE pixel LoRAs; img2img from a real FE frame
-  (identity transfer) keeps engine-usable geometry.
-- (ii) **Hand-sprite the 3 party sets** on the old-32 art's ground: 6-10
-  frames per action, FE proportions, drawn in-repo (slow but exact).
-- (iii) **Keep chibi v2 sheets + FX layer** (B) — ships tomorrow; the look
-  stays chibi.
-RECOMMENDATION to Choo: for the playtest loop, ship (iii) now (it animates),
-pursue (i) as a research spike in a background session.
+- (i) ~~FE-style LoRA~~ DEAD END RECORDED: the CivitAI GBA Sprite Style LoRAs
+  (949388 Illustrious / 726209 Pony) require CivitAI login (no account/key on
+  this box); no HF mirrors. Downloaded Illustrious-XL-v0.1 base (6.6GB, correct
+  file) — produces STRUCTURED NOISE on this Comfy install (3 probes, fresh
+  restart; committed bin/probe_illustrious.py). Do not retry without a
+  different checkpoint or host.
+- (i-b) **img2img from REAL FE frames via flux2-klein — BREAKTHROUGH
+  (066d922)**: Eirika standing frame (game rip, reference only) → 512 →
+  klein img2img d0.55–0.62 with Soren identity prompt = crisp FE-proportioned
+  hooded swordsman w/ sword (d55 ≈36px figure ready pose; d60 ≈52px swing).
+  /tmp/fe_i2i/r55.png r60.png r62.png + bin/probe_i2i_fe.py.
+  NEXT: pin denoise per pose type (stand 0.55, swing 0.60), lock scale via
+  post-crop-to-36px, palette-lock pass, then batch poses.
+- (ii) hand-sprite the 3 party sets (slow, exact) — still open as fallback.
+- (iii) chibi v2 sheets + FX layer (live in game now, interim).
 
 ## 7. Original production notes from the source material (unchanged)
 

@@ -77,7 +77,7 @@ export default class BattleScene extends Phaser.Scene {
       // Phase 10b trial: hero (slot 0) prefers the FE-style pair sheet
       // (104x72 frames: 0 = stand, 1 = swing) — FE proportions, i2i art.
       const feKey = `fesheet_${artKey}`;
-      if (i === 0 && this.textures.exists(feKey)) {
+      if (this.textures.exists(feKey)) {
         sprite = this.add.sprite(x, 120, feKey, 0);
         sprite._isSprite = true;
         sprite._sheet = feKey;
@@ -92,6 +92,7 @@ export default class BattleScene extends Phaser.Scene {
         sprite = this.add.sprite(x, 120, sheetKey, 1); // frame 1 = row0 stand
         sprite._isSprite = true;
         sprite._sheet = sheetKey;
+        sprite._feCast = false;
         sprite.setScale(2);
         sprite.setOrigin(0.5, 1.0); // feet on the ground strip; bob scales from feet
         sprite.y = 128;             // ground line for 48px-tall feet-anchored sprite
@@ -106,10 +107,20 @@ export default class BattleScene extends Phaser.Scene {
         if (this.textures.exists(texKey)) {
           sprite = this.add.image(x, 120, texKey);
           sprite._isSprite = true;
+          sprite._feCast = false;
         } else {
           sprite = this.add.rectangle(x, 120, 20, 28, partyColors[i % partyColors.length]);
           sprite.setStrokeStyle(1, 0xffffff, 0.5);
+          sprite._feCast = false;
         }
+      }
+      // Caster strip: anyone with a 14-frame cast sheet gets the FE cast
+      // (Aria first — the monk). Attack sheet stays whatever it was.
+      const castSheetKey = `fechest_${artKey}_cast`;
+      if (this.textures.exists(castSheetKey)) {
+        // swap the sprite's texture for casting only: keep both textures
+        sprite._castSheet = castSheetKey;
+        sprite._feCast = true;
       }
       this.playerSprites.push(sprite);
     });
@@ -1137,7 +1148,77 @@ export default class BattleScene extends Phaser.Scene {
   // caster stayed floating ~5px higher after every spell).
   castGesture(casterSprite, targetSprite, onContact) {
     if (!casterSprite) { onContact(); return; }
-    this.suspendIdle(casterSprite); // breath must not fight the gesture
+    // FE SCRIPT RUNNER — cast variant (Phase 10f). When the caster has the
+    // 14-frame cast strip (_feCast), playback follows the REAL monk-cast
+    // arc sampled from Eirika's actual 31-frame cast animation:
+    //   raise → orb charge (looped wind) → RELEASE push (spell FX fires) →
+    //   cape swirl → settle → recover → stand. No vertical float-hop; the
+    //   old ±5px rise is gone (FE casters stay grounded, the CAPE moves).
+    const isSheet = !!(casterSprite._sheet && casterSprite.setTexture);
+    const feCast = !!casterSprite._feCast;
+    if (isSheet || feCast) this.suspendIdle(casterSprite);
+
+    if (feCast) {
+      const T = 1000 / 60;
+      // swap to the cast strip for the duration; swap back at the end
+      if (casterSprite._castSheet) {
+        casterSprite._attackSheet = casterSprite.texture.key;
+        casterSprite._attackScale = { x: casterSprite.scaleX, y: casterSprite.scaleY };
+        casterSprite.setTexture(casterSprite._castSheet);
+        // cast strips are 72px content like the FE attack strips — display
+        // at the FE figure scale, NOT the chibi 2x (which would render 144px)
+        if (!casterSprite._fe19 && !casterSprite._fePair) {
+          casterSprite._baseScale = 0.66;
+          casterSprite.setScale(0.66);
+        }
+      }
+      // [sheetFrame, ticks, xProgress] — slight step forward into the release
+      const SCRIPT = [
+        [0, 5, 0.0],    // ready
+        [1, 5, 0.0],    // arms rising
+        [2, 6, 0.0],    // arms high, head bowed
+        [3, 8, 0.02],   // orb formed (charge)
+        [4, 5, 0.02],   // charged hold: orb blazing (wind loop)
+        [5, 5, 0.02],   // charged hold, wind intensifying
+        [6, 4, 0.08],   // RELEASE push — spell FX fires here
+        [7, 4, 0.10],   // follow-through arms extended
+        [8, 4, 0.10],   // cape swirl
+        [9, 3, 0.06],   // cape settling
+        [10, 3, 0.0],   // lowering arms
+        [11, 3, 0.0],   // recovering
+        [12, 3, 0.0],   // nearly recovered
+        [13, 3, 0.0],   // calm ready stance
+      ];
+      const releaseStep = 6;
+      const run = (stepIdx) => {
+        if (stepIdx >= SCRIPT.length) {
+          if (casterSprite._attackSheet) {
+            casterSprite.setTexture(casterSprite._attackSheet);
+            if (casterSprite._attackScale) {
+              casterSprite._baseScale = casterSprite._attackScale.x;
+              casterSprite.setScale(casterSprite._attackScale.x);
+            }
+          }
+          casterSprite.setFrame(1);
+          this.resumeIdle(casterSprite);
+          return;
+        }
+        const [frame, ticks, prog] = SCRIPT[stepIdx];
+        casterSprite.setFrame(frame);
+        if (stepIdx === releaseStep) {
+          onContact();                       // spell FX + damage at the release
+          if (targetSprite) this.magicCircle(targetSprite);
+        }
+        const fromX = stepIdx === 0 ? casterSprite.x : casterSprite.x;
+        this._tweenX(casterSprite, fromX, fromX + 0 /* grounded cast: no walk */, ticks * T, () => {
+          run(stepIdx + 1);
+        });
+      };
+      run(0);
+      return;
+    }
+
+    // ── legacy float cast (chibi sheets / plain images) ──
     const t0 = performance.now();
     const startY = casterSprite.y;
     const CHARGE_MS = 340, SETTLE_MS = 220;

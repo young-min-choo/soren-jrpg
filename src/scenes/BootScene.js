@@ -55,6 +55,16 @@ export default class BootScene extends Phaser.Scene {
     // timing) — replaces the 6-cell version when present.
     this.load.spritesheet('fesheet_soren_battle', 'sprites/battle/fe_soren_atk19.png',
       { frameWidth: 95, frameHeight: 72, endFrame: 19 });
+    // Phase 10f: 14-frame FE cast strip (cells 53x72; real monk-cast arc).
+    this.load.spritesheet('fechest_aria_battle_cast', 'sprites/battle/fe_aria_cast14.png',
+      { frameWidth: 53, frameHeight: 72, endFrame: 14 });
+    // Phase 10g: Aria + Kael 19-frame FE attack strips (same geometry/timing
+    // as Soren's — Eirika-verbatim, identity-transferred: Aria palm strikes,
+    // Kael dagger slashes).
+    this.load.spritesheet('fesheet_aria_battle', 'sprites/battle/fe_aria_atk19.png',
+      { frameWidth: 89, frameHeight: 72, endFrame: 19 });
+    this.load.spritesheet('fesheet_kael_battle', 'sprites/battle/fe_kael_atk19.png',
+      { frameWidth: 88, frameHeight: 72, endFrame: 19 });
     // Phase 9: themed tileset strips (fallback to programmatic if missing)
     ['town_tiles', 'dgn_ember', 'dgn_tide', 'dgn_hollow', 'dgn_spire', 'dgn_ruins'].forEach((key) => {
       this.load.image(`${key}_ai`, `sprites/tiles/${key}.png`);

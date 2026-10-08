@@ -112,6 +112,10 @@ export default class BattleScene extends Phaser.Scene {
       // rows anchored to the ground strip (ground rect spans y=126..174):
       // row 0 at y=110 puts sprite feet ≈120 on the grass; row 1 at 138.
       const y = 110 + Math.floor(i / 2) * 28;
+      // depth = row-based: BACK rows must render BEHIND front rows (Phase 10
+      // fix — creation order made row 1 draw over row 0 whenever sprites
+      // got big/sheet-driven). Depth descending by row: back = 10, front = 20.
+      const depth = 20 - Math.floor(i / 2) * 10;
       // EnemyData keys are camelCase (caveSpider); art files are snake_case
       // (cave_spider) — normalize so every enemy gets its real sprite.
       const artKey = enemy.type.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
@@ -122,9 +126,11 @@ export default class BattleScene extends Phaser.Scene {
       if (this.textures.exists(texKey)) {
         sprite = this.add.image(x, y, texKey);
         sprite._isSprite = true;
+        sprite.setDepth(depth);
       } else {
         sprite = this.add.rectangle(x, y, 24, 24, enemy.color);
         sprite.setStrokeStyle(1, 0xffffff, 0.5);
+        sprite.setDepth(depth);
       }
       this.enemySprites.push(sprite);
     });

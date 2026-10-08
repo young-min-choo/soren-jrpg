@@ -69,14 +69,33 @@ export default class BattleScene extends Phaser.Scene {
     this.party.forEach((char, i) => {
       const x = 40 + i * 30;
       const artKey = char.spriteKey || 'soren_battle'; // protagonist art for unnamed/legacy-party entries
-      const texKey = `bsprite_${artKey}`;
+      // Phase 10: battle ACTION sheets — party members with a 48x96 sheet
+      // (16x24 frames, walk-grid + arms-raised/jump specials) get a real
+      // animated sprite; base position scaled up 2x (16x24 → 32x48 display).
       let sprite;
-      if (this.textures.exists(texKey)) {
-        sprite = this.add.image(x, 120, texKey);
+      const sheetKey = `battlesheet_${artKey}`;
+      if (this.textures.exists(sheetKey)) {
+        sprite = this.add.sprite(x, 120, sheetKey, 1); // frame 1 = row0 stand
         sprite._isSprite = true;
+        sprite._sheet = sheetKey;
+        sprite.setScale(2);
+        sprite.setOrigin(0.5, 1.0); // feet on the ground strip; bob scales from feet
+        sprite.y = 128;             // ground line for 48px-tall feet-anchored sprite
+        sprite._homeY = sprite.y;
+        // per-artKey walk/cast/slash anims (idle = gentle walk-in-place is
+        // too busy; stand frame + breathing driver handles idle)
+        if (!this.anims.exists(`battleanim_${artKey}_cast`)) {
+          this.anims.create({ key: `battleanim_${artKey}_cast`, frames: this.anims.generateFrameNumbers(sheetKey, { frames: [3, 3, 3] }), frameRate: 6, repeat: 0 });
+        }
       } else {
-        sprite = this.add.rectangle(x, 120, 20, 28, partyColors[i % partyColors.length]);
-        sprite.setStrokeStyle(1, 0xffffff, 0.5);
+        const texKey = `bsprite_${artKey}`;
+        if (this.textures.exists(texKey)) {
+          sprite = this.add.image(x, 120, texKey);
+          sprite._isSprite = true;
+        } else {
+          sprite = this.add.rectangle(x, 120, 20, 28, partyColors[i % partyColors.length]);
+          sprite.setStrokeStyle(1, 0xffffff, 0.5);
+        }
       }
       this.playerSprites.push(sprite);
     });
@@ -1004,12 +1023,20 @@ export default class BattleScene extends Phaser.Scene {
     const LEAN_MS = 110;   // wind-up
     const SNAP_MS = 90;    // strike
     const HOLD_MS = 70;    // hold through the flash frame
+    // Sheet attackers: slash pose = jump frame (row1 col3 for left-slide,
+    // row2 col3 for right-slide read best) — swap frames through the phases.
+    const isSheet = !!(attackerSprite._sheet && attackerSprite.setTexture);
+    if (isSheet) this.suspendIdle(attackerSprite);
+    if (isSheet) attackerSprite.setFrame(4); // row1 col0 — step wind-up
     // wind-up: lean AWAY from target (rotate ±14° back + slight pull-back)
     this._tweenRot(attackerSprite, origRot, -0.26 * dir, origX, origX - 6 * dir, LEAN_MS, () => {
+      if (isSheet) attackerSprite.setFrame(7); // row2 col3 = jump/strike (sword extended)
       // strike: whip TOWARD target (rotate ±26° forward)
       this._tweenRot(attackerSprite, -0.26 * dir, 0.42 * dir, origX - 6 * dir, origX + 10 * dir, SNAP_MS, () => {
         onContact();  // flash/shake/damage fire at the snap's end
         setTimeout(() => {
+          if (isSheet) attackerSprite.setFrame(1); // stand
+          this.resumeIdle(attackerSprite);
           // settle back to identity
           this._tweenRot(attackerSprite, 0.42 * dir, origRot, origX + 10 * dir, origX, 160, null);
         }, HOLD_MS);
@@ -1083,13 +1110,17 @@ export default class BattleScene extends Phaser.Scene {
     const startY = casterSprite.y;
     const CHARGE_MS = 340, SETTLE_MS = 220;
     let contactFired = false;
+    // Sheet casters: hold the arms-raised frame through the whole gesture
+    const artKey = casterSprite._sheet ? casterSprite._sheet.replace('battlesheet_', '') : null;
+    const isSheetCaster = !!(casterSprite._sheet && artKey && this.textures.exists(casterSprite._sheet));
+    if (isSheetCaster) casterSprite.setFrame(3); // row0 col3 = both arms raised
     const step = (now) => {
       const e = now - t0;
       if (e < CHARGE_MS) {
         const t = e / CHARGE_MS;
         // rise ~5px over charge, easeInOut — reproducible, no per-frame drift
         casterSprite.y = startY - 5 * Math.sin(t * Math.PI / 2);
-        casterSprite.setTint(0xaaffff);          // arcane glow
+        if (!isSheetCaster) casterSprite.setTint(0xaaffff); // arcane glow
       } else {
         if (!contactFired) {
           contactFired = true;
@@ -1102,6 +1133,7 @@ export default class BattleScene extends Phaser.Scene {
         casterSprite.y = startY - 5 * (1 - t) * (1 - t);
         if (t >= 1) {
           casterSprite.y = startY;
+          casterSprite.setFrame(1); // back to stand
           this.resumeIdle(casterSprite);
           return;
         }

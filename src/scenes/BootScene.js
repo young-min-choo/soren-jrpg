@@ -43,6 +43,14 @@ export default class BootScene extends Phaser.Scene {
     Object.values(battleManifest.party).forEach((key) => {
       this.load.image(`bsprite_${key}`, `sprites/battle/${key}.png`);
     });
+    // Phase 10: battle ACTION sheets (48×96, 12+ frames of 16×24, same grid
+    // as field sheets but generated WITH weapons/cast poses). Party members
+    // with a sheet get real animated gestures (cast raise, slash lunge);
+    // the rest fall back to single-pose images. Consumed by BattleScene.
+    ['soren_battle', 'aria_battle', 'kael_battle'].forEach((key) => {
+      this.load.spritesheet(`battlesheet_${key}`, `sprites/battle/sheets/${key}.png`,
+        { frameWidth: 16, frameHeight: 24, endFrame: 12 });
+    });
     // Phase 9: themed tileset strips (fallback to programmatic if missing)
     ['town_tiles', 'dgn_ember', 'dgn_tide', 'dgn_hollow', 'dgn_spire', 'dgn_ruins'].forEach((key) => {
       this.load.image(`${key}_ai`, `sprites/tiles/${key}.png`);

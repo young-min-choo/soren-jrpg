@@ -1,0 +1,37 @@
+{
+ "raw": "battle_sheets/kael_battle_sheet/raw_512.png",
+ "sheet": "battle_sheets/kael_battle_sheet/sheet_48x96.png",
+ "sheet_size": [
+  48,
+  96
+ ],
+ "grid_48x96": true,
+ "frames_nonempty": "12/12",
+ "grounded": "12/12",
+ "unique_colors_total": 26,
+ "uniq_per_frame": [
+  17,
+  21,
+  15,
+  19,
+  20,
+  17,
+  18,
+  17,
+  16,
+  13,
+  17,
+  17
+ ],
+ "adjacent_frame_diff": [
+  0.208,
+  0.24,
+  0.198,
+  0.18,
+  0.201,
+  0.18,
+  0.188,
+  0.208
+ ],
+ "min_diff": 0.18
+}

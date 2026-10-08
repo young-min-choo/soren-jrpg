@@ -85,6 +85,35 @@ Desktop (omarchy) keeps a dev server running for tailnet play:
    and anims are already in place for it. Decide deployment (tailscale serve
    `dist/`, or GitHub Pages once playtested).
 
+### Balance pass + NPC wandering (2026-10-09, @359f818)
+
+Round-2 playtest follow-ups, both pushed:
+- **Hero rebuilt via AI pipeline (6abc516):** the v7 "tone fix" addressed the
+  front-portrait read, but the REAL bug was literal alpha holes in the v6/v7
+  side-head silhouette (x7-9, rows 6-8 — grass showed through in-game; Choo's
+  screenshot was a left-walk frame). My v8 hand-drawn "NPC-template rebuild"
+  reproduced the same holes via the 'hood' hairshape branch. Final fix: hero
+  generated through the SAME pipeline as the 16 NPCs (klein-base-4B +
+  pixel_4walk LoRA, `soren_hero` identity seed 42, added to NPC_IDENTS for
+  regens) + pinhole-sealing pass (7+17 px filled; head/torso interior holes 0,
+  leg gaps preserved). Gates 6/6.
+- **NPC wandering (4061a1d):** `wander: true` on 5 free-roamers (village
+  townsfolk, port dockhand, stonewatch/skyhold/aurelia villagers). Grid-stepped
+  hops: idle 0.8-3.2s → ~260ms eased hop to a walkable neighbor (T_FLOOR/T_PATH)
+  within radius 2 of home; from/to tiles reserved mid-step; player tile
+  excluded; talk-freeze (mid-step NPC lands + frame holds via idleUntil bump);
+  `this.mapData` exposed for walkability. Static-body collision unchanged.
+- **Balance (@359f818):** simulated combat with real formulas before changing
+  anything — `calcDamage` was `atk*(atk/def)` (quadratic in atk): every random
+  fight died in round 1, all 8 bosses in 1-2 rounds at recommended levels.
+  Fix pair: linear `atk − def/2` (variance ±10%) + enemy table retuned upward
+  (25 standard + 8 bosses; def bumps on low-def fliers/casters bat/wisp/
+  voltSprite/stormHawk/cryptPriest). Sim-validated vs real source data:
+  random fights 1-3 rounds / ≤9% pool lost; bosses 3.9-5.1 rounds / 15-27%
+  pool lost / 0 losses in 20 runs each; under-leveled −3 = 5-6 rounds.
+  Known quirk (accepted): enemy spells `power*atk` aren't DEF-mitigated.
+- E2E 37/37 throughout.
+
 ### First manual playtest bug sweep (2026-10-09)
 Choo ran the first hands-on session and reported 5 bugs; all fixed:
 1. **Choices overlapped the portrait** — choices positioned at box
